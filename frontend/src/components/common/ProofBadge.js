@@ -9,6 +9,7 @@ import {
   GlobeAltIcon,
   UserGroupIcon,
   StarIcon,
+  ScaleIcon,
 } from "@heroicons/react/24/outline";
 import { getTierStyles } from "@/lib/badges/computeBadges";
 
@@ -29,6 +30,7 @@ const BADGE_ICONS = {
   "early-builder": SparklesIcon,
   "verified-payouts": RocketLaunchIcon,
   "community-tested": UserGroupIcon,
+  "jury-verified": ScaleIcon,
 };
 
 /**

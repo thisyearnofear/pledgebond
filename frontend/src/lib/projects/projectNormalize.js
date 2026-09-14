@@ -105,6 +105,7 @@ export function cleanHackathons(hackathons) {
 const HACKATHON_VERIFICATION_FIELDS = [
   'verificationStatus', 'payoutVerifiedAt', 'payoutVerified', 'payoutConfidence',
   'payoutActualAmount', 'payoutAttestationId', 'payoutProvider',
+  'juryVerdict', 'juryConfidence', 'juryReason', 'juryCreditBoost', 'juryResolvedAt', 'juryContract',
 ];
 
 export function mergeHackathonsWithVerification(hackathons, existing = []) {

@@ -8,15 +8,16 @@ import { useRouter } from "next/router";
 import { Card } from "@/components/common/Card";
 import TabBar from "@/components/common/TabBar";
 import { AGENTS, AGENTS_INTRO } from "@/config/agents";
-import { AGENT_MODES } from "@/config/navigation";
 import { AGENTS_CAPITAL_HINT } from "@/config/capitalStack";
 import AgentsSetupPanel from "./AgentsSetupPanel";
 
+const GenlayerDemoPanel = dynamic(() => import("@/components/genlayer/GenlayerDemoPanel"), { ssr: false, loading: () => null });
 const AnalyzePanel = dynamic(() => import("./AnalyzePanel"), { ssr: false, loading: () => null });
 const ScoutPanel = dynamic(() => import("./ScoutPanel"), { ssr: false, loading: () => null });
 const ComparePanel = dynamic(() => import("./ComparePanel"), { ssr: false, loading: () => null });
 
 const MODE_TABS = [
+  { id: "jury", label: "⚖️ Jury" },
   { id: "analyze", label: "Underwrite" },
   { id: "scout", label: "Scout" },
   { id: "compare", label: "Compare" },
@@ -26,6 +27,9 @@ const MODE_TABS = [
 /** Winner-facing agents first; Scout last in the roster strip. */
 const WINNER_AGENT_ORDER = ["verify", "underwrite", "scout"];
 
+/** Agent modes incl. the GenLayer jury demo — keep in sync with MODE_TABS. */
+const AGENT_MODES = ["jury", "analyze", "scout", "compare", "setup"];
+
 /**
  * @param {string | string[] | undefined} mode
  * @returns {string}
@@ -33,7 +37,7 @@ const WINNER_AGENT_ORDER = ["verify", "underwrite", "scout"];
 function resolveMode(mode) {
   const value = Array.isArray(mode) ? mode[0] : mode;
   if (value && AGENT_MODES.includes(value)) return value;
-  return "analyze";
+  return "jury";
 }
 
 export default function AgentsTab() {
@@ -44,8 +48,7 @@ export default function AgentsTab() {
   );
 
   const setMode = (nextMode) => {
-    const query = { tab: "agents" };
-    if (nextMode !== "analyze") query.mode = nextMode;
+    const query = { tab: "agents", mode: nextMode };
     if (router.query.project) query.project = router.query.project;
     router.replace({ pathname: "/back", query }, undefined, { shallow: true });
   };
@@ -89,6 +92,7 @@ export default function AgentsTab() {
 
       <TabBar tabs={MODE_TABS} activeTab={mode} onChange={setMode} variant="pill" />
 
+      {mode === "jury" && <GenlayerDemoPanel />}
       {mode === "analyze" && <AnalyzePanel />}
       {mode === "scout" && <ScoutPanel />}
       {mode === "compare" && <ComparePanel />}

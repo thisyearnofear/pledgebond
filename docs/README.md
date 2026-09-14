@@ -61,13 +61,17 @@ A complete payout verification system and hackathon leaderboard that turns time-
 ### Architecture
 
 ```
-PayoutVerifierService.ts     # 3-provider verification (Circle API, EVM, Solana)
+PayoutVerifierService.ts     # 4-provider verification (Circle API, EVM, Solana, GenLayer jury)
 payout-verify.js             # POST /api/agent/payout-verify (single + batch)
 analyze.js                   # claim_verification type — rule-based signals + on-chain proof
+                             # genlayer_verdict type — MilestoneArbiter jury verdict + credit signal
+genlayer/submit.js           # POST /api/genlayer/submit — jury resolve + attestation
+genlayer/verdict.js          # GET /api/genlayer/verdict — read path for Underwriter + UI
 payoutAttestations           # Firestore collection storing attestation records
 leaderboard.js               # /leaderboard page with 3 tabs (Builders / Backers / Hackathons)
 hackathons/leaderboard.js    # GET /api/hackathons/leaderboard — aggregation + composite score
 ClaimVerificationBadge       # Green/amber/red badge on project detail hackathon claims
+GenlayerVerdictCard          # Jury verdict pill (ProofBadge language) + reason + links
 ```
 
 ### Verification Providers
@@ -95,6 +99,9 @@ Payout speed color coding: ≤7d lightning, ≤30d fast, ≤90d moderate, >90d s
 | Medium | Amber shield | Partial proof (e.g., URL claim only) |
 | Low | Red shield | No verifiable evidence |
 | Loading | Gray pulse | Verification in progress |
+| Jury Delivered | Gold badge | GenLayer consensus: deliverable confirmed (HIGH confidence) |
+| Jury Not-delivered | Red badge | GenLayer consensus: no deliverable found |
+| Jury Inconclusive | Amber badge | GenLayer consensus: insufficient public evidence |
 
 ### Leaderboard Trust Gate
 
@@ -108,6 +115,28 @@ Claims with `verificationStatus: "pending"` or missing `evidenceUrl` are exclude
 4. Verified payouts upgrade to `verificationStatus: "payout_verified"` with `payoutVerifiedAt` + `payoutActualAmount`
 5. Builder receives "🎉 Payout verified!" notification with amount and project link
 6. Only verified claims surface on the public leaderboard
+
+### GenLayer Jury (Agent Tank — Future of Work)
+
+Decentralized milestone verdicts via the `MilestoneArbiter` Intelligent Contract
+(Python, GenLayer testnet). Validators fetch public evidence URLs and reach LLM
+consensus — no oracle. Full brief: [GENLAYER_TANK_SUBMISSION.md](./GENLAYER_TANK_SUBMISSION.md).
+
+```
+GenlayerVerdictService.ts      # RPC client + toCreditSignal (+15 / −25 / 0), GENLAYER_MOCK offline mode
+api/genlayer/submit            # POST — submit + resolve + provider:'genlayer' attestation
+api/genlayer/verdict           # GET ?milestoneId= — read path for Underwriter + UI
+api/agent/analyze              # type:'genlayer_verdict' — Underwriter entry point (never 500s)
+GenlayerVerdictCard            # Badge-style verdict pill + reason + evidence/contract links
+GenlayerDemoPanel              # /back?tab=agents one-click demo (Delivered / Not-delivered presets)
+```
+
+| Provider | Method | What it Checks |
+|----------|--------|----------------|
+| **Circle API** | `verifyCircleTransfer()` | Transaction status, amount match (±0.01 USDC), recipient match, `complete`/`paid` status |
+| **EVM (raw RPC)** | `verifyOnChainTransfer()` | Parses `Transfer` event logs from `eth_getTransactionReceipt`, decodes recipient + amount, cross-references USDC address per chain |
+| **Solana** | `verifySolanaTransfer()` | Scans `preTokenBalances`/`postTokenBalances` for USDC mint changes to recipient wallet |
+| **GenLayer jury** | `resolve_milestone()` | Validators fetch evidence URL + LLM consensus → DELIVERED / NOT_DELIVERED / INCONCLUSIVE + confidence + reason |
 
 ### Notification System
 

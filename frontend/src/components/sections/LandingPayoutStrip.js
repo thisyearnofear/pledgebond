@@ -1,41 +1,55 @@
 /**
  * LandingPayoutStrip — live payout-speed proof for the landing page.
  * Reuses FastestPayoutHero when data exists; stays quiet when empty.
+ * Below-the-fold: fetch deferred to idle so the hero paints first.
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import FastestPayoutHero from "@/components/leaderboard/FastestPayoutHero";
-import { LoadingSpinner } from "@/components/common/LoadingStates";
 
 export default function LandingPayoutStrip() {
-  const [entries, setEntries] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState(null); // null = not loaded yet; [] = loaded empty
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch("/api/hackathons/leaderboard");
-        if (!res.ok) throw new Error("Failed to load payout data");
-        const data = await res.json();
-        if (!cancelled) setEntries(data.hackathons || []);
-      } catch {
-        if (!cancelled) setEntries([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    // Defer below-the-fold fetch until idle — landing paints first.
+    const run = () => {
+      fetch("/api/hackathons/leaderboard")
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load payout data");
+          return res.json();
+        })
+        .then((data) => { if (!cancelled) setEntries(data.hackathons || []); })
+        .catch(() => { if (!cancelled) { setEntries([]); setFailed(true); } });
+    };
+    let idleId = null;
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(run, { timeout: 2500 });
+    } else {
+      const t = setTimeout(run, 400);
+      idleId = { timeout: t };
     }
-    load();
     return () => {
       cancelled = true;
+      if (typeof window !== "undefined" && "cancelIdleCallback" in window && idleId) {
+        window.cancelIdleCallback(idleId);
+      } else if (idleId?.timeout) {
+        clearTimeout(idleId.timeout);
+      }
     };
   }, []);
 
-  if (loading) {
+  // Reserve layout height while loading so the strip never shifts the CTA.
+  if (entries === null && !failed) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex justify-center">
-        <LoadingSpinner />
-      </div>
+      <section className="border-t border-default bg-surface py-10 sm:py-14" aria-busy="true">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="skeleton h-7 w-64 mb-2" />
+          <div className="skeleton h-4 w-96 mb-6" />
+          <div className="skeleton h-24 w-full" />
+        </div>
+      </section>
     );
   }
 

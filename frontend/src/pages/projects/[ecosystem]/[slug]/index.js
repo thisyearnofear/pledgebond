@@ -27,6 +27,7 @@ import ProjectBackerSummary from "@/components/projects/ProjectBackerSummary";
 import EnhancedDetailsSection from "@/components/projects/EnhancedDetailsSection";
 import BagsMarketCard from "@/components/common/BagsMarketCard";
 
+import GenlayerVerdictCard from "@/components/genlayer/GenlayerVerdictCard";
 import {
   ArrowTopRightOnSquareIcon,
   CheckCircleIcon,
@@ -54,6 +55,8 @@ export default function ProjectDetailPage() {
   const [ownerEthosLoading, setOwnerEthosLoading] = useState(false);
   const [verifiedClaims, setVerifiedClaims] = useState(null);
   const [claimsVerifying, setClaimsVerifying] = useState(false);
+  const [genlayer, setGenlayer] = useState(null);
+  const [genlayerLoading, setGenlayerLoading] = useState(false);
 
   // Compute badges from project data
   const projectBadges = useMemo(() => {
@@ -112,6 +115,27 @@ export default function ProjectDetailPage() {
             })
             .catch(() => {})
             .finally(() => { if (!cancelled) setClaimsVerifying(false); });
+
+          // GenLayer jury: resolve first milestone with public evidence (mock-safe)
+          const firstEvidence = data.hackathons.find((h) => h.evidenceUrl || h.url || h.submissionUrl);
+          const evidenceUrl = firstEvidence?.evidenceUrl || firstEvidence?.url || firstEvidence?.submissionUrl;
+          if (evidenceUrl) {
+            setGenlayerLoading(true);
+            fetch('/api/agent/analyze', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: 'genlayer_verdict',
+                description: `${data.name || slug} — ${firstEvidence?.name || 'milestone delivery'}`,
+                evidenceUrl,
+                criteria: 'Deliverable exists at the evidence URL and meets the stated outcome.',
+              }),
+            })
+              .then(r => r.json().catch(() => ({})))
+              .then(body => { if (!cancelled && body.success) setGenlayer({ ...body.analysis, evidenceUrl }); })
+              .catch(() => {})
+              .finally(() => { if (!cancelled) setGenlayerLoading(false); });
+          }
         }
         
         // Fetch Ethos score for project owner
@@ -438,6 +462,20 @@ export default function ProjectDetailPage() {
                         )}
                         {h.judgingNotes && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Judge / reviewer context: {h.judgingNotes}</p>
+                        )}
+                        {idx === 0 && (genlayer || genlayerLoading) && (
+                          <div className="mt-3">
+                            {genlayerLoading && !genlayer ? (
+                              <p className="text-xs text-gray-500 dark:text-gray-400" aria-live="polite">⚖️ Jury reading evidence…</p>
+                            ) : (
+                              <GenlayerVerdictCard
+                                verdict={genlayer.genlayer}
+                                creditSignal={genlayer.creditSignal}
+                                contractAddress={genlayer.genlayer?.contractAddress}
+                                evidenceUrl={genlayer.evidenceUrl}
+                              />
+                            )}
+                          </div>
                         )}
                       </div>
                       

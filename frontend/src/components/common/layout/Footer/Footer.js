@@ -15,7 +15,7 @@ export default function Footer() {
             <ul className="space-y-2">
               <li><Link href="/explore" className="text-sm text-secondary hover:text-primary transition-colors">Explore Projects</Link></li>
               <li><Link href="/leaderboard" className="text-sm text-secondary hover:text-primary transition-colors">Leaderboard</Link></li>
-              <li><Link href="/back?tab=agents" className="text-sm text-secondary hover:text-primary transition-colors">Agents</Link></li>
+              <li><Link href="/back?tab=agents&mode=jury" className="text-sm text-secondary hover:text-primary transition-colors">Agents</Link></li>
             </ul>
           </div>
 

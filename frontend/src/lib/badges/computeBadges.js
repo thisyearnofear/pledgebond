@@ -261,6 +261,25 @@ export function computeProjectBadges(project) {
     }
   }
 
+  // ── Jury Verified (GenLayer) ──
+  // A decentralized jury reached consensus on at least one claim.
+  // Fields are persisted by claim_verification (analyze.js) so this reads
+  // consensus without re-resolving.
+  const juryClaim = hackathons.find((h) => h.juryVerdict);
+  if (juryClaim) {
+    const delivered = juryClaim.juryVerdict === "DELIVERED";
+    const humanVerdict = String(juryClaim.juryVerdict).toLowerCase().replace(/_/g, " ");
+    badges.push({
+      id: "jury-verified",
+      label: delivered ? "Jury: Delivered" : `Jury: ${humanVerdict}`,
+      description: delivered
+        ? `GenLayer jury confirmed delivery${juryClaim.juryConfidence ? ` (${juryClaim.juryConfidence} confidence)` : ""}${juryClaim.juryReason ? ` — ${juryClaim.juryReason}` : ""}`
+        : `GenLayer jury verdict: ${juryClaim.juryVerdict}${juryClaim.juryReason ? ` — ${juryClaim.juryReason}` : ""}`,
+      tier: delivered && juryClaim.juryConfidence === "HIGH" ? "gold" : delivered ? "silver" : "bronze",
+      category: "proof",
+    });
+  }
+
   return badges;
 }
 

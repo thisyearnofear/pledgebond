@@ -44,7 +44,10 @@ export default function LeaderboardPage() {
     let cancelled = false;
 
     async function loadTorque() {
-      setLoading(true);
+      // Only gates the builders/backers tabs; hackathon tabs render from the
+      // second fetch so a slow/failing Torque call can't blank the page.
+      const needsTorque = tab === "builders" || tab === "backers";
+      if (needsTorque) setLoading(true);
       try {
         const res = await fetch("/api/torque/leaderboard");
         if (!res.ok) throw new Error("Failed to load leaderboard");
@@ -57,13 +60,16 @@ export default function LeaderboardPage() {
         }));
       } catch (err) {
         console.warn("Leaderboard fetch failed:", err);
-        if (!cancelled) setEntries(EMPTY_ENTRIES);
+        if (!cancelled && needsTorque) setEntries(EMPTY_ENTRIES);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && needsTorque) setLoading(false);
       }
     }
 
     async function loadHackathons() {
+      // Own loading lane so hackathon tabs paint even while Torque is slow.
+      if (tab === "builders" || tab === "backers") return;
+      setLoading(true);
       try {
         const res = await fetch("/api/hackathons/leaderboard");
         if (!res.ok) throw new Error("Failed to load hackathon leaderboard");
@@ -77,13 +83,15 @@ export default function LeaderboardPage() {
         }));
       } catch (err) {
         console.warn("Hackathon leaderboard fetch failed:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
     loadTorque();
     loadHackathons();
     return () => { cancelled = true; };
-  }, []);
+  }, [tab]);
 
   const { ogImageUrl, ogTitle, ogDescription } = useLeaderboardOG(router.query.ref, entries);
 

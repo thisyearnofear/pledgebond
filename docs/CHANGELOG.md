@@ -1,5 +1,42 @@
 # Changelog
 
+## 2026-09-14 — GenLayer Agent Tank: MilestoneArbiter jury (Future of Work)
+
+Decentralized milestone verdicts via a GenLayer Intelligent Contract, wired end-to-end in mock-safe mode ahead of the Sep 17 Tank deadline.
+
+### Contract (Day 1)
+- `genlayer/contracts/milestone_arbiter.py` — `submit_milestone` → `resolve_milestone` (validators fetch evidence via `gl.get_webpage`, LLM consensus via `eq_principle comparative`) → `challenge` (appeal); `submit_and_resolve` for demos; `get_milestone` / `get_verdict` / `get_total` views
+- `genlayer/DEPLOY.md` — Studio deploy + faucet + seeding steps
+- `.env.example` — `GENLAYER_RPC_URL`, `GENLAYER_CONTRACT_ADDRESS`, `GENLAYER_MOCK`
+
+### Backend (Day 2 AM)
+- `frontend/src/services/GenlayerVerdictService.ts` — JSON-RPC client (no new dep), `mock` flag on verdicts, `toCreditSignal` (+15 / −25 / 0)
+- `POST /api/agent/analyze` `type: 'genlayer_verdict'` — Underwriter entry point (never 500s)
+- `claim_verification` now resolves a jury verdict per claim (signals `jury_delivered` / `jury_not_delivered` / `jury_inconclusive`), returns `jury` payload + `source: 'genlayer'` when confirmed, persists `juryVerdict/juryConfidence/juryReason/juryCreditBoost/juryResolvedAt/juryContract` onto claims
+- `POST /api/genlayer/submit` + `GET /api/genlayer/verdict` — submit/attest + read path; `VerificationResult.provider` gains `'genlayer'`
+
+### Product design (Day 2 PM — stakeholders)
+- `GenlayerVerdictCard` rewritten in ProofBadge grammar: tiered pill, gold shimmer only when earned, `live jury`/`preview` provenance, reason quote, progressive-disclosure details (contract link hidden in preview)
+- `jury-verified` badge in `computeProjectBadges` (ScaleIcon mapped in `ProofBadge`), fed by persisted jury fields — no re-resolve per view
+- `HACKATHON_VERIFICATION_FIELDS` extended so jury state survives project edits
+- `GenlayerDemoPanel` on `/back?tab=agents`: preset tabs with expectation hints, narrated 3-step loading, touch-size CTA, `role=tablist` + `aria-live`/`role=alert`
+- `SourceBadge` renders `genlayer` → "Jury", `genlayer-mock` → "Jury Preview"
+- Project page: jury auto-resolves from first claim evidence, card under first hackathon claim
+- `scripts/seed-genlayer-demo.js` — Future of Work demo project seed (dotenv + `--confirm` convention)
+
+### Tests
+- `genlayer-routes.test.js` — 9 tests: submit/verdict/analyze routes, graceful degradation, card render states (delivered/not-delivered/null, expand disclosure)
+- `navigation.test.js` + `ai-redirects.test.jsx` — jury-first routing (`agentsHref()` defaults to `mode=jury`; `/analyze` → `mode=analyze`)
+
+### Stakeholder UX + performance (same day)
+- **Jury as first-class mode:** new `⚖️ Jury` tab on Agents (`/back?tab=agents&mode=jury`, lazy-loaded), default mode for `agentsHref()`; footer + `/back` preserve it. Demo no longer stacked above all modes.
+- **Performance:** `useProjectData` bounded to 60 docs + 90s shared module cache + in-flight dedupe (was unbounded full-collection read per mount); search debounced 220ms in `useProjectFilters`; `LiveAgentTicker` subscribes only while visible (`IntersectionObserver`) and pauses rotation in hidden tabs; leaderboard per-tab loading lanes (slow Torque can't blank Payouts tab); landing strip fetch deferred to idle with skeleton height reserve (no CTA shift).
+- `SourceBadge` renders `genlayer` → "Jury", `genlayer-mock` → "Jury Preview"
+
+### Docs
+- `docs/GENLAYER_TANK_SUBMISSION.md` — track, load-bearing integration diagram, contract table (TBDs for post-deploy paste), demo path, design rationale, checklist
+- `docs/README.md` — 4-provider verification, jury badge states, GenLayer Jury section
+
 ## 2026-09-04 — Rebrand to PledgeBond
 
 Full codebase rename from "Proof of Ship" / "Builder Credit" to "PledgeBond". ~140 tracked files updated plus the logo asset; 466/466 Vitest tests pass, TypeScript clean, production build clean.

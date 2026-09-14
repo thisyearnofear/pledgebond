@@ -9,6 +9,7 @@
  *   Body: { project: { name, description, githubUrl?, ecosystem? } }
  *   Body: { type: 'credit', scoreData: { reputation, totalBacking, milestonesCompleted, milestonesTotal } }
  *   Body: { type: 'claim_verification', project: { hackathons: [...] } }
+ *   Body: { type: 'genlayer_verdict', description, evidenceUrl, criteria? }
  *   Body: { type: 'listing_improvement', project: { ... } }
  *
  * Tracks: Tether Frontier Track ($10K)
@@ -126,6 +127,31 @@ Focus on what the score means for their borrowing capacity and what would improv
           }
         }
 
+        // 2b. GenLayer jury — delivery verdict from the public evidence URL.
+        // Runs whenever the claim links public evidence; mock-safe (no RPC
+        // configured → deterministic offline verdict, same interface).
+        // Note: page views trigger this, so we persist the verdict onto the
+        // claim (step 4) but do NOT mint attestations here — those are only
+        // written by POST /api/genlayer/submit (explicit user action).
+        let juryResult = null;
+        const juryEvidenceUrl = claim.evidenceUrl || claim.url || claim.submissionUrl || claim.announcementUrl;
+        if (juryEvidenceUrl && /^https?:\/\//.test(juryEvidenceUrl)) {
+          try {
+            const { genlayerVerdictService, toCreditSignal } = await import('@/services/GenlayerVerdictService');
+            const verdict = await genlayerVerdictService.submitAndResolve({
+              description: `${claim.name || `Hackathon ${idx + 1}`} — ${claim.outcome || 'milestone delivery'}`,
+              evidenceUrl: juryEvidenceUrl,
+              criteria: 'Deliverable exists at the evidence URL and meets the stated outcome.',
+            });
+            juryResult = { ...verdict, creditSignal: toCreditSignal(verdict.verdict) };
+            if (verdict.verdict === 'DELIVERED') signals.push('jury_delivered');
+            else if (verdict.verdict === 'NOT_DELIVERED') signals.push('jury_not_delivered');
+            else signals.push('jury_inconclusive');
+          } catch (err) {
+            console.warn(`GenLayer jury failed for claim ${idx}:`, err.message);
+          }
+        }
+
         // 3. Compute credibility score
         const totalSignals = signals.length + (onChainResult?.verified ? 1 : 0);
         const totalPossible = totalSignals + missing.length;
@@ -139,6 +165,15 @@ Focus on what the score means for their borrowing capacity and what would improv
           missing,
           credibility: signalScore >= 80 ? 'high' : signalScore >= 50 ? 'medium' : 'low',
           signalScore,
+          jury: juryResult ? {
+            verdict: juryResult.verdict,
+            confidence: juryResult.confidence,
+            reason: juryResult.reason,
+            creditBoost: juryResult.creditSignal?.boost ?? 0,
+            contractAddress: juryResult.contractAddress,
+            txHash: juryResult.txHash,
+            mock: juryResult.mock === true,
+          } : null,
           onChainVerification: onChainResult ? {
             verified: onChainResult.verified,
             provider: onChainResult.provider,
@@ -152,8 +187,10 @@ Focus on what the score means for their borrowing capacity and what would improv
 
         verifiedClaims.push(claimResult);
 
-        // 4. Update the project's hackathon claim in Firestore with verification results
-        if (onChainResult && project.slug && firebaseModule) {
+        // 4. Update the project's hackathon claim in Firestore with verification results.
+        // Jury fields persist so Jury Verified badges + leaderboard read consensus
+        // without re-resolving on every view.
+        if ((onChainResult || juryResult) && project.slug && firebaseModule) {
           try {
             const { db } = firebaseModule;
             const projectRef = db.collection('projects').doc(project.slug);
@@ -166,13 +203,23 @@ Focus on what the score means for their borrowing capacity and what would improv
               if (idx < hackathons.length) {
                 hackathons[idx] = {
                   ...hackathons[idx],
-                  payoutVerified: onChainResult.verified,
-                  payoutConfidence: onChainResult.confidence,
-                  payoutAttestationId: onChainResult.attestationId,
-                  payoutActualAmount: onChainResult.actualAmount,
-                  payoutVerifiedAt: new Date().toISOString(),
-                  payoutProvider: onChainResult.provider,
-                  payoutAt: onChainResult.payoutTimestamp || hackathons[idx].payoutAt,
+                  ...(onChainResult ? {
+                    payoutVerified: onChainResult.verified,
+                    payoutConfidence: onChainResult.confidence,
+                    payoutAttestationId: onChainResult.attestationId,
+                    payoutActualAmount: onChainResult.actualAmount,
+                    payoutVerifiedAt: new Date().toISOString(),
+                    payoutProvider: onChainResult.provider,
+                    payoutAt: onChainResult.payoutTimestamp || hackathons[idx].payoutAt,
+                  } : {}),
+                  ...(juryResult ? {
+                    juryVerdict: juryResult.verdict,
+                    juryConfidence: juryResult.confidence,
+                    juryReason: juryResult.reason,
+                    juryCreditBoost: juryResult.creditSignal?.boost ?? 0,
+                    juryResolvedAt: juryResult.resolvedAt,
+                    juryContract: juryResult.contractAddress,
+                  } : {}),
                 };
 
                 await projectRef.update({
@@ -190,17 +237,51 @@ Focus on what the score means for their borrowing capacity and what would improv
       const avgScore = Math.round(verifiedClaims.reduce((sum, c) => sum + c.signalScore, 0) / verifiedClaims.length);
       const verifiedCount = verifiedClaims.filter((c) => c.credibility === 'high').length;
       const onChainVerifiedCount = verifiedClaims.filter((c) => c.onChainVerification?.verified).length;
+      const juryDeliveredCount = verifiedClaims.filter((c) => c.jury?.verdict === 'DELIVERED').length;
 
       return res.status(200).json({
         success: true,
         analysis: {
-          summary: `Verified ${verifiedClaims.length} hackathon claim(s). ${verifiedCount} high credibility, ${onChainVerifiedCount} on-chain confirmed. Average score: ${avgScore}/100.`,
+          summary: `Verified ${verifiedClaims.length} hackathon claim(s). ${verifiedCount} high credibility, ${onChainVerifiedCount} on-chain confirmed, ${juryDeliveredCount} jury-delivered. Average score: ${avgScore}/100.`,
           verified: avgScore >= 50,
           claims: verifiedClaims,
           attestationsCreated,
         },
-        source: onChainVerifiedCount > 0 ? 'on-chain' : 'rule-based',
+        source: onChainVerifiedCount > 0 ? 'on-chain' : juryDeliveredCount > 0 ? 'genlayer' : 'rule-based',
       });
+    }
+
+    // ── GenLayer jury verdict (Agent Tank) ────────────────────────
+    // Underwriter consumes the MilestoneArbiter verdict as a credit signal.
+    // Works in mock mode (no GENLAYER_RPC_URL) so the demo never blocks.
+    if (type === 'genlayer_verdict' && req.body) {
+      const { description, evidenceUrl, criteria, milestoneId, contractAddress } = req.body;
+      try {
+        const { genlayerVerdictService, toCreditSignal } = await import('@/services/GenlayerVerdictService');
+        const verdict = description && evidenceUrl
+          ? await genlayerVerdictService.submitAndResolve({ description, evidenceUrl, criteria })
+          : await genlayerVerdictService.getVerdict(
+              contractAddress || process.env.GENLAYER_CONTRACT_ADDRESS || 'mock-genlayer-contract',
+              String(milestoneId ?? '0')
+            );
+        const creditSignal = toCreditSignal(verdict.verdict);
+        return res.status(200).json({
+          success: true,
+          source: verdict.txHash ? 'genlayer' : 'genlayer-mock',
+          analysis: {
+            summary: `GenLayer jury: ${verdict.verdict} (${verdict.confidence}) — credit ${creditSignal.boost >= 0 ? '+' : ''}${creditSignal.boost}. ${verdict.reason}`,
+            verified: verdict.verdict === 'DELIVERED',
+            genlayer: verdict,
+            creditSignal,
+          },
+        });
+      } catch (err) {
+        return res.status(200).json({
+          success: false,
+          source: 'genlayer-error',
+          analysis: { summary: `GenLayer resolution failed: ${err.message}`, verified: false, genlayer: null },
+        });
+      }
     }
 
     // ── Listing improvement ──────────────────────────────────────

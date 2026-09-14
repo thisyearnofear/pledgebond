@@ -8,6 +8,7 @@ import {
   sortBackerProjects,
   prioritizeScoutProjects,
 } from "@/utils/projectUtils";
+import { debounce } from "@/utils/common";
 
 /**
  * @param {object[]} projects
@@ -16,10 +17,26 @@ import {
 export default function useProjectFilters(projects, options = {}) {
   const { limit = null, scoutProjects } = options;
 
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterEcosystem, setFilterEcosystem] = useState("all");
   const [filterMultiplier, setFilterMultiplier] = useState("all");
   const [sortBy, setSortBy] = useState("health");
+
+  // Debounce keystrokes → filtering runs ~4x/sec max instead of per-keystroke.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const pushSearch = useCallback(
+    debounce((v) => setSearchQuery(v), 220),
+    []
+  );
+
+  const setSearch = useCallback(
+    (v) => {
+      setSearchInput(v);
+      pushSearch(v);
+    },
+    [pushSearch]
+  );
 
   const sortedMatches = useMemo(() => {
     const filtered = filterBackerProjects(projects, {
@@ -43,6 +60,7 @@ export default function useProjectFilters(projects, options = {}) {
     || filterMultiplier !== "all";
 
   const clearFilters = useCallback(() => {
+    setSearchInput("");
     setSearchQuery("");
     setFilterEcosystem("all");
     setFilterMultiplier("all");
@@ -51,8 +69,8 @@ export default function useProjectFilters(projects, options = {}) {
   return {
     filteredProjects,
     totalMatches,
-    searchQuery,
-    setSearchQuery,
+    searchQuery: searchInput,
+    setSearchQuery: setSearch,
     filterEcosystem,
     setFilterEcosystem,
     filterMultiplier,

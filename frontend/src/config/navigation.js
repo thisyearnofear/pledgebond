@@ -26,7 +26,7 @@ export const AGENTS_TAB = "agents";
 /** @deprecated Use AGENTS_TAB — kept for inbound links during transition */
 export const LEGACY_AGENTS_TAB = "economy";
 
-export const AGENT_MODES = ["analyze", "scout", "compare", "setup"];
+export const AGENT_MODES = ["jury", "analyze", "scout", "compare", "setup"];
 
 /**
  * @param {string} [mode]
@@ -35,8 +35,8 @@ export const AGENT_MODES = ["analyze", "scout", "compare", "setup"];
  */
 export function agentsHref(mode, projectId) {
   const query = new URLSearchParams({ tab: AGENTS_TAB });
-  const resolved = mode && mode !== "analyze" ? mode : null;
-  if (resolved) query.set("mode", resolved);
+  const resolved = mode || "jury";
+  query.set("mode", resolved);
   if (projectId) query.set("project", projectId);
   return `/back?${query.toString()}`;
 }

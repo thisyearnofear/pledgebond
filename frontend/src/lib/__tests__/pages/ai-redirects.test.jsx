@@ -28,11 +28,11 @@ describe("legacy AI route redirects", () => {
     replace.mockClear();
   });
 
-  it("redirects /analyze to Back Agents", async () => {
+  it("redirects /analyze to Back Agents analyze mode", async () => {
     const AnalyzeRedirectPage = (await import("@/pages/analyze")).default;
     render(<AnalyzeRedirectPage />);
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith(`/back?tab=${AGENTS_TAB}`);
+      expect(replace).toHaveBeenCalledWith(`/back?tab=${AGENTS_TAB}&mode=analyze`);
     });
   });
 

@@ -27,30 +27,50 @@ export default function LiveAgentTicker() {
   const [index, setIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
 
-  // Subscribe to real agent runs
+  // Subscribe to real agent runs — only while the ticker is on screen.
+  // Previously this held a Firestore listener on every page (landing +
+  // explore mount it), billing reads for users who never see a tick.
   useEffect(() => {
-    const q = query(
-      collection(db, 'agent_runs'),
-      orderBy('timestamp', 'desc'),
-      limit(20)
+    if (typeof IntersectionObserver === "undefined") return;
+    const el = document.getElementById("agent-ticker");
+    if (!el) return;
+    let unsubscribe = null;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.some((e) => e.isIntersecting);
+        if (visible && !unsubscribe) {
+          const q = query(
+            collection(db, 'agent_runs'),
+            orderBy('timestamp', 'desc'),
+            limit(20)
+          );
+          unsubscribe = onSnapshot(q, (snapshot) => {
+            const newRuns = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
+            setRuns(newRuns);
+          }, (error) => {
+            console.warn('Agent runs feed unavailable:', error.message);
+          });
+        } else if (!visible && unsubscribe) {
+          unsubscribe();
+          unsubscribe = null;
+        }
+      },
+      { rootMargin: "100px" }
     );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newRuns = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setRuns(newRuns);
-    }, (error) => {
-      console.warn('Agent runs feed unavailable:', error.message);
-    });
-
-    return () => unsubscribe();
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
-  // Rotate through activities
+  // Rotate through activities — paused when tab hidden (no wasted renders).
   useEffect(() => {
     const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
       setIsVisible(false);
       setTimeout(() => {
         setIndex((prev) => {
@@ -78,7 +98,7 @@ export default function LiveAgentTicker() {
   ).length;
 
   return (
-    <div className="bg-slate-900 text-cyan-400 py-1.5 px-4 overflow-hidden border-b border-slate-800">
+    <div id="agent-ticker" className="bg-slate-900 text-cyan-400 py-1.5 px-4 overflow-hidden border-b border-slate-800">
       <div className="max-w-7xl mx-auto flex items-center gap-3">
         <div className="flex items-center gap-1.5 shrink-0">
           <div className="relative">

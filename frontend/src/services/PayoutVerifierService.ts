@@ -24,7 +24,7 @@ export interface PayoutClaim {
 
 export interface VerificationResult {
   verified: boolean;
-  provider: 'circle' | 'evm' | 'solana' | 'manual';
+  provider: 'circle' | 'evm' | 'solana' | 'manual' | 'genlayer';
   actualAmount: number | null;
   payoutTimestamp: string | null;
   payoutTxHash: string | null;

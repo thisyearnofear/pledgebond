@@ -55,7 +55,7 @@ export default function BackPage() {
     setTabState(t);
     const query = t === "discover" ? {} : { tab: t };
     if (t === "agents") {
-      if (router.query.mode) query.mode = router.query.mode;
+      query.mode = router.query.mode || "jury";
       if (router.query.project) query.project = router.query.project;
     }
     router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
