@@ -46,11 +46,21 @@ async function main() {
   await impl.deployed();
   console.log(`✅ Implementation deployed to: ${impl.address}`);
 
+  // Admin can differ from the deployer: set ADMIN_ADDRESS to a multisig so
+  // upgrade/pause/treasury powers never sit on the hot deploy key.
+  const adminAddress = process.env.ADMIN_ADDRESS || deployer.address;
+  if (adminAddress === deployer.address && chainId === 5042) {
+    console.warn(
+      "⚠️  ADMIN_ADDRESS not set — deployer key will hold admin roles on mainnet."
+    );
+  }
+  console.log(`🔐 Contract admin: ${adminAddress}`);
+
   // Encode the initialize call
   const initData = impl.interface.encodeFunctionData("initialize", [
     hackathonRegistry.address,
     usdcAddress,
-    deployer.address,
+    adminAddress,
   ]);
 
   // Deploy ERC1967 proxy manually using the ERC1967Proxy artifact from upgrades-core
@@ -99,12 +109,14 @@ async function main() {
     network: networkName,
     chainId: chainId,
     usdcAddress: usdcAddress,
+    contractVersion: "2.0.0",
     contracts: {
       HackathonRegistry: hackathonRegistry.address,
       BuilderCreditCore: proxy.address,
       BuilderCreditCoreImpl: impl.address,
     },
     deployer: deployer.address,
+    admin: adminAddress,
     deploymentTime: new Date().toISOString(),
     blockNumber: await ethers.provider.getBlockNumber(),
     proxyKind: "uups",
