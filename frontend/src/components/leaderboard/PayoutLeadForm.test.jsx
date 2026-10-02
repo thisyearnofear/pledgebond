@@ -84,6 +84,7 @@ describe('PayoutLeadForm', () => {
         email: 'test@example.com',
         prizeAmount: 5000,
         wallet: '0x1234',
+        announcementUrl: null,
       }),
     });
   });

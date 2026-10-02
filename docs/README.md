@@ -4,7 +4,7 @@ Decentralized platform where backers fund builders and hackathon prizes collater
 
 > **6★ Winner Experience:** See [SIX_STAR_ROADMAP.md](./SIX_STAR_ROADMAP.md) for the full initiative tracking — what's done (security hardening, winner moments, dark-mode migration) and what remains (scale, lifecycle, organizer tools).
 >
-> **New:** See [VISION.md](./VISION.md) for the unified capital-stack narrative (Bags Token → x402 Credit → Prize Routing) and how the agentic layer prices, scouts, and verifies across all three rails.
+> **New:** See [VISION.md](./VISION.md) for the wedge (builders-as-businesses, verified track record as collateral) plus the unified capital-stack narrative (Bags Token → x402 Credit → Prize Routing) and how the agentic layer prices, scouts, and verifies across all three rails.
 >
 > **Arc update:** See [HACKATHON_ARC.md](./HACKATHON_ARC.md) for the current Arc agent integration, including the simplified `setup → analyze → review` flow, explicit demo/live payment states, and result-source metadata.
 

@@ -10,6 +10,7 @@ import ProjectHealthChart from './ProjectHealthChart';
 import SnsIdentityBadge from '@/components/common/SnsIdentityBadge';
 import { BuilderTrustCompact } from '@/components/common/BuilderTrust';
 import { isValidSolanaAddress } from '@/utils/common';
+import useAgentPeek from '@/hooks/useAgentPeek';
 import { 
   CurrencyDollarIcon, 
   ArrowTrendingUpIcon,
@@ -39,6 +40,10 @@ const BORDER_COLORS = [
 export default function ProjectCard({ project, onBack, scoutScore }) {
   const progress = (project.totalBacked / project.targetFunding) * 100;
   const ecoStyle = ECOSYSTEM_STYLES[project.ecosystem] || ECOSYSTEM_STYLES.base;
+
+  // Cached Underwriter summary — free read, paid for by the first caller.
+  const { peek } = useAgentPeek(project.id || project.slug);
+  const peekScore = peek?.summary?.healthScore ?? null;
   
   // Pick a border color based on project index for visual variety
   const borderClass = BORDER_COLORS[(project.slug || project.id || '').length % BORDER_COLORS.length];
@@ -84,6 +89,20 @@ export default function ProjectCard({ project, onBack, scoutScore }) {
           {scoutScore?.backed && (
             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 bg-indigo-50 rounded-full px-2 py-0.5">
               🤖 {scoutScore.score}/100
+            </span>
+          )}
+
+          {/* Cached Underwriter summary — first caller paid, this read is free */}
+          {peekScore != null && (
+            <span
+              title={`Underwriter · cached ${peek.cachedAge}`}
+              className={`inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5 border ${
+                peek?.summary?.healthVerdict === "back"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : "bg-gray-50 text-gray-600 border-gray-200"
+              }`}
+            >
+              📊 {peekScore}/100{peek?.summary?.recommendation ? ` · ${peek.summary.recommendation}` : ""}
             </span>
           )}
           

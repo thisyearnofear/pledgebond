@@ -11,7 +11,9 @@
  */
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useUser } from '@/stores/authStore';
+import { trackFunnelStep } from '@/lib/funnel';
 import { Card } from '@/components/common/Card';
 import Button from '@/components/common/Button';
 import { Input, Textarea, Select, Checkbox } from '@/components/common/Input';
@@ -101,6 +103,7 @@ export default function WinnerGate({ onSubmitClaim, loading, pendingClaim, error
     setSubmitting(false);
 
     if (result.success) {
+      trackFunnelStep('winner_claim', 'claim_submitted', { outcome });
       setSubmitted(true);
     } else {
       setSubmitError(result.error || 'Failed to submit claim');
@@ -274,6 +277,20 @@ export default function WinnerGate({ onSubmitClaim, loading, pendingClaim, error
           The founder reviews every claim personally. You&apos;ll typically get verified ASAP.
         </p>
       </form>
+
+      {/* No win yet — route to the front door instead of a dead end */}
+      <div className="mt-6 pt-6 border-t border-default text-center">
+        <p className="text-sm text-secondary mb-2">
+          Haven&apos;t won a hackathon yet?
+        </p>
+        <Link
+          href="/explore?tab=hackathons"
+          className="text-sm font-medium text-amber-700 dark:text-amber-300 hover:underline"
+          onClick={() => trackFunnelStep('winner_claim', 'explore_hackathons_clicked')}
+        >
+          Browse active and upcoming hackathons to find your first win →
+        </Link>
+      </div>
     </Card>
   );
 }

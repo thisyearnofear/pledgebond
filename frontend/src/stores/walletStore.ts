@@ -264,6 +264,15 @@ async function deposit(amountUSDC: number) {
 
 async function payForAgent(agentType: string, params: any = {}) {
   const url = buildAgentUrl(agentType, params);
+  // Underwrite is sponsored-first: the server funds the first N calls per
+  // user (agentSponsorship) so new backers get value before the x402 toll.
+  // Other agents keep the direct paid path.
+  if (agentType === "underwrite") {
+    const result = await nanopaymentService.payOrSponsor(url);
+    const transactions = [result, ...walletStore.getState().nanopayment.transactions].slice(0, 50);
+    walletStore.setState((s) => ({ nanopayment: { ...s.nanopayment, transactions } }));
+    return result;
+  }
   const result = await nanopaymentService.pay(url, { method: "GET" });
   const transactions = [result, ...walletStore.getState().nanopayment.transactions].slice(0, 50);
   walletStore.setState((s) => ({ nanopayment: { ...s.nanopayment, transactions } }));

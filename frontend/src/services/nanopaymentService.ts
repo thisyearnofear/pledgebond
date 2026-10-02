@@ -124,6 +124,47 @@ class NanopaymentService {
     const url = `${baseUrl || ""}/api/agent/underwrite?projectId=${projectId}`;
     return this.pay(url);
   }
+
+  /**
+   * Sponsored-first agent call: plain fetch first — the server funds it
+   * from the caller's free-call budget (agentSponsorship) when available.
+   * On 402 (budget spent) fall back to the deposit-gated x402 client.
+   * Same call shape as pay(): { success, data, status }.
+   */
+  async payOrSponsor(url: string, options?: {
+    method?: 'GET' | 'POST';
+    headers?: Record<string, string>;
+  }): Promise<PaymentResult> {
+    try {
+      const res = await fetch(url, {
+        method: options?.method || 'GET',
+        headers: options?.headers,
+      });
+      if (res.status === 402) {
+        // Budget spent — paid path (requires an initialized client).
+        if (!this.client) {
+          return {
+            success: false,
+            status: "payment_required",
+            error: "Free calls used up. Deposit USDC to keep analyzing.",
+          };
+        }
+        return this.pay(url, options);
+      }
+      const data = await res.json().catch(() => null);
+      return {
+        success: res.ok && data?.success !== false,
+        status: res.ok ? "paid" : "failed",
+        data,
+      };
+    } catch (error: unknown) {
+      return {
+        success: false,
+        status: "failed",
+        error: error instanceof Error ? error.message : "Request failed",
+      };
+    }
+  }
 }
 
 export const nanopaymentService = new NanopaymentService();

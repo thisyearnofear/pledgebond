@@ -4,6 +4,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useUser } from "@/stores/authStore";
 import useWinnerStatus from "@/hooks/useWinnerStatus";
 import { Card } from "@/components/common/Card";
@@ -33,9 +34,30 @@ function matchPayoutEntry(wins, hackathons) {
 export default function WinnerHome() {
   const { currentUser } = useUser();
   const { isVerified, wins, pendingClaim, loading: winnerLoading } = useWinnerStatus();
+  const router = useRouter();
   const [hackathons, setHackathons] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loadingExtra, setLoadingExtra] = useState(true);
+
+  // Deep-link focus: /build?tab=wins&focus=claim scrolls to + flashes the
+  // exact action card (pending review or unclaimed win CTA).
+  useEffect(() => {
+    if (winnerLoading) return;
+    if (router.query.focus !== "claim") return;
+    const anchor = pendingClaim ? "win-status-card" : !isVerified ? "win-status-card" : null;
+    if (!anchor) return;
+    const el = document.getElementById(anchor);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ring-2", "ring-amber-400", "ring-offset-2", "rounded-xl");
+    const timer = setTimeout(() => {
+      el.classList.remove("ring-2", "ring-amber-400", "ring-offset-2", "rounded-xl");
+    }, 2400);
+    return () => {
+      clearTimeout(timer);
+      el.classList.remove("ring-2", "ring-amber-400", "ring-offset-2", "rounded-xl");
+    };
+  }, [router.query.focus, winnerLoading, pendingClaim, isVerified]);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,7 +123,7 @@ export default function WinnerHome() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="p-5 space-y-3">
+        <Card id="win-status-card" className="p-5 space-y-3 transition-shadow">
           <div className="flex items-center gap-2">
             <TrophyIcon className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <h3 className="font-semibold text-primary">Win status</h3>

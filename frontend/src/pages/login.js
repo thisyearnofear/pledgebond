@@ -8,8 +8,37 @@ import Head from "next/head";
 import SnsIdentityBadge from "@/components/common/SnsIdentityBadge";
 import SetupChecklist from "@/components/common/SetupChecklist";
 import useLoginSetupProgress from "@/hooks/useLoginSetupProgress";
+import { useApp } from "@/stores/profileStore";
 import { getPostLoginDestination } from "@/lib/onboarding/loginSteps";
 import { snsService } from "@/services/SnsService";
+import { trackFunnelStep } from "@/lib/funnel";
+
+/**
+ * StepShell — one ceremony step. Completed steps collapse to a one-line
+ * confirmation; only the active step expands. Beginners keep helper copy
+ * (showHints); experienced users get the terse line.
+ */
+function StepShell({ done, title, doneLine, hint, children }) {
+  if (done) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-green-500/60 bg-green-50 dark:bg-green-900/20">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-primary">{title}</p>
+          <p className="truncate text-xs text-green-800 dark:text-green-300">{doneLine}</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-lg border-2 transition-all border-gray-200 dark:border-gray-700">
+      {children}
+      {hint && <p className="px-4 pb-3 text-xs text-gray-500 dark:text-gray-400">{hint}</p>}
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const { currentUser, signInWithGithub, signInWithWallet, linkWallet, linkedWallets, userRole, logout } = useUser();
@@ -54,6 +83,9 @@ export default function LoginPage() {
     linked,
     alreadyLinked,
   });
+  // showHints → beginners keep helper copy; experienced users get terse lines.
+  const { getAdaptiveSettings } = useApp();
+  const showHints = getAdaptiveSettings().showHints;
 
   useEffect(() => {
     if (!walletFamily) {
@@ -81,6 +113,8 @@ export default function LoginPage() {
   // On revisit: if Firebase auth persists, skip the full login flow.
   // Redirect immediately if we have wallet-linked data from Firestore,
   // even without a fresh wallet connection.
+  // GitHub-only builders: redirect into the hub with a banner reminding
+  // them to link a wallet before requesting funding.
   useEffect(() => {
     if (isFullyAuthed || (alreadyLinked && currentUser)) {
       const dest = getPostLoginDestination(role || userRole || "builder", redirect);
@@ -95,7 +129,22 @@ export default function LoginPage() {
       const timer = setTimeout(() => router.push(dest), 500);
       return () => clearTimeout(timer);
     }
-  }, [isFullyAuthed, alreadyLinked, currentUser, linkedWallets, redirect, router, role, userRole]);
+    // GitHub-only + role chosen (or defaulting builder) → land in the hub.
+    // Wallet linking is deferred to the first payout-bearing action.
+    if (
+      currentUser &&
+      linkedWallets.length === 0 &&
+      !anyWalletConnected &&
+      !isFullyAuthed
+    ) {
+      const resolvedRole = role || userRole || "builder";
+      if (resolvedRole) {
+        const dest = getPostLoginDestination(resolvedRole, redirect);
+        const timer = setTimeout(() => router.push(dest), 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isFullyAuthed, alreadyLinked, currentUser, linkedWallets, redirect, router, role, userRole, anyWalletConnected]);
 
   const signWalletMessage = useCallback(async () => {
     if (!anyWalletConnected || !activeWalletAddress) throw new Error('No wallet connected');
@@ -147,31 +196,32 @@ export default function LoginPage() {
 
   const handleConnectEvm = () => {
     setError(null);
+    trackFunnelStep("login", "wallet_connect_clicked", { role });
     connectEvm();
     setWalletFamily('evm');
   };
 
   const handleConnectSolana = async () => {
-    try { setError(null); await connectSolana(); setWalletFamily('solana'); }
+    try { setError(null); trackFunnelStep("login", "wallet_connect_clicked", { role }); await connectSolana(); setWalletFamily('solana'); }
     catch { setError("Could not open the Solana wallet picker. Try refreshing the page."); }
   };
 
   const handleGithubLogin = async () => {
-    try { setError(null); setIsSigningIn(true); await signInWithGithub(); }
+    try { setError(null); setIsSigningIn(true); trackFunnelStep("login", "github_connect_clicked", { role }); await signInWithGithub(); }
     catch { setError("GitHub sign-in was cancelled or failed."); }
     finally { setIsSigningIn(false); }
   };
 
   const handleLinkIdentity = async () => {
     if (!currentUser || !anyWalletConnected || !activeWalletAddress) return;
-    try { setError(null); setIsLinking(true); const { signature, message } = await signWalletMessage(); await linkWallet(activeWalletAddress, signature, message, walletFamily); setLinked(true); }
+    try { setError(null); setIsLinking(true); const { signature, message } = await signWalletMessage(); await linkWallet(activeWalletAddress, signature, message, walletFamily); trackFunnelStep("login", "identity_signed", { role, flow: "link" }); setLinked(true); }
     catch (err) { setError(err.message || "Wallet verification failed. Try again."); }
     finally { setIsLinking(false); }
   };
 
   const handleWalletSignIn = async () => {
     if (!anyWalletConnected || !activeWalletAddress) return;
-    try { setError(null); setIsLinking(true); const { signature, message } = await signWalletMessage(); await signInWithWallet(activeWalletAddress, signature, message, walletFamily); setLinked(true); }
+    try { setError(null); setIsLinking(true); const { signature, message } = await signWalletMessage(); await signInWithWallet(activeWalletAddress, signature, message, walletFamily); trackFunnelStep("login", "identity_signed", { role, flow: "wallet_signin" }); setLinked(true); }
     catch (err) { setError(err.message || "Wallet verification failed. Try again."); }
     finally { setIsLinking(false); }
   };
@@ -217,14 +267,14 @@ export default function LoginPage() {
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
           <SetupChecklist steps={setupSteps} />
           <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => setRole('builder')}
+            <button onClick={() => { trackFunnelStep("login", "role_selected", { role: "builder" }); setRole('builder'); }}
               className="p-6 bg-surface rounded-xl border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all text-left group">
               <div className="text-2xl mb-2">{'\u{1F680}'}</div>
               <h3 className="text-lg font-bold text-primary group-hover:text-blue-700 dark:text-blue-300">I&apos;m Building</h3>
               <p className="text-sm text-secondary mt-1">Ship projects and get funded based on your track record.</p>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-3">Connects GitHub + Wallet</p>
             </button>
-            <button onClick={() => setRole('backer')}
+            <button onClick={() => { trackFunnelStep("login", "role_selected", { role: "backer" }); setRole('backer'); }}
               className="p-6 bg-surface rounded-xl border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left group">
               <div className="text-2xl mb-2">{'\u{1F4B0}'}</div>
               <h3 className="text-lg font-bold text-primary group-hover:text-purple-700 dark:text-purple-300">I&apos;m Backing</h3>
@@ -252,25 +302,27 @@ export default function LoginPage() {
           <p className="text-center text-xs text-secondary mb-4">Step {setupProgress.label}</p>
           <div className="bg-surface py-8 px-4 shadow-xl border border-gray-100 sm:rounded-xl sm:px-10">
             {error && <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 dark:text-red-300">{error}</div>}
-            <div className="space-y-6">
-              <div className={`p-4 rounded-lg border-2 transition-all ${anyWalletConnected ? 'border-green-500 dark:border-green-600 bg-green-100 dark:bg-green-900/40' : 'border-gray-200 dark:border-gray-700'}`}>
-                <div className="flex items-center justify-between gap-3">
+            <div className="space-y-4">
+              {/* Step 1 collapses once connected — no reason to re-read it. */}
+              <StepShell
+                done={anyWalletConnected}
+                title="Wallet"
+                doneLine={activeWalletAddress ? `${connectedSnsName || `${activeWalletAddress.slice(0,6)}...${activeWalletAddress.slice(-4)}`} connected` : "Wallet connected"}
+                hint={showHints ? "Where you receive funds." : null}
+              >
+                <div className="flex items-center justify-between gap-3 p-4">
                   <div className="flex items-center">
-                    <div className={`p-2 rounded-full ${anyWalletConnected ? 'bg-green-600 dark:bg-green-500 text-white' : 'bg-gray-100 text-gray-400 dark:text-gray-500'}`}>
-                      {anyWalletConnected ? (
-                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                      ) : <span className="text-xs font-bold">1</span>}
+                    <div className="p-2 rounded-full bg-gray-100 text-gray-400 dark:text-gray-500">
+                      <span className="text-xs font-bold">1</span>
                     </div>
                     <div className="ml-3">
                       <p className="text-sm font-bold text-primary">Your Wallet</p>
-                      <p className={`text-xs ${anyWalletConnected ? 'text-green-800 dark:text-green-300 dark:text-green-200 font-medium' : 'text-secondary'}`}>
-                        {anyWalletConnected && activeWalletAddress ? `Connected: ${connectedSnsName || `${activeWalletAddress.slice(0,6)}...${activeWalletAddress.slice(-4)}`}` : 'Where you receive funds'}
-                      </p>
+                      <p className="text-xs text-secondary">Where you receive funds</p>
                     </div>
                   </div>
-                  {!anyWalletConnected && renderWalletButtons()}
+                  {renderWalletButtons()}
                 </div>
-              </div>
+              </StepShell>
 
               <div className={`p-6 rounded-lg border-2 border-dashed transition-all text-center ${isFullyAuthed ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}>
                 {isFullyAuthed ? (
@@ -321,40 +373,53 @@ export default function LoginPage() {
         <div className="bg-surface py-8 px-4 shadow-xl border border-gray-100 sm:rounded-xl sm:px-10">
           {error && <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700 dark:text-red-300">{error}</div>}
           <div className="space-y-6">
-            <div className={`p-4 rounded-lg border-2 transition-all ${currentUser ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className={`p-2 rounded-full ${currentUser ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-400 dark:text-gray-500'}`}>
-                    {currentUser ? <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <span className="text-xs font-bold">1</span>}
+            <div className="space-y-4">
+              <StepShell
+                done={!!currentUser}
+                title="GitHub"
+                doneLine={currentUser?.displayName ? `Signed in as ${currentUser.displayName}` : "GitHub connected"}
+                hint={showHints ? "We read your public repos to verify your shipping history." : null}
+              >
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-full bg-gray-100 text-gray-400 dark:text-gray-500">
+                      <span className="text-xs font-bold">1</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-bold text-primary">GitHub</p>
+                      <p className="text-xs text-secondary">Verify your shipping history.</p>
+                    </div>
                   </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-bold text-primary">GitHub</p>
-                    <p className="text-xs text-secondary">{currentUser ? `Signed in as ${currentUser.displayName}` : 'We read your public repos to verify your shipping history.'}</p>
-                  </div>
-                </div>
-                {!currentUser && (
                   <button onClick={handleGithubLogin} disabled={isSigningIn}
                     className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-md hover:bg-gray-800 disabled:opacity-50">
                     {isSigningIn ? 'Opening GitHub...' : 'Connect GitHub'}
                   </button>
-                )}
-              </div>
-            </div>
-
-            <div className={`p-4 rounded-lg border-2 transition-all ${anyWalletConnected ? 'border-green-500 dark:border-green-600 bg-green-100 dark:bg-green-900/40' : 'border-gray-200 dark:border-gray-700'}`}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center">
-                  <div className={`p-2 rounded-full ${anyWalletConnected ? 'bg-green-600 dark:bg-green-500 text-white' : 'bg-gray-100 text-gray-400 dark:text-gray-500'}`}>
-                    {anyWalletConnected ? <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> : <span className="text-xs font-bold">2</span>}
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-sm font-bold text-primary">Wallet</p>
-                    <p className={`text-xs ${anyWalletConnected ? 'text-green-800 dark:text-green-300 dark:text-green-200 font-medium' : 'text-secondary'}`}>{anyWalletConnected && activeWalletAddress ? `Connected: ${connectedSnsName || `${activeWalletAddress.slice(0,6)}...${activeWalletAddress.slice(-4)}`}` : 'Where you receive funding payouts.'}</p>
-                  </div>
                 </div>
-                {!anyWalletConnected && renderWalletButtons()}
               </div>
-            </div>
+              </StepShell>
+
+            <StepShell
+              done={anyWalletConnected}
+              title="Wallet"
+              doneLine={activeWalletAddress ? `${connectedSnsName || `${activeWalletAddress.slice(0,6)}...${activeWalletAddress.slice(-4)}`} connected` : "Wallet connected"}
+              hint={showHints ? "Where you receive funding payouts." : null}
+            >
+              <div className="p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center">
+                    <div className="p-2 rounded-full bg-gray-100 text-gray-400 dark:text-gray-500">
+                      <span className="text-xs font-bold">2</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm font-bold text-primary">Wallet</p>
+                      <p className="text-xs text-secondary">Where you receive funding payouts.</p>
+                    </div>
+                  </div>
+                  {renderWalletButtons()}
+                </div>
+              </div>
+            </StepShell>
 
             <div className={`p-6 rounded-lg border-2 border-dashed transition-all text-center ${isFullyAuthed || alreadyLinked ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}>
               {isFullyAuthed ? (
@@ -388,5 +453,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  </div>
   );
 }

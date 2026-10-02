@@ -32,10 +32,10 @@ export function trackEvent(event, properties = {}) {
 
   if (typeof navigator !== "undefined" && navigator.sendBeacon) {
     try {
-      navigator.sendBeacon(
-        ANALYTICS_ENDPOINT,
-        JSON.stringify(payload)
-      );
+      // Blob with type application/json — sendBeacon with a plain string
+      // sends text/plain, which Next's body parser skips (empty req.body).
+      const blob = new Blob([JSON.stringify(payload)], { type: "application/json" });
+      navigator.sendBeacon(ANALYTICS_ENDPOINT, blob);
     } catch {
       // Silently fail — analytics should never break user flow
     }

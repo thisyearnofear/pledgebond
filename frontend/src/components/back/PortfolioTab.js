@@ -16,7 +16,7 @@ import {
   ReceiptPercentIcon,
 } from "@heroicons/react/24/outline";
 
-export default function PortfolioTab({ setTab }) {
+export default function PortfolioTab({ setTab, onPositions, compact = false }) {
   const wallet = useWallet();
   const { chainId, signer } = useBuilderCredit();
   const [loading, setLoading] = useState(true);
@@ -106,6 +106,12 @@ export default function PortfolioTab({ setTab }) {
         if (!cancelled) {
           setBackedDetails(details);
           setCompassScore(calculateCompassScore(roiHistory));
+          // Report up for the tab badge + adaptive landing on /back:
+          // total positions and how many have a ready-to-claim return.
+          const readyCount = details.filter(
+            (d) => !d.claimed && d.milestonesCount > 0 && d.milestonesCompleted >= d.milestonesCount
+          ).length;
+          if (typeof onPositions === "function") onPositions(details.length, readyCount);
         }
       } catch (err) { /* portfolio load failed */ }
       finally { if (!cancelled) setLoading(false); }
@@ -113,7 +119,7 @@ export default function PortfolioTab({ setTab }) {
     
     load();
     return () => { cancelled = true; };
-  }, [wallet.account, signer, chainId]);
+  }, [wallet.account, signer, chainId, onPositions]);
 
   // Fetch claimable Bags fees for Solana wallets
   useEffect(() => {
@@ -175,6 +181,31 @@ export default function PortfolioTab({ setTab }) {
 
   const compassTier = getCompassTier(compassScore);
 
+  // Attention state: milestones done but return not claimed = money on the
+  // table. Drives the badge deep-link + per-card highlight.
+  const maturedUnclaimed = backedDetails.filter(
+    (p) => !p.claimed && p.milestonesCount > 0 && p.milestonesCompleted >= p.milestonesCount
+  );
+
+  // Deep-link focus: /back?tab=portfolio&focus=claim highlights the first
+  // matured-unclaimed position.
+  useEffect(() => {
+    if (!maturedUnclaimed.length) return;
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    if (params?.get("focus") !== "claim") return;
+    const el = document.getElementById("position-claim-attention");
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("ring-2", "ring-amber-400", "ring-offset-2", "rounded-xl");
+    const timer = setTimeout(() => {
+      el.classList.remove("ring-2", "ring-amber-400", "ring-offset-2", "rounded-xl");
+    }, 2400);
+    return () => {
+      clearTimeout(timer);
+      el.classList.remove("ring-2", "ring-amber-400", "ring-offset-2", "rounded-xl");
+    };
+  }, [maturedUnclaimed.length]);
+
   if (loading) return <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>;
 
   if (!wallet.account) {
@@ -201,9 +232,9 @@ export default function PortfolioTab({ setTab }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-5 bg-indigo-50 border-indigo-100">
+    <div className={compact ? "space-y-4" : "space-y-6"}>
+      <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${compact ? "gap-3" : "gap-4"}`}>
+        <Card className={compact ? "p-4 bg-indigo-50 border-indigo-100" : "p-5 bg-indigo-50 border-indigo-100"}>
           <div className="flex items-center gap-3">
             <span className="text-2xl">{compassTier.icon}</span>
             <div>
@@ -213,17 +244,17 @@ export default function PortfolioTab({ setTab }) {
             </div>
           </div>
         </Card>
-        <Card className="p-5">
+        <Card className={compact ? "p-4" : "p-5"}>
           <BanknotesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mb-1" />
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Total Staked</p>
           <p className="text-xl font-bold">${backedDetails.reduce((s, p) => s + parseFloat(p.myStake), 0).toFixed(2)}</p>
         </Card>
-        <Card className="p-5">
+        <Card className={compact ? "p-4" : "p-5"}>
           <TrophyIcon className="w-5 h-5 text-green-600 dark:text-green-400 mb-1" />
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Potential Returns</p>
           <p className="text-xl font-bold">${backedDetails.reduce((s, p) => s + parseFloat(p.potentialReturn), 0).toFixed(2)}</p>
         </Card>
-        <Card className="p-5">
+        <Card className={compact ? "p-4" : "p-5"}>
           <RocketLaunchIcon className="w-5 h-5 text-purple-600 dark:text-purple-400 mb-1" />
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Active Stakes</p>
           <p className="text-xl font-bold">{backedDetails.length}</p>
@@ -259,8 +290,18 @@ export default function PortfolioTab({ setTab }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {backedDetails.map((project) => {
           const progress = (project.milestonesCompleted / project.milestonesCount) * 100;
+          const needsClaim = !project.claimed && project.milestonesCount > 0 && project.milestonesCompleted >= project.milestonesCount;
+          const isFirstAttention = needsClaim && maturedUnclaimed[0]?.id === project.id;
           return (
-            <Card key={project.id} className="border-l-4 border-l-indigo-500 hover:shadow-md transition-shadow">
+            <Card
+              key={project.id}
+              id={isFirstAttention ? "position-claim-attention" : undefined}
+              className={`border-l-4 hover:shadow-md transition-shadow ${
+                needsClaim
+                  ? "border-l-amber-500 bg-amber-50/50 dark:bg-amber-900/10"
+                  : "border-l-indigo-500"
+              }`}
+            >
               <div className="p-5">
                 <div className="flex justify-between items-start mb-3">
                   <div>
@@ -304,8 +345,8 @@ export default function PortfolioTab({ setTab }) {
                   </div>
                 </div>
                 <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                  <span className={`font-medium ${project.claimed ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}>
-                    {project.claimed ? "✓ Claimed" : "Pending"}
+                  <span className={`font-medium ${project.claimed ? "text-green-600 dark:text-green-400" : needsClaim ? "text-amber-600 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}`}>
+                    {project.claimed ? "✓ Claimed" : needsClaim ? "★ Return ready to claim" : "Pending"}
                   </span>
                   <span className="font-medium text-indigo-600 dark:text-indigo-400">{project.myMultiplier}x</span>
                 </div>

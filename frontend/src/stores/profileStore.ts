@@ -229,6 +229,20 @@ function isExperiencedWith(feature: string) {
 
 function getAdaptiveSettings(): AdaptiveSettings {
   const { preferences } = profileStore.getState();
+  // Explicit user override always wins — adaptive that can't be tuned feels creepy.
+  const override = preferences.preferredComplexity;
+  if (override === "advanced" || override === "detailed" || override === "simple") {
+    const advanced = override === "advanced";
+    return {
+      showAdvancedFilters: override !== "simple",
+      showHealthScores: true,
+      showDetailedStats: advanced,
+      defaultComplexity: override,
+      autoExpandSections: advanced,
+      showHints: override === "simple",
+      enableCompactMode: advanced,
+    };
+  }
   const total = preferences.totalInteractions || 0;
   const level = preferences.experienceLevel || (total >= 100 ? "advanced" : total >= 30 ? "intermediate" : "beginner");
   return {
@@ -286,6 +300,11 @@ function refreshDerived(_userProfile: any, _creditData: any) {
 // ============================================================================
 // Router sync (route changes update lastVisitedEcosystem)
 // ============================================================================
+
+// NOTE: route tracking is written directly by the project detail page effect
+// (trackProjectInteraction + lastVisitedEcosystem) rather than a global router
+// hook — explicit call sites beat magic listeners. This stub remains only so
+// initProfileStore() keeps its shape; do not re-add router magic here.
 
 function attachRouterSync() {
   if (typeof window === "undefined") return;

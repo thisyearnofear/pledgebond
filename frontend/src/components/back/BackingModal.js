@@ -2,12 +2,13 @@
  * BackingModal — stake USDC on a builder project (extracted from DiscoverTab).
  */
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ShareIcon } from "@heroicons/react/24/outline";
 import { Card } from "@/components/common/Card";
 import Confetti from "@/components/common/Confetti";
 import SnsIdentityBadge from "@/components/common/SnsIdentityBadge";
 import { isValidSolanaAddress } from "@/utils/common";
+import { trackFunnelStep } from "@/lib/funnel";
 
 /**
  * Fire-and-forget: notify the builder that they just got backed.
@@ -53,6 +54,13 @@ export default function BackingModal({ project, wallet, onClose, onSuccess }) {
   const [backingMultiplier, setBackingMultiplier] = useState("150");
   const [backingStatus, setBackingStatus] = useState(null);
   const [backingError, setBackingError] = useState(null);
+  const amountTrackedRef = useRef(false);
+
+  // Funnel: modal_opened fires once per mount (per project).
+  useEffect(() => {
+    if (project?.id) trackFunnelStep("backing", "modal_opened", { projectId: project.id });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project?.id]);
 
   const showsSolName = !!project?.developer
     && (project?.ecosystem === "solana" || isValidSolanaAddress(project.developer));
@@ -72,6 +80,7 @@ export default function BackingModal({ project, wallet, onClose, onSuccess }) {
         parseFloat(backingAmount),
       );
       setBackingStatus("success");
+      trackFunnelStep("backing", "tx_confirmed", { projectId: project.id });
       onSuccess?.();
 
       // Fire-and-forget: notify the builder they got backed
@@ -79,6 +88,7 @@ export default function BackingModal({ project, wallet, onClose, onSuccess }) {
     } catch (err) {
       setBackingStatus("error");
       setBackingError(err.message || "Transaction failed");
+      trackFunnelStep("backing", "tx_failed", { projectId: project.id, error: String(err.message || err).slice(0, 120) });
     }
   };
 
@@ -155,7 +165,13 @@ export default function BackingModal({ project, wallet, onClose, onSuccess }) {
                   min="1"
                   step="1"
                   value={backingAmount}
-                  onChange={(e) => setBackingAmount(e.target.value)}
+                  onChange={(e) => {
+                    setBackingAmount(e.target.value);
+                    if (parseFloat(e.target.value) > 0 && !amountTrackedRef.current) {
+                      amountTrackedRef.current = true;
+                      trackFunnelStep("backing", "amount_entered", { projectId: project.id });
+                    }
+                  }}
                   placeholder="100"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                 />

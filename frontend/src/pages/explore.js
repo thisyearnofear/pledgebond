@@ -16,6 +16,7 @@ import LiveAgentTicker from "@/components/common/LiveAgentTicker";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ECOSYSTEM_CONFIGS } from "@/config/ecosystems";
 import useEcosystemPreference from "@/hooks/useEcosystemPreference";
+import { useApp } from "@/stores/profileStore";
 
 const ProjectsTab = dynamic(() => import("@/components/explore/ProjectsTab").then((m) => m.default), {
   ssr: false,
@@ -46,7 +47,8 @@ function parseEcosystems(value) {
 
 export default function ExplorePage() {
   const router = useRouter();
-  const { primary, hasExplicitPrimary, setPrimaryEcosystem } = useEcosystemPreference();
+  const { primary, hasExplicitPrimary, setPrimaryEcosystem, ranked } = useEcosystemPreference();
+  const { trackEcosystemInteraction } = useApp();
   const tab = router.query.tab || "projects";
   const selectedEcosystems = parseEcosystems(router.query.ecosystem);
 
@@ -73,7 +75,11 @@ export default function ExplorePage() {
   const setEcosystems = (ecosystems) => {
     const next = [...new Set(ecosystems)].filter((id) => ECOSYSTEM_IDS.includes(id));
     const query = { ...router.query, ecosystem: next.length > 0 ? next.join(",") : "all" };
-    if (next.length > 0) setPrimaryEcosystem(next[0]);
+    if (next.length > 0) {
+      setPrimaryEcosystem(next[0]);
+      // Feed the learning loop — filter use is an implicit preference signal.
+      try { trackEcosystemInteraction(next[0], "filter"); } catch {}
+    }
     router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
   };
 
@@ -112,7 +118,10 @@ export default function ExplorePage() {
               >
                 All ecosystems
               </button>
-              {Object.entries(ECOSYSTEM_CONFIGS).map(([id, config]) => (
+              {ranked.map((id) => {
+                const config = ECOSYSTEM_CONFIGS[id];
+                if (!config) return null;
+                return (
                 <button
                   key={id}
                   type="button"
@@ -126,7 +135,8 @@ export default function ExplorePage() {
                 >
                   {config.icon} {config.shortName}
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
           <TabBar tabs={TABS} activeTab={tab} onChange={setTab} variant="pill" className="mb-6" />

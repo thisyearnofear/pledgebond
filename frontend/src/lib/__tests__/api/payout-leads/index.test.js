@@ -4,12 +4,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const addMock = vi.fn(() => Promise.resolve({ id: 'lead-123' }));
-
-const fakeDoc = () => ({
+const leadGetMock = vi.fn(() => Promise.resolve({
   id: 'lead-123',
-  get: vi.fn(() => Promise.resolve({ exists: false })),
-  set: vi.fn(() => Promise.resolve()),
-  update: vi.fn(() => Promise.resolve()),
+  data: () => ({
+    hackathonName: 'Test Hackathon',
+    email: 'test@example.com',
+    prizeAmount: 5000,
+    announcementUrl: 'https://x.com/win',
+    createdAt: '2026-09-01T00:00:00Z',
+  }),
+}));
+const leadUpdateMock = vi.fn(() => Promise.resolve());
+const projectSetMock = vi.fn(() => Promise.resolve());
+
+const fakeDoc = (opts = {}) => ({
+  id: 'lead-123',
+  get: vi.fn(() => Promise.resolve({ exists: false, ...opts })),
+  set: projectSetMock,
+  update: leadUpdateMock,
 });
 
 const fakeQuery = () => {
@@ -18,10 +30,23 @@ const fakeQuery = () => {
   q.orderBy = vi.fn(() => q);
   q.limit = vi.fn(() => q);
   q.get = vi.fn(() => Promise.resolve({ docs: [], size: 0 }));
-  q.doc = vi.fn(() => fakeDoc());
+  // payoutLeads doc reads return the lead snapshot; projects start absent.
+  q.doc = vi.fn((id) => ({
+    get: id === 'lead-123' ? leadGetMock : vi.fn(() => Promise.resolve({ exists: false })),
+    set: projectSetMock,
+    update: leadUpdateMock,
+  }));
   q.add = addMock;
   return q;
 };
+
+// Inline conversion uses the shared lib — stub it at the module boundary.
+const convertLeadToClaimMock = vi.fn(() =>
+  Promise.resolve({ slug: 'test-hackathon-lead-lead-123', claim: {}, created: true }),
+);
+vi.mock('@/lib/payoutLeads', () => ({
+  convertLeadToClaim: (...args) => convertLeadToClaimMock(...args),
+}));
 
 vi.mock('@/lib/firebase/serverOnly', () => ({
   db: {
@@ -78,5 +103,72 @@ describe('/api/payout-leads (index)', () => {
     };
     await handler(req, res);
     expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it('converts inline and returns projectSlug when announcementUrl is present', async () => {
+    const handler = (await import('../../../../pages/api/payout-leads/index')).default;
+    const req = {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '127.0.0.1' },
+      body: {
+        hackathonName: 'Test Hackathon',
+        email: 'test@example.com',
+        announcementUrl: 'https://x.com/win',
+      },
+    };
+    const res = { status: vi.fn(() => res), json: vi.fn() };
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        converted: true,
+        projectSlug: 'test-hackathon-lead-lead-123',
+      }),
+    );
+    expect(convertLeadToClaimMock).toHaveBeenCalled();
+  });
+
+  it('falls back to lead-only (no conversion) without announcementUrl', async () => {
+    convertLeadToClaimMock.mockClear();
+    const handler = (await import('../../../../pages/api/payout-leads/index')).default;
+    const req = {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '127.0.0.1' },
+      body: {
+        hackathonName: 'Test Hackathon',
+        email: 'test@example.com',
+      },
+    };
+    const res = { status: vi.fn(() => res), json: vi.fn() };
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, leadId: 'lead-123' }),
+    );
+    expect(convertLeadToClaimMock).not.toHaveBeenCalled();
+  });
+
+  it('still returns 201 when inline conversion fails (cron retries)', async () => {
+    convertLeadToClaimMock.mockRejectedValueOnce(new Error('convert failed'));
+    const handler = (await import('../../../../pages/api/payout-leads/index')).default;
+    const req = {
+      method: 'POST',
+      headers: { 'x-forwarded-for': '127.0.0.1' },
+      body: {
+        hackathonName: 'Test Hackathon',
+        email: 'test@example.com',
+        announcementUrl: 'https://x.com/win',
+      },
+    };
+    const res = { status: vi.fn(() => res), json: vi.fn() };
+    await handler(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, leadId: 'lead-123' }),
+    );
   });
 });

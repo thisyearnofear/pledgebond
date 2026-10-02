@@ -6,6 +6,7 @@ export const ONBOARDING_KEYS = {
   tour: "pos_tour_complete",
   banner: "pos_banner_dismissed",
   privacy: "pos_privacy_dismissed",
+  walletLink: "pb_wallet_link_dismissed",
 };
 
 const LEGACY_KEYS = {
@@ -64,4 +65,12 @@ export function isPrivacyDismissed() {
 
 export function markPrivacyDismissed() {
   writeFlag(ONBOARDING_KEYS.privacy);
+}
+
+export function isWalletLinkDismissed() {
+  return readFlag(ONBOARDING_KEYS.walletLink);
+}
+
+export function markWalletLinkDismissed() {
+  writeFlag(ONBOARDING_KEYS.walletLink);
 }

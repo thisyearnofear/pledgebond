@@ -35,7 +35,28 @@ export default async function handler(req, res) {
       console.warn('Could not load previous leaderboard snapshot:', e.message);
     }
 
-    const projectsSnap = await db.collection("projects").get();
+    // Paginated read (S1): cursor batches instead of an unbounded
+    // collection get() — bounds read cost per request and avoids the
+    // 60s serverless timeout as the projects collection grows.
+    const PAGE_SIZE = 500;
+    let projectsSnap = { docs: [] };
+    try {
+      let query = db.collection("projects").orderBy("__name__").limit(PAGE_SIZE);
+      let allDocs = [];
+      // Cursor loop: keep pulling pages until short/empty. Implicit
+      // orderBy on __name__ keeps the cursor stable across pages.
+      for (;;) {
+        const snap = await query.get();
+        allDocs = allDocs.concat(snap.docs);
+        if (snap.docs.length < PAGE_SIZE) break;
+        const last = snap.docs[snap.docs.length - 1];
+        query = db.collection("projects").orderBy("__name__").startAfter(last).limit(PAGE_SIZE);
+      }
+      projectsSnap = { docs: allDocs };
+    } catch (e) {
+      console.warn("Paginated projects read failed, trying single read:", e.message);
+      projectsSnap = await db.collection("projects").get();
+    }
 
     const hackathonMap = new Map();
     const builderMap = new Map();

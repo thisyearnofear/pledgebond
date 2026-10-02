@@ -1,6 +1,6 @@
 # PledgeBond
 
-Decentralized platform where backers fund builders and hackathon prizes collateralize credit. AI agents analyze projects via x402 nanopayments on Circle's Arc network.
+Credit infrastructure for builders: verified hackathon wins become collateral. We turn a hackathon win from a trophy into a receivable — and the receivable into credit. AI agents underwrite, scout, and verify via x402 nanopayments on Circle's Arc network; backers fund builders and are repaid from prize payouts.
 
 ## Features
 

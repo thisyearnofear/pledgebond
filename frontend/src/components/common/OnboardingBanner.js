@@ -18,7 +18,7 @@ import { useOnboardingCoordinator } from "@/components/onboarding/OnboardingCoor
 import {
   MagnifyingGlassIcon,
   SparklesIcon,
-  RocketLaunchIcon,
+  TrophyIcon,
   BanknotesIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
@@ -99,25 +99,25 @@ export default function OnboardingBanner() {
 function AuthBanner({ userRole, onDismiss, router }) {
   const builderSteps = [
     {
-      icon: MagnifyingGlassIcon,
-      title: "1. Explore Projects",
-      desc: "Browse builder portfolios across 7 ecosystems",
-      action: () => router.push("/explore"),
-      cta: "Explore \u2192",
+      icon: TrophyIcon,
+      title: "1. Claim Your Win",
+      desc: "Submit your project with prize evidence — we verify it on the public ledger",
+      action: () => router.push("/projects/new"),
+      cta: "Claim \u2192",
     },
     {
       icon: SparklesIcon,
-      title: "2. Try AI Agents",
-      desc: "Get instant project analysis for fractions of a cent",
+      title: "2. Get Verified",
+      desc: "AI agents score your project and confirm payouts on-chain for pennies",
       action: () => router.push(agentsHref("analyze")),
-      cta: "Try Agents \u2192",
+      cta: "Run Agents \u2192",
     },
     {
-      icon: RocketLaunchIcon,
-      title: "3. Submit a Project",
-      desc: "Showcase your work and get backed by the community",
-      action: () => router.push("/projects/new"),
-      cta: "Submit \u2192",
+      icon: BanknotesIcon,
+      title: "3. Unlock Credit",
+      desc: "Your verified track record collateralizes a USDC credit line",
+      action: () => router.push("/build"),
+      cta: "View Credit \u2192",
     },
   ];
 
@@ -125,21 +125,21 @@ function AuthBanner({ userRole, onDismiss, router }) {
     {
       icon: MagnifyingGlassIcon,
       title: "1. Explore Builders",
-      desc: "Find promising projects and builders to back",
+      desc: "Find builders with verified wins and shipping momentum",
       action: () => router.push("/explore"),
       cta: "Explore \u2192",
     },
     {
       icon: SparklesIcon,
       title: "2. Analyze with AI",
-      desc: "Use AI agents to evaluate project health and risk",
+      desc: "Agents score project health, risk, and payout history for pennies",
       action: () => router.push(agentsHref("analyze")),
       cta: "Analyze \u2192",
     },
     {
       icon: BanknotesIcon,
-      title: "3. Stake Privately",
-      desc: "Your positions are shielded by default — no copy-staking",
+      title: "3. Back a Builder",
+      desc: "Stake USDC — principal + multiplier repaid from prize wins, shielded by default",
       action: () => router.push("/back?tab=discover"),
       cta: "Stake \u2192",
     },
@@ -155,7 +155,7 @@ function AuthBanner({ userRole, onDismiss, router }) {
             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
               {userRole === "backer"
                 ? "\uD83D\uDC4B Welcome back — here's how to start backing builders:"
-                : "\uD83D\uDC4B Welcome back — here's how to get started:"}
+                : "\uD83D\uDC4B Welcome back — here's how to turn wins into working capital:"}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {steps.map((step) => (

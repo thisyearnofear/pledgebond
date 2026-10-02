@@ -6,6 +6,21 @@ PledgeBond is a chain-agnostic capital stack for software builders. It pairs **o
 
 ---
 
+## The Wedge
+
+**Builders are businesses; their track record is underwritable collateral.** A verified hackathon win creates two assets no existing lender can see: a receivable (the prize the organizer owes) and a track record of shipped, verified work. PledgeBond makes both legible — and prices them.
+
+- **Secret:** hackathon winners are creditworthy but invisible to every existing lender. Banks can't underwrite a $2k prize receivable; crypto credit protocols only know overcollateralization. Neither reads a builder's track record as collateral.
+- **Beachhead:** hackathon winners are a small, overlooked, uncontested market — own it completely, then expand: hackathon winners → open-source maintainers → freelancers/creators. Anyone with verifiable output and no credit file.
+- **10x:** human underwriting of a $2k receivable costs more than $2k. Our agents underwrite for $0.05/call, and Arc's ~$0.01 USDC fees make micro-credit settlement economical for the first time.
+- **Moat:** the verified payout ledger. Every claim we verify (evidence URLs, on-chain payout confirmation) is data nobody else collects — each entry improves our underwriting and raises the cost of fast-following. The unscalable verification work is the moat.
+
+**One line:** we turn a hackathon win from a trophy into a receivable — and the receivable into credit.
+
+The agents are the builder's underwriting department: the Underwriter prices credit against verified history, the Verifier confirms milestones and payouts, and agent-to-agent x402 payments settle on Arc before funds move.
+
+---
+
 ## The Capital Stack
 
 We provide three rails — most builders will use one, mature builders will use all three.

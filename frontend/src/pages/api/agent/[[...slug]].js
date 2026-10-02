@@ -20,6 +20,8 @@ export default async function handler(req, res) {
       return handleVerify(req, res);
     case "scout":
       return handleScout(req, res);
+    case "peek":
+      return handlePeek(req, res);
     case "execute":
       return handleExecute(req, res);
     case "copy":
@@ -27,6 +29,48 @@ export default async function handler(req, res) {
     default:
       if (!action) return res.status(404).json({ error: "Not found" });
       return res.status(404).json({ error: `Unknown agent: ${action}` });
+  }
+}
+
+/**
+ * Peek — free, unauthenticated read of cached agent results.
+ *
+ * The surfacing half of the agent economy: the first caller pays for an
+ * Underwriter run; everyone else reads the cached summary for free.
+ * This endpoint never runs inference and never charges — it only reads
+ * the agentCache collection. Returns 204 when nothing is cached yet so
+ * cards can silently skip the badge.
+ */
+async function handlePeek(req, res) {
+  if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+
+  const { projectId } = req.query;
+  if (!projectId) return res.status(400).json({ error: "projectId query parameter is required" });
+
+  try {
+    const cached = await getCachedResult("underwrite", { projectId });
+    if (!cached) return res.status(204).end();
+
+    const d = cached.data || {};
+    // getRecommendation returns {amount, multiplier, label} or null (below MIN_SCORE_TO_BACK).
+    const rec = d.recommendation || null;
+    return res.status(200).json({
+      success: true,
+      cached: true,
+      cachedAt: cached.cachedAt,
+      cachedAge: cached.ageHuman,
+      projectId,
+      summary: {
+        healthScore: d.healthScore ?? null,
+        // Derive the tier verdict from the score the same way the card badge does.
+        recommendation: rec ? `stake ${rec.amount} USDC @ ${rec.label}` : d.healthScore != null && d.healthScore < MIN_SCORE_TO_BACK ? "below back threshold" : null,
+        healthVerdict: rec ? "back" : "watch",
+        aiAnalysis: typeof d.aiAnalysis === "string" ? d.aiAnalysis.slice(0, 280) : null,
+      },
+    });
+  } catch (err) {
+    console.warn("Peek failed:", err.message);
+    return res.status(204).end();
   }
 }
 
@@ -187,6 +231,39 @@ function getContextualReply(message) {
 }
 
 async function handleUnderwrite(req, res) {
+  // Sponsored first calls: a per-user free budget (default 3) lets new
+  // backers read a real packet before setting up x402 payments. When the
+  // budget is spent, the standard paid path runs unchanged.
+  // Identity: verified Firebase ID token when present; otherwise the
+  // caller is anonymous and gets a single IP-keyed sponsored call
+  // (client-supplied uid headers are never trusted).
+  const { consumeSponsoredCall } = await import("@/lib/agentSponsorship");
+  let sponsorUid = null;
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const { auth } = await import("@/lib/firebase/serverOnly");
+      const decoded = await auth.verifyIdToken(authHeader.slice(7));
+      sponsorUid = decoded.uid;
+    } catch {
+      sponsorUid = null; // invalid token → anonymous budget path
+    }
+  }
+  const sponsor = await consumeSponsoredCall({
+    uid: sponsorUid,
+    ip: req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || null,
+  });
+  if (sponsor) {
+    req.nanopayment = {
+      amount: 0.05,
+      sponsored: true,
+      txHash: null,
+      network: "arc",
+      verificationStatus: "sponsored",
+      testMode: false,
+    };
+    return underwriteHandler(req, res);
+  }
   const { withAgentAuth } = await import("@/lib/agentAuth");
   return withAgentAuth(withNanopayment(underwriteHandler, 0.05))(req, res);
 }

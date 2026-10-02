@@ -7,6 +7,7 @@ import Head from "next/head";
 import { useWallet } from "@/stores/walletStore";
 import { useBuilderCredit } from "@/stores/walletStore";
 import { useUser } from "@/stores/authStore";
+import { useApp } from "@/stores/profileStore";
 import Link from "next/link";
 import { useRouter } from "next/router";
 
@@ -26,6 +27,9 @@ import PageHeader from "@/components/common/PageHeader";
 import Card from "@/components/common/Card";
 import CapitalStack from "@/components/sections/CapitalStack";
 import WinnerHome from "@/components/winner/WinnerHome";
+import WalletLinkBanner from "@/components/common/WalletLinkBanner";
+import LinkWalletPrompt from "@/components/common/LinkWalletPrompt";
+import useWinnerStatus from "@/hooks/useWinnerStatus";
 import {
   CAPITAL_RAILS,
   getRailById,
@@ -57,8 +61,14 @@ export default function BuildPage() {
   const setTab = (t) => {
     setActiveTab(t);
     const query = { ...router.query };
-    if (t === "wins") delete query.tab;
-    else query.tab = t;
+    if (t === "wins") {
+      delete query.tab;
+      // Badge deep-link: "Wins • pending/claim" jumps straight to the
+      // exact action card inside the winner desk.
+      if (winsBadge && winsBadge !== "Wins") query.focus = "claim";
+    } else {
+      query.tab = t;
+    }
     router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
   };
 
@@ -72,6 +82,17 @@ export default function BuildPage() {
     solanaAddress
   } = wallet;
   const { creditProfile, developerProjects, projectDetails, contractLoading, usdcBalance } = builderCredit;
+
+  // ── All hooks before any early return (Rules of Hooks) ────────────────
+  // Wins attention: pending claim or unverified win state drives the tab badge.
+  // useWinnerStatus is cached (5 min) so this adds no new fetch.
+  const { pendingClaim, isVerified } = useWinnerStatus();
+  const winsBadge = pendingClaim ? "Wins • pending" : !isVerified && developerProjects?.length > 0 ? "Wins • claim" : "Wins";
+
+  // Compact mode: experienced builders get tighter grids (fewer px per card).
+  // Beginners keep the roomy default.
+  const { getAdaptiveSettings } = useApp();
+  const compactMode = getAdaptiveSettings().enableCompactMode;
 
   // Rail detection — which capital rail is this builder on?
   const doesHaveProjects = Array.isArray(developerProjects) && developerProjects.length > 0;
@@ -99,11 +120,21 @@ export default function BuildPage() {
     }
   }, [userRole, router]);
 
+  // Adaptive landing: builders with projects but no explicit tab skip the
+  // Wins desk and land where the work is. Explicit ?tab= always wins.
+  useEffect(() => {
+    if (!router.isReady || router.query.tab) return;
+    if (activeTab !== "wins") return;
+    if (developerProjects?.length > 0) setTab("projects");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, developerProjects]);
+
   if (userRole === 'backer') {
     return null; // Redirecting
   }
 
   const isActuallyConnected = activeChainFamily === 'solana' ? solanaConnected : connected;
+  const anyWalletConnected = connected || solanaConnected;
 
   const loading = metaMaskLoading || contractLoading;
 
@@ -206,9 +237,9 @@ export default function BuildPage() {
   }
 
   const tabs = [
-    { id: "wins", label: "Wins" },
+    { id: "wins", label: winsBadge },
     { id: "credit", label: "Credit" },
-    { id: "projects", label: "Projects" },
+    { id: "projects", label: doesHaveProjects ? `Projects (${developerProjects.length})` : "Projects" },
     { id: "funding", label: "Get Funded" },
     { id: "crosschain", label: "Cross-Chain" },
   ];
@@ -217,6 +248,9 @@ export default function BuildPage() {
     <>
       <Head><title>Build | PledgeBond</title></Head>
       <div className="py-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Deferred-wallet awareness banner: GitHub-only builders see this
+            until they link a wallet or dismiss it. */}
+        {currentUser && !anyWalletConnected && <WalletLinkBanner />}
         <PageHeader
           title="Builder Hub"
           subtitle="Claim status, payout clock, and Underwriter packets — then credit tools."
@@ -300,9 +334,9 @@ export default function BuildPage() {
 
         {activeTab === "projects" && (
           <ErrorBoundary name="ProjectsTab" errorMessage="Failed to load projects.">
-            <div className="space-y-8">
+            <div className={compactMode ? "space-y-5" : "space-y-8"}>
               <BuilderProjectGrowth />
-              <div className="border-t border-slate-200 pt-8">
+              <div className={`border-t border-slate-200 ${compactMode ? "pt-5" : "pt-8"}`}>
                 <DeveloperDashboard />
               </div>
               {/* Bags — Rail 1: launch a project token on Solana */}
@@ -346,21 +380,29 @@ export default function BuildPage() {
 
         {activeTab === "funding" && (
           <ErrorBoundary name="FundingTab" errorMessage="Failed to load funding interface.">
-            <div className="space-y-6">
-              <FundingInterface
-                creditScore={creditProfile?.creditScore || 0}
-                onFundingComplete={() => setActiveTab("credit")}
-              />
-            </div>
+            {!anyWalletConnected ? (
+              <LinkWalletPrompt reason="request funding" />
+            ) : (
+              <div className="space-y-6">
+                <FundingInterface
+                  creditScore={creditProfile?.creditScore || 0}
+                  onFundingComplete={() => setActiveTab("credit")}
+                />
+              </div>
+            )}
           </ErrorBoundary>
         )}
 
         {activeTab === "crosschain" && (
           <ErrorBoundary name="CrossChainTab" errorMessage="Failed to load cross-chain tools.">
-            <div className="space-y-8">
-              <CrossChainTransfer />
-              <TransferHistory />
-            </div>
+            {!anyWalletConnected ? (
+              <LinkWalletPrompt reason="use cross-chain transfers" />
+            ) : (
+              <div className="space-y-8">
+                <CrossChainTransfer />
+                <TransferHistory />
+              </div>
+            )}
           </ErrorBoundary>
         )}
       </div>

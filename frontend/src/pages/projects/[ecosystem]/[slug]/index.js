@@ -3,6 +3,7 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 
 import { useUser } from "@/stores/authStore";
+import { useApp } from "@/stores/profileStore";
 import { useEnhancedGithub } from "@/providers/Github/EnhancedGithubProvider";
 import { Card } from "@/components/common/Card";
 import Button from "@/components/common/Button";
@@ -44,6 +45,7 @@ export default function ProjectDetailPage() {
   const { ecosystem, slug } = router.query;
   const { currentUser } = useUser();
   const { getProject, loadProjectDetails } = useEnhancedGithub();
+  const { trackProjectInteraction, trackEcosystemInteraction, updatePreference, getAdaptiveSettings } = useApp();
 
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,11 @@ export default function ProjectDetailPage() {
   const [claimsVerifying, setClaimsVerifying] = useState(false);
   const [genlayer, setGenlayer] = useState(null);
   const [genlayerLoading, setGenlayerLoading] = useState(false);
+  const [expandedClaim, setExpandedClaim] = useState(null);
+  // Adaptive density: beginners get the first claim expanded + hints;
+  // intermediate+ get everything collapsed. Resolved at mount (never mid-render)
+  // and overridable via the density toggle (preferredComplexity).
+  const adaptive = useMemo(() => getAdaptiveSettings(), [getAdaptiveSettings]);
 
   // Compute badges from project data
   const projectBadges = useMemo(() => {
@@ -77,7 +84,18 @@ export default function ProjectDetailPage() {
         const data = await getProject(slug, ecosystem);
         if (!data) throw new Error("Project not found");
 
-        if (!cancelled) setProject(data);
+        if (!cancelled) {
+          setProject(data);
+          // Feed the ecosystem learning loop (favorites + ranking).
+          try {
+            trackProjectInteraction(String(slug), String(data.ecosystem || ecosystem || ""));
+            updatePreference("lastVisitedEcosystem", String(data.ecosystem || ecosystem || ""));
+          } catch {}
+          // Beginners see the first claim expanded once; everyone else collapsed.
+          if (adaptive.showHints && expandedClaim === null && Array.isArray(data.hackathons) && data.hackathons.length > 0) {
+            setExpandedClaim(0);
+          }
+        }
 
         // Load recent feedback previews (client-side, 5 latest)
         try {
@@ -276,6 +294,7 @@ export default function ProjectDetailPage() {
             { label: ecosystemConfig?.shortName || ecosystem, href: `/explore?ecosystem=${ecosystem}` },
             { label: title },
           ]} />
+          <DensityToggle adaptive={adaptive} updatePreference={updatePreference} />
           
           <ProjectHero
             project={project}
@@ -425,28 +444,34 @@ export default function ProjectDetailPage() {
             </h2>
 
             {Array.isArray(project.hackathons) && project.hackathons.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {project.hackathons.map((h, idx) => (
+              <>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  {project.hackathons.length} tracked
+                  {verifiedClaims?.some((c) => c.onChainVerification?.verified || c.jury?.verdict === "DELIVERED")
+                    ? " · verified" : claimsVerifying ? " · verifying…" : ""}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {project.hackathons.map((h, idx) => {
+                  const vc = verifiedClaims?.[idx];
+                  const open = expandedClaim === idx;
+                  return (
                   <div key={idx} className="p-5 bg-gray-50 rounded-xl border border-gray-100 hover:border-pink-200 transition-all">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-1">
                           <h3 className="font-bold text-primary text-lg">
                             {h.name || `Hackathon ${idx + 1}`}
                           </h3>
-                          <ClaimVerificationBadge
-                            claim={verifiedClaims?.[idx]}
-                            loading={claimsVerifying}
-                          />
+                          <ClaimVerificationBadge claim={vc} loading={claimsVerifying} />
                         </div>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                           {h.outcome ? `Outcome: ${h.outcome}` : "Outcome: —"}
+                          {h.prizeAmount ? ` · ${h.prizeAmount}` : ""}
                         </p>
+                        {open && (
+                          <div className="mt-1">
                         {h.track && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Track: {h.track}</p>
-                        )}
-                        {h.prizeAmount && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Prize: {h.prizeAmount}</p>
                         )}
                         {h.payoutWallet && (
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 break-all">Payout wallet: {h.payoutWallet}</p>
@@ -462,6 +487,8 @@ export default function ProjectDetailPage() {
                         )}
                         {h.judgingNotes && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Judge / reviewer context: {h.judgingNotes}</p>
+                        )}
+                          </div>
                         )}
                         {idx === 0 && (genlayer || genlayerLoading) && (
                           <div className="mt-3">
@@ -479,22 +506,29 @@ export default function ProjectDetailPage() {
                         )}
                       </div>
                       
-                      <div className="flex items-center gap-2 shrink-0">
-                        {verifiedClaims?.[idx] && (
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <button
+                          onClick={() => setExpandedClaim(open ? null : idx)}
+                          aria-expanded={open}
+                          className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
+                        >
+                          {open ? "Less" : "Details"}
+                        </button>
+                        {open && vc && (
                           <button
                             onClick={() => {
-                              const signals = verifiedClaims[idx];
+                              const s = vc;
                               alert(
-                                `Signals: ${signals.signals?.join(', ') || 'none'}\nMissing: ${signals.missing?.join(', ') || 'none'}\nCredibility: ${signals.credibility || 'unknown'}\nScore: ${signals.signalScore || 0}/100`
+                                `Signals: ${s.signals?.join(', ') || 'none'}\nMissing: ${s.missing?.join(', ') || 'none'}\nCredibility: ${s.credibility || 'unknown'}\nScore: ${s.signalScore || 0}/100`
                               );
                             }}
                             className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-400 underline"
                             title="View verification details"
                           >
-                            Details
+                            Signals
                           </button>
                         )}
-                        {h.url && (
+                        {open && h.url && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -506,7 +540,7 @@ export default function ProjectDetailPage() {
                             Link
                           </Button>
                         )}
-                        {h.submissionUrl && h.submissionUrl !== h.url && (
+                        {open && h.submissionUrl && h.submissionUrl !== h.url && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -517,7 +551,7 @@ export default function ProjectDetailPage() {
                             Submission
                           </Button>
                         )}
-                        {h.announcementUrl && (
+                        {open && h.announcementUrl && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -528,7 +562,7 @@ export default function ProjectDetailPage() {
                             Announcement
                           </Button>
                         )}
-                        {h.evidenceUrl && (
+                        {open && h.evidenceUrl && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -542,8 +576,10 @@ export default function ProjectDetailPage() {
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              </>
             ) : (
               <div className="text-center py-10">
                 <p className="text-gray-500 dark:text-gray-400 text-lg">No hackathon submissions tracked yet.</p>
@@ -552,61 +588,79 @@ export default function ProjectDetailPage() {
           </Card>
 
           <Card className="p-6 border-0 shadow-lg rounded-2xl overflow-hidden">
-            <h2 className="text-xl font-bold text-primary mb-6 flex items-center gap-2">
+            <h2 className="text-xl font-bold text-primary mb-2 flex items-center gap-2">
               <span className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
                 <TagIcon className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
               </span>
               Earn by testing
             </h2>
             {Array.isArray(project.testerTasks) && project.testerTasks.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {project.testerTasks.map((t) => (
+              <>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  {project.testerTasks.length} open ·{" "}
+                  {Math.max(...project.testerTasks.map((t) => Number(t.rewardUSDC || 0)))} USDC top reward
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {project.testerTasks.map((t) => {
+                  const taskOpen = expandedClaim === `task-${t.id}`;
+                  return (
                   <div key={t.id} className="p-5 bg-gray-50 rounded-xl border border-gray-100 hover:border-yellow-200 transition-all">
                     <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <h3 className="font-bold text-primary text-lg">{t.title}</h3>
-                        {t.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{t.description}</p>
-                        )}
-                        <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold mt-3">
-                          Reward: {Number(t.rewardUSDC || 0)} USDC
+                        <p className="text-sm text-gray-700 dark:text-gray-300 font-semibold mt-1">
+                          {Number(t.rewardUSDC || 0)} USDC
                         </p>
-                        {Array.isArray(t.evidenceRequirements) && t.evidenceRequirements.length > 0 && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                            Evidence: {t.evidenceRequirements.join(', ')}
-                          </p>
+                        {taskOpen && (
+                          <>
+                            {t.description && (
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">{t.description}</p>
+                            )}
+                            {Array.isArray(t.evidenceRequirements) && t.evidenceRequirements.length > 0 && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                Evidence: {t.evidenceRequirements.join(', ')}
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/feedback?project=${encodeURIComponent(slug)}&taskId=${encodeURIComponent(t.id)}`)}
-                        className="shrink-0"
-                      >
-                        Submit evidence
-                      </Button>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <button
+                          onClick={() => setExpandedClaim(taskOpen ? null : `task-${t.id}`)}
+                          aria-expanded={taskOpen}
+                          className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
+                        >
+                          {taskOpen ? "Less" : "Details"}
+                        </button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/feedback?project=${encodeURIComponent(slug)}&taskId=${encodeURIComponent(t.id)}`)}
+                          className="shrink-0"
+                        >
+                          Submit evidence
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-10">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">No tester tasks available.</p>
-              </div>
-            )}
+                  );
+                })}
+                </div>
+              </>
+            ) : null}
           </Card>
 
           {isAdminClient && (
-            <Card className="p-6 border-2 border-red-200 shadow-lg rounded-2xl overflow-hidden bg-red-50">
-              <div className="flex items-center gap-3 mb-4">
-                <span className="w-10 h-10 bg-red-200 rounded-xl flex items-center justify-center">
-                  <CheckCircleIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+            <details className="rounded-2xl border-2 border-red-200 bg-red-50 overflow-hidden">
+              <summary className="p-5 cursor-pointer text-sm font-semibold text-red-900 list-none flex items-center gap-3">
+                <span className="w-8 h-8 bg-red-200 rounded-xl flex items-center justify-center">
+                  <CheckCircleIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
                 </span>
-                <h2 className="text-xl font-bold text-red-900">Admin controls</h2>
-              </div>
-              
+                Admin controls
+              </summary>
+              <div className="px-6 pb-6">
               <p className="text-sm text-red-800 mb-6">Approve a tester reward by feedback ID. Server-side admin check is enforced.</p>
-              
+
               <AdminApproveForm projectSlug={slug} />
 
               <div className="mt-8 pt-6 border-t border-red-200">
@@ -614,11 +668,49 @@ export default function ProjectDetailPage() {
                 <p className="text-sm text-red-700 dark:text-red-300 mb-4">Paste JSON array or CSV with headers: feedbackId,projectSlug,taskId,destinationAddress,amount. Source wallet applies to all rows.</p>
                 <BulkApproveForm projectSlug={slug} />
               </div>
-            </Card>
+              </div>
+            </details>
           )}
         </div>
       </div>
     </>
+  );
+}
+
+/**
+ * DensityToggle — explicit adaptivity control.
+ * Essentials (collapsed) vs Everything (expanded). Persists to
+ * preferredComplexity so getAdaptiveSettings() respects the override.
+ */
+function DensityToggle({ adaptive, updatePreference }) {
+  const mode = adaptive?.defaultComplexity || "simple";
+  const set = (v) => {
+    try { updatePreference("preferredComplexity", v); } catch {}
+  };
+  return (
+    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400" role="group" aria-label="Detail density">
+      <span className="font-medium">Show me:</span>
+      <div className="inline-flex rounded-full border border-default p-0.5" role="tablist" aria-label="Density">
+        {[
+          { id: "simple", label: "Essentials" },
+          { id: "advanced", label: "Everything" },
+        ].map((o) => (
+          <button
+            key={o.id}
+            role="tab"
+            aria-selected={(mode === "advanced") === (o.id === "advanced")}
+            onClick={() => set(o.id)}
+            className={`px-2.5 py-1 rounded-full font-semibold transition-colors ${
+              (mode === "advanced") === (o.id === "advanced")
+                ? "bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900"
+                : "hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

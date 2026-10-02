@@ -1,4 +1,5 @@
 import { db } from "../../../lib/firebase/serverOnly";
+import { convertLeadToClaim } from "../../../lib/payoutLeads";
 
 const rateLimitMap = new Map();
 const RATE_LIMIT_WINDOW = 60_000;
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { hackathonName, email, prizeAmount, wallet } = req.body;
+    const { hackathonName, email, prizeAmount, wallet, announcementUrl } = req.body;
 
     if (!hackathonName || typeof hackathonName !== "string" || hackathonName.trim().length < 2) {
       return res.status(400).json({ error: "Hackathon name is required (min 2 chars)" });
@@ -38,17 +39,47 @@ export default async function handler(req, res) {
     if (!email || typeof email !== "string" || !email.includes("@")) {
       return res.status(400).json({ error: "Valid email is required" });
     }
+    if (announcementUrl && typeof announcementUrl !== "string") {
+      return res.status(400).json({ error: "announcementUrl must be a string" });
+    }
+
+    const evidenceUrl = announcementUrl && announcementUrl.trim() ? announcementUrl.trim() : null;
 
     const doc = {
       hackathonName: hackathonName.trim(),
       email: email.trim().toLowerCase(),
       prizeAmount: prizeAmount && !isNaN(prizeAmount) ? Number(prizeAmount) : null,
       wallet: wallet && typeof wallet === "string" ? wallet.trim() : null,
+      announcementUrl: evidenceUrl,
       createdAt: new Date().toISOString(),
       source: "payout-leaderboard",
     };
 
-    await db.collection("payoutLeads").add(doc);
+    const leadRef = await db.collection("payoutLeads").add(doc);
+
+    // ── Inline conversion ────────────────────────────────────────────
+    // With evidence attached, convert the lead to a claim immediately
+    // instead of waiting for the daily cron. Time-to-leaderboard drops
+    // from ~a day to seconds. Without evidence, the lead is marked
+    // pending_evidence and the cron remains the fallback path.
+    if (evidenceUrl) {
+      try {
+        const leadDoc = await db.collection("payoutLeads").doc(leadRef.id).get();
+        const { slug } = await convertLeadToClaim(leadDoc);
+        return res.status(201).json({
+          success: true,
+          leadId: leadRef.id,
+          projectSlug: slug,
+          converted: true,
+        });
+      } catch (convertErr) {
+        console.warn("Inline lead conversion failed, cron will retry:", convertErr.message);
+        await db.collection("payoutLeads").doc(leadRef.id).update({
+          status: "pending_evidence",
+          updatedAt: new Date().toISOString(),
+        }).catch(() => {});
+      }
+    }
 
     // Notify via Slack webhook if configured
     const slackWebhook = process.env.SLACK_WEBHOOK_URL;
@@ -62,7 +93,7 @@ export default async function handler(req, res) {
       }).catch(() => {});
     }
 
-    return res.status(201).json({ success: true });
+    return res.status(201).json({ success: true, leadId: leadRef.id });
   } catch (err) {
     console.error("Payout lead submission error:", err);
     return res.status(500).json({ error: "Failed to submit payout info" });

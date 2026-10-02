@@ -17,8 +17,7 @@
  */
 
 import { db } from "../../../lib/firebase/serverOnly";
-import { payoutVerifierService } from "../../../services/PayoutVerifierService";
-import { logActivity } from "../../../utils/activityLogger";
+import { convertLeadToClaim, verifyProjectPayouts } from "../../../lib/payoutLeads";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -46,6 +45,7 @@ export default async function handler(req, res) {
     let processed = 0;
     let skipped = 0;
     let errors = 0;
+    let totalVerified = 0;
 
     for (const doc of leadsSnap.docs) {
       const lead = doc.data();
@@ -80,41 +80,8 @@ export default async function handler(req, res) {
           continue;
         }
 
-        const slug = lead.hackathonName
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/(^-|-$)/g, "") + `-lead-${leadId.slice(0, 8)}`;
-
-        const claim = {
-          name: lead.hackathonName,
-          outcome: "winner",
-          prizeAmount: lead.prizeAmount || 0,
-          hackathonEndDate: new Date().toISOString(),
-          payoutAt: null,
-          payoutVerifiedAt: null,
-          verificationStatus: "pending",
-          evidenceUrl,
-          source: "payout-lead",
-          leadId,
-          submittedAt: lead.createdAt || new Date().toISOString(),
-        };
-
-        await db.collection("projects").doc(slug).set({
-          slug,
-          name: `${lead.hackathonName} Winner`,
-          owner: lead.email.split("@")[0],
-          submittedBy: lead.email.split("@")[0],
-          ecosystem: "arc",
-          hackathons: [claim],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-
-        await db.collection("payoutLeads").doc(leadId).update({
-          status: "verified",
-          verifiedAt: new Date().toISOString(),
-          projectSlug: slug,
-        });
+        // Shared conversion path (same as inline submission + verify route)
+        const { slug } = await convertLeadToClaim(doc);
 
         processed++;
         details.push({ leadId, status: "verified", projectSlug: slug });
@@ -126,77 +93,29 @@ export default async function handler(req, res) {
 
     // ── Pass 2: On-chain payout verification ──────────────────────────
     // For each project with claims that have a payoutTxHash or circleTransferId
-    // but haven't been verified yet, run PayoutVerifierService and upgrade
+    // but haven't been verified yet, run the shared verifier and upgrade
     // the verificationStatus to "payout_verified" when confirmed.
+    // Shared with inline submission — the cron is the retry path.
+    // Paginated read (S1) — cursor batches bound the read cost per run.
+    // The where filter applies in memory per page to avoid needing a new
+    // composite index for the cursor path.
     try {
-      const projectsSnap = await db.collection("projects")
-        .where("hackathons", "!=", null)
-        .get();
+      const PAGE_SIZE = 500;
+      let query = db.collection("projects").orderBy("__name__").limit(PAGE_SIZE);
+      for (;;) {
+        const projectsSnap = await query.get();
+        if (projectsSnap.empty) break;
 
-      let totalVerified = 0;
-
-      for (const projectDoc of projectsSnap.docs) {
-        const project = projectDoc.data();
-        if (!Array.isArray(project.hackathons)) continue;
-
-        let projectModified = false;
-        const updatedHackathons = await Promise.all(project.hackathons.map(async (claim) => {
-          // Only verify claims that haven't been verified yet but have evidence
-          if (claim.verificationStatus === "payout_verified") return claim;
-          if (!claim.payoutTxHash && !claim.circleTransferId) return claim;
-
-          try {
-            const result = await payoutVerifierService.verify({
-              hackathonName: claim.name,
-              winnerAddress: claim.payoutWallet || claim.winnerAddress || "0x0",
-              expectedAmount: claim.prizeAmount || 0,
-              payoutTxHash: claim.payoutTxHash,
-              circleTransferId: claim.circleTransferId,
-              chainId: claim.chainId,
-            });
-
-            if (result.result?.verified) {
-              totalVerified++;
-              projectModified = true;
-              const verifiedClaim = {
-                ...claim,
-                verificationStatus: "payout_verified",
-                payoutVerifiedAt: result.result.payoutTimestamp || new Date().toISOString(),
-                payoutActualAmount: result.result.actualAmount,
-              };
-
-              // Fire "Payout Arrived" notification to the builder
-              const builderUid = project.submittedBy || project.owner;
-              if (builderUid) {
-                logActivity({
-                  type: "payout_verified",
-                  userId: builderUid,
-                  userHandle: builderUid,
-                  description: `Payout verified for ${claim.name} — ${result.result.actualAmount || claim.prizeAmount || 0} USDC confirmed on-chain.`,
-                  metadata: {
-                    hackathonName: claim.name,
-                    amount: result.result.actualAmount || claim.prizeAmount || 0,
-                    projectSlug: projectDoc.id,
-                    ecosystem: project.ecosystem,
-                    txHash: result.result.payoutTxHash,
-                  },
-                }).catch(() => {});
-              }
-
-              return verifiedClaim;
-            }
-          } catch {
-            // Verification failed — leave claim as-is, will retry next run
-          }
-          return claim;
-        }));
-
-        if (projectModified) {
-          await db.collection("projects").doc(projectDoc.id).update({
-            hackathons: updatedHackathons,
-            updatedAt: new Date().toISOString(),
-          });
+        for (const projectDoc of projectsSnap.docs) {
+          const project = projectDoc.data();
+          if (!Array.isArray(project.hackathons)) continue;
+          const { verifiedCount } = await verifyProjectPayouts(projectDoc.id);
+          totalVerified += verifiedCount;
         }
+
+        if (projectsSnap.docs.length < PAGE_SIZE) break;
+        const last = projectsSnap.docs[projectsSnap.docs.length - 1];
+        query = db.collection("projects").orderBy("__name__").startAfter(last).limit(PAGE_SIZE);
       }
     } catch (verifyErr) {
       console.error("Payout verification pass error:", verifyErr);

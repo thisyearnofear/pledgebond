@@ -238,6 +238,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Agent sponsorships — platform-funded first agent calls per user.
+    // Written by /api/agent/* via admin SDK; read is admin-only (economics audit).
+    match /agentSponsorships/{sponsorshipId} {
+      allow read: if isAdminUser();
+      allow write: if false;
+    }
+
+    // Funnel events — step-to-outcome instrumentation (login, claim, backing).
+    // Written by /api/analytics/event via admin SDK; read is admin-only.
+    match /funnelEvents/{eventId} {
+      allow read: if isAdminUser();
+      allow write: if false;
+    }
+
     // Referrals — tracks referral attribution for new users.
     // Each doc: { referralCode, referredUid, referredAt, bonusXp, status }
     // Read: only the referred user can read their own referral record.

@@ -125,6 +125,85 @@ describe('Agent API Response Contracts', () => {
     }, 15000);
   });
 
+  describe('Peek Endpoint', () => {
+    it('returns 405 for non-GET requests', async () => {
+      const { default: handler } = await import('../../../pages/api/agent/[[...slug]].js');
+      const req = reqWithSlug('peek', { method: 'POST', body: {} });
+      const res = { status: vi.fn(() => res), json: vi.fn() };
+
+      await handler(req, res);
+      expect(res.status).toHaveBeenCalledWith(405);
+    });
+
+    it('returns 400 when projectId is missing', async () => {
+      const { default: handler } = await import('../../../pages/api/agent/[[...slug]].js');
+      const req = reqWithSlug('peek', { query: { slug: ['peek'] } });
+      const res = { status: vi.fn(() => res), json: vi.fn() };
+
+      await handler(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('returns 204 when nothing is cached', async () => {
+      const { default: handler } = await import('../../../pages/api/agent/[[...slug]].js');
+      const req = reqWithSlug('peek', { query: { slug: ['peek'], projectId: 'proj-1' } });
+      const res = { status: vi.fn(() => res), json: vi.fn(), end: vi.fn() };
+
+      await handler(req, res);
+      expect(res.status).toHaveBeenCalledWith(204);
+      expect(res.end).toHaveBeenCalled();
+      expect(res.json).not.toHaveBeenCalled();
+    });
+
+    it('returns a compact cached summary when the cache is warm', async () => {
+      const { getCachedResult } = await import('@/lib/agentCache');
+      getCachedResult.mockResolvedValueOnce({
+        data: {
+          healthScore: 82,
+          recommendation: { amount: 3.0, multiplier: 150, label: '1.5x' },
+          aiAnalysis: 'A'.repeat(500),
+        },
+        cachedAt: '2026-09-14T00:00:00Z',
+        ageHuman: '5 min ago',
+      });
+
+      const { default: handler } = await import('../../../pages/api/agent/[[...slug]].js');
+      const req = reqWithSlug('peek', { query: { slug: ['peek'], projectId: 'proj-1' } });
+      const res = { status: vi.fn(() => res), json: vi.fn() };
+
+      await handler(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+
+      const body = res.json.mock.calls[0][0];
+      expect(body.success).toBe(true);
+      expect(body.cached).toBe(true);
+      expect(body.projectId).toBe('proj-1');
+      expect(body.summary.healthScore).toBe(82);
+      expect(body.summary.healthVerdict).toBe('back');
+      expect(body.summary.recommendation).toBe('stake 3 USDC @ 1.5x');
+      // aiAnalysis is truncated for the card surface
+      expect(body.summary.aiAnalysis.length).toBeLessThanOrEqual(280);
+    });
+
+    it('reports below-threshold scores as watch, not back', async () => {
+      const { getCachedResult } = await import('@/lib/agentCache');
+      getCachedResult.mockResolvedValueOnce({
+        data: { healthScore: 42, recommendation: null, aiAnalysis: null },
+        cachedAt: '2026-09-14T00:00:00Z',
+        ageHuman: '5 min ago',
+      });
+
+      const { default: handler } = await import('../../../pages/api/agent/[[...slug]].js');
+      const req = reqWithSlug('peek', { query: { slug: ['peek'], projectId: 'proj-2' } });
+      const res = { status: vi.fn(() => res), json: vi.fn() };
+
+      await handler(req, res);
+      const body = res.json.mock.calls[0][0];
+      expect(body.summary.healthVerdict).toBe('watch');
+      expect(body.summary.recommendation).toBe('below back threshold');
+    });
+  });
+
   describe('Scout Endpoint', () => {
     it('returns 405 for invalid methods', async () => {
       const { default: handler } = await import('../../../pages/api/agent/[[...slug]].js');

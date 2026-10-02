@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useUser } from '@/stores/authStore';
 import { Modal } from '../common/Modal';
-import { 
-  SparklesIcon, 
-  MapIcon, 
-  ShieldCheckIcon, 
-  ArrowRightIcon,
+import {
+  SparklesIcon,
+  TrophyIcon,
+  ShieldCheckIcon,
+  BanknotesIcon,
   ChevronRightIcon,
   ChevronLeftIcon
 } from '@heroicons/react/24/outline';
@@ -16,30 +16,30 @@ import { markTourDismissed } from "@/lib/onboarding/storage";
 const TOUR_STEPS = [
   {
     id: 'welcome',
-    title: 'Welcome Aboard, Captain!',
-    description: 'Ready to turn your code into credit? Let us show you around the deck of PledgeBond.',
-    icon: SparklesIcon,
-    color: 'bg-blue-500'
+    title: 'You Won. Now Get Paid.',
+    description: 'PledgeBond turns hackathon wins into working capital. We verify your win on a public ledger — and your track record unlocks credit.',
+    icon: TrophyIcon,
+    color: 'bg-amber-500'
   },
   {
-    id: 'explore',
-    title: 'Explore the Fleet',
-    description: 'Discover projects across multiple ecosystems. See what other builders are shipping and find inspiration.',
-    icon: MapIcon,
-    color: 'bg-cyan-500'
+    id: 'claim',
+    title: 'Claim Your Win',
+    description: 'Submit your project with prize evidence. Verified wins go on the public payout ledger — the record ecosystems and lenders trust.',
+    icon: ShieldCheckIcon,
+    color: 'bg-teal-500'
   },
   {
     id: 'agents',
-    title: 'AI Verification Agents',
-    description: 'Our AI agents (Underwriter, Scout, Verifier) assess your project quality in real-time using nanopayments.',
-    icon: ShieldCheckIcon,
+    title: 'Agents Do the Underwriting',
+    description: 'Underwriter, Scout, and Verifier score your project and confirm payouts — for pennies per call, settled in USDC on Arc.',
+    icon: SparklesIcon,
     color: 'bg-indigo-500'
   },
   {
     id: 'credit',
-    title: 'Unlock Your Credit',
-    description: 'As your reputation grows, so does your credit limit. Use it to fund your next big ship!',
-    icon: ArrowRightIcon,
+    title: 'Unlock Credit',
+    description: 'Your verified track record collateralizes a USDC credit line. Start your next build before the prize check arrives.',
+    icon: BanknotesIcon,
     color: 'bg-purple-500'
   }
 ];
@@ -53,11 +53,13 @@ export default function UnifiedOnboarding({ isOpen, onClose, onComplete }) {
     if (currentTourStep < TOUR_STEPS.length - 1) {
       setCurrentTourStep(currentTourStep + 1);
     } else {
-      // Last step — route unauthenticated users to signup, otherwise explore
+      // Last step — route unauthenticated users to signup, builders to claim a win
       markTourDismissed();
       onClose?.();
       if (!currentUser) {
         router.push('/login?mode=signup');
+      } else {
+        router.push('/projects/new');
       }
     }
   };
