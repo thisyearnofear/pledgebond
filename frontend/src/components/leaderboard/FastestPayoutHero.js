@@ -173,7 +173,7 @@ export default function FastestPayoutHero({ entries }) {
                 Waiting on a payout?
               </p>
               <p className="text-xs text-secondary">
-                Get funded upfront on Arc while you wait. No interest, no collateral.
+                Get funded upfront while you wait. No interest, no collateral.
               </p>
             </div>
           </div>

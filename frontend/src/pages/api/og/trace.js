@@ -46,7 +46,7 @@ export default async function handler(req) {
             PROOF SCOUT
           </span>
           <span style={{ fontSize: '14px', color: '#64748b', marginLeft: '8px' }}>
-            Autonomous Agent on Arc
+            Autonomous On-chain Agent
           </span>
         </div>
 
@@ -106,7 +106,7 @@ export default async function handler(req) {
           borderTop: '1px solid #1e293b',
         }}>
           <span style={{ fontSize: '14px', color: '#64748b' }}>
-            Transparent AI reasoning traces on Arc
+            Transparent AI reasoning traces on-chain
           </span>
           <span style={{ fontSize: '14px', color: '#06b6d4', fontWeight: 'bold' }}>
             pledgebond.com/scout

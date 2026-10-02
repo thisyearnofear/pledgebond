@@ -52,7 +52,7 @@ function createPaymentRequirement(amountUSDC = PRICE_PER_REQUEST) {
       recipient: process.env.CIRCLE_GATEWAY_WALLET_ADDRESS || "0x0000000000000000000000000000000000000000",
       chainId: ARC_CHAIN_ID,
       token: ARC_USDC,
-      description: "AI Agent API — per-request USDC nanopayment on Arc",
+      description: "AI Agent API — per-request USDC nanopayment",
     },
     expires: Date.now() + 5 * 60 * 1000,
   };

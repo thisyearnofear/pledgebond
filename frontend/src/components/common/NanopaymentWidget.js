@@ -193,7 +193,7 @@ export default function NanopaymentWidget({ compact = false, onPaymentComplete }
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {nanopaymentDemoMode
                       ? "Payments skipped. Responses marked as test mode."
-                      : "Use real USDC for live Arc-backed payments."}
+                      : "Use real USDC for live payments."}
                   </p>
                 </div>
               </div>
@@ -321,7 +321,7 @@ export default function NanopaymentWidget({ compact = false, onPaymentComplete }
 
       <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-center gap-2">
         <span className={`w-2 h-2 rounded-full ${nanopaymentDemoMode ? 'bg-amber-400' : 'bg-green-400'} animate-pulse`} />
-        <span className="text-xs text-gray-400 dark:text-gray-500">{nanopaymentDemoMode ? 'Test mode — payments skipped' : 'Arc-backed live payment mode'}</span>
+        <span className="text-xs text-gray-400 dark:text-gray-500">{nanopaymentDemoMode ? 'Test mode — payments skipped' : 'Live payment mode'}</span>
       </div>
     </div>
   );
@@ -374,7 +374,7 @@ function StrategicAdvisorPanel({ advice, onDismiss }) {
           </div>
         </div>
         <div className="bg-white p-3 rounded-lg border border-indigo-50">
-          <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Circle / Arc</p>
+          <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Circle / x402</p>
           <div className="flex items-end justify-between">
             <span className="text-lg font-black text-indigo-700">{advice.tradeOffMatrix.circleArc.suitability}%</span>
             <span className="text-[10px] text-indigo-500 dark:text-indigo-400">Fit score</span>
@@ -468,7 +468,7 @@ function UninitializedWidget({ onInitialize }) {
         <RocketLaunchIcon className="w-12 h-12 mx-auto text-indigo-500 dark:text-indigo-400 mb-4" />
         <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-2">Set up payment wallet</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Connect a wallet with USDC on Arc to run AI agents. Payments settle instantly via x402.
+          Connect a wallet with USDC to run AI agents. Payments settle instantly via x402.
         </p>
         <div className="bg-gray-50 rounded-lg p-4 mb-4">
           <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">Per-request pricing:</p>

@@ -29,7 +29,7 @@ export default function ScoutHeader({ subscribed, onShare, onCopy, embedded = fa
             </div>
             <TitleTag className={`${embedded ? "text-2xl" : "text-3xl"} font-bold text-white mb-2`}>Proof Scout</TitleTag>
             <p className="text-slate-400 dark:text-slate-500 max-w-xl">
-              An AI agent that continuously evaluates builder projects, generates reasoning traces, and executes backings on Arc with USDC. Every decision is transparent and on-chain.
+              An AI agent that continuously evaluates builder projects, generates reasoning traces, and executes backings with USDC. Every decision is transparent and on-chain.
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">

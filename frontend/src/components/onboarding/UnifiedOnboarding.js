@@ -31,7 +31,7 @@ const TOUR_STEPS = [
   {
     id: 'agents',
     title: 'Agents Do the Underwriting',
-    description: 'Underwriter, Scout, and Verifier score your project and confirm payouts — for pennies per call, settled in USDC on Arc.',
+    description: 'Underwriter, Scout, and Verifier score your project and confirm payouts — for pennies per call, settled instantly in USDC.',
     icon: SparklesIcon,
     color: 'bg-indigo-500'
   },

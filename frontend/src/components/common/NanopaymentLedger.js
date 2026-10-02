@@ -140,7 +140,7 @@ export default function NanopaymentLedger({
       <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-          <span className="text-xs text-gray-400 dark:text-gray-500">Circle Gateway on Arc</span>
+          <span className="text-xs text-gray-400 dark:text-gray-500">Circle Gateway</span>
         </div>
         <span className="text-xs text-gray-400 dark:text-gray-500">
           Gasless · Sub-second

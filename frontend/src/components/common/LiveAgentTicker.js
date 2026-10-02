@@ -11,7 +11,7 @@ function formatAgentRun(run) {
   const totalStake = run.totalStakeRecommended || run.totalStaked || 0;
 
   if (type === 'execution') {
-    return `${agent} executed ${backed} backing${backed !== 1 ? 's' : ''} — ${totalStake.toFixed(2)} USDC on Arc`;
+    return `${agent} executed ${backed} backing${backed !== 1 ? 's' : ''} — ${totalStake.toFixed(2)} USDC settled`;
   }
   if (type === 'scout') {
     return `${agent} evaluated ${evaluated} projects, recommended ${backed} — ${totalStake.toFixed(2)} USDC`;

@@ -19,7 +19,7 @@ import {
 } from "@/components/scout";
 
 const SHARE_TEXT = (stats) =>
-  `Proof Scout has evaluated ${stats.totalEvaluated} projects and executed ${stats.totalBacked} backings on Arc. Copy the agent:`;
+  `Proof Scout has evaluated ${stats.totalEvaluated} projects and executed ${stats.totalBacked} backings. Copy the agent:`;
 
 export default function ScoutPanel() {
   const { currentUser } = useUser();

@@ -14,7 +14,7 @@ function MarketRow({ trace }) {
           Will {trace.project} ship by June 1?
         </div>
         <div className="text-[10px] text-slate-500 dark:text-slate-400">
-          Resolved by Verifier agent on Arc
+          Resolved by Verifier agent on-chain
         </div>
       </div>
       <div className="flex items-center gap-3">
@@ -52,7 +52,7 @@ export default function PredictionMarketPreview({ traces }) {
           )}
         </div>
         <div className="mt-3 text-[10px] text-pink-300/80 text-center">
-          Coming soon — USDC markets on Arc with verifier oracle resolution
+          Coming soon — USDC markets with verifier oracle resolution
         </div>
       </Card>
     </section>

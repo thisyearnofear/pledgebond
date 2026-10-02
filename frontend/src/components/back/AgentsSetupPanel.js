@@ -28,7 +28,7 @@ export default function AgentsSetupPanel() {
           Setup wallet → pay in USDC → run AI analysis → inspect result source → decide what to back
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-          Fast stablecoin settlement on Arc · clearer demo/live states · fewer hidden fallbacks
+          Fast stablecoin settlement · clearer demo/live states · fewer hidden fallbacks
         </p>
       </Card>
     </div>

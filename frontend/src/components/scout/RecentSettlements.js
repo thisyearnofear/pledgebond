@@ -13,7 +13,7 @@ export default function RecentSettlements({ executions }) {
     <section>
       <h2 className="text-sm font-black text-slate-300 dark:text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
         <BanknotesIcon className="w-4 h-4 text-emerald-400" />
-        Recent Arc Settlements
+        Recent On-chain Settlements
       </h2>
       <div className="space-y-2">
         {executions.map((exec) => (

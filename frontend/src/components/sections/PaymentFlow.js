@@ -33,7 +33,7 @@ export function PaymentFlow() {
             How AI Agents Analyze Your Projects
           </h2>
           <p className="text-sm sm:text-base text-secondary max-w-2xl mx-auto">
-            Per-query AI agents assess builder quality — paid instantly via x402 nanopayments on Circle&apos;s Arc L2
+            Per-query AI agents assess builder quality — paid instantly via x402 nanopayments in USDC
           </p>
         </div>
 
@@ -91,8 +91,8 @@ export function PaymentFlow() {
               <span>🤖 Agent</span>
               <span className="text-gray-400 dark:text-gray-400">→ pays →</span>
               <span>🧠 LLM Inference</span>
-              <span className="text-gray-400 dark:text-gray-400">→ settled on</span>
-              <span className="font-semibold text-teal-600 dark:text-teal-400">Arc L2</span>
+              <span className="text-gray-400 dark:text-gray-400">→ settled in</span>
+              <span className="font-semibold text-teal-600 dark:text-teal-400">USDC</span>
             </div>
           </div>
         </div>

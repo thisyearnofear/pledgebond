@@ -128,7 +128,7 @@ export default function ScoutTracePage() {
     <>
       <Head>
         <title>Scout Trace — {runId}</title>
-        <meta name="description" content={`Proof Scout reasoning trace for run ${runId}. Transparent AI project evaluation on Arc.`} />
+        <meta name="description" content={`Proof Scout reasoning trace for run ${runId}. Transparent AI project evaluation on-chain.`} />
         <meta property="og:title" content={`Proof Scout Trace — ${runId}`} />
         <meta property="og:description" content="Transparent AI reasoning trace for blockchain project evaluation." />
         <meta property="og:image" content={`https://pledgebond.com/api/og/trace?runId=${encodeURIComponent(runId)}&project=${encodeURIComponent(traces[0]?.project || 'Unknown')}&score=${encodeURIComponent(run.healthScore || run.projectsBacked || '?')}&trace=${encodeURIComponent((traces[0]?.trace || '').slice(0, 200))}`} />

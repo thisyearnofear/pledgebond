@@ -247,7 +247,7 @@ export default function TransactionsPage() {
             </span>
             <span>→</span>
             <span className="bg-surface px-2 py-1 rounded border border-gray-200 dark:border-gray-600">
-              USDC settled on Arc via Circle
+              USDC settled via Circle
             </span>
             <span>→</span>
             <span className="bg-surface px-2 py-1 rounded border border-gray-200 dark:border-gray-600">
