@@ -96,6 +96,14 @@ module.exports = {
       accounts: [PRIVATE_KEY],
       chainId: 5042002,
     },
+    // Arc Mainnet — USDC-native gas; the mempool enforces a 20 Gwei
+    // maxFeePerGas floor (see docs.arc.io/arc/references/evm-differences)
+    arc: {
+      url: process.env.ARC_MAINNET_RPC || "https://rpc.mainnet.arc.io",
+      accounts: [PRIVATE_KEY],
+      chainId: 5042,
+      gasPrice: 20000000000,
+    },
     // Mainnet
     ethereum: {
       url: INFURA_API_KEY

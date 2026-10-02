@@ -5,7 +5,7 @@ import { getContract, formatUnits, parseUnits, maxUint256 } from 'viem';
 import type { PublicClient, WalletClient } from 'viem';
 
 import { BUILDER_CREDIT_CORE_ABI, ERC20_ABI, HACKATHON_REGISTRY_ABI } from '../constants/abis';
-import { BUILDER_CREDIT_CORE_ADDRESSES, TESTNET_USDC_ADDRESSES, HACKATHON_REGISTRY_ADDRESSES } from '../config/tokens';
+import { BUILDER_CREDIT_CORE_ADDRESSES, USDC_ADDRESSES, HACKATHON_REGISTRY_ADDRESSES } from '../config/tokens';
 import type { ProjectData, ProjectBackingData, ProjectDetails } from '../lib/chains/types';
 
 // ABIs are in human-readable format; cast for viem (tuple() syntax not supported by parseAbi)
@@ -24,7 +24,7 @@ class CreditService {
     getContracts(chainId: number | undefined, publicClient: PublicClient, walletClient?: WalletClient): Contracts | null {
         if (!chainId) return null;
         const coreAddress = (BUILDER_CREDIT_CORE_ADDRESSES as Record<number, string>)[chainId] as `0x${string}`;
-        const usdcAddress = (TESTNET_USDC_ADDRESSES as Record<number, string>)[chainId] as `0x${string}`;
+        const usdcAddress = (USDC_ADDRESSES as Record<number, string>)[chainId] as `0x${string}`;
         const registryAddress = (HACKATHON_REGISTRY_ADDRESSES as Record<number, string>)[chainId] as `0x${string}`;
         if (!coreAddress || !usdcAddress || !registryAddress) {
             throw new Error(`Platform not supported on network ${chainId}`);

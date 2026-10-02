@@ -18,7 +18,7 @@
     "@bonfida/spl-name-service": "3.0.21",
     "@circle-fin/circle-sdk": "^1.3.0",
     "@circle-fin/developer-controlled-wallets": "10.3.1",
-    "@circle-fin/x402-batching": "^2.1.0",
+    "@circle-fin/x402-batching": "^3.5.0",
     "@cloak.dev/sdk": "0.1.6",
     "@coral-xyz/anchor": "^0.32.1",
     "@farcaster/miniapp-sdk": "^0.3.0",

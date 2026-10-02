@@ -7,7 +7,6 @@
  */
 
 import { realCircleService, calculateFundingAmount } from '../services/RealCircleService';
-import { ARC_CIRCLE_BLOCKCHAIN } from '../config/tokens';
 import { getFundingTier } from './format';
 // Re-export client-safe formatters so existing server-side callers that
 // already import usdcPayments keep working. Client components should

@@ -1,7 +1,9 @@
 const { ethers, network } = require("hardhat");
 const fs = require("fs");
 
-const TESTNET_USDC_ADDRESSES = {
+// Native USDC ERC-20 interface on Arc is the same system address on
+// testnet and mainnet; other entries are per-chain USDC deployments.
+const USDC_ADDRESSES = {
   11155111: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
   421614: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
   84532: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
@@ -9,6 +11,7 @@ const TESTNET_USDC_ADDRESSES = {
   44787: "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B",
   59141: "0xFEce4462D57bD51A6A552365A011b95f0E16d9B7",
   5042002: "0x3600000000000000000000000000000000000000",
+  5042: "0x3600000000000000000000000000000000000000",
 };
 
 async function main() {
@@ -22,7 +25,7 @@ async function main() {
   const balance = await deployer.getBalance();
   console.log(`💰 Account balance: ${ethers.utils.formatEther(balance)} ETH`);
 
-  const usdcAddress = TESTNET_USDC_ADDRESSES[chainId];
+  const usdcAddress = USDC_ADDRESSES[chainId];
   if (!usdcAddress) {
     console.error(`❌ USDC address not found for chain ID ${chainId}`);
     process.exit(1);
@@ -122,9 +125,10 @@ async function main() {
   console.log(`👤 Deployer: ${deployer.address}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-  if (chainId === 5042002) {
-    console.log(`\n📝 BUILDER_CREDIT_ARC_ADDRESS=${proxy.address}`);
-    console.log(`HACKATHON_REGISTRY_ARC_ADDRESS=${hackathonRegistry.address}`);
+  if (chainId === 5042002 || chainId === 5042) {
+    const suffix = chainId === 5042 ? "_MAINNET" : "";
+    console.log(`\n📝 BUILDER_CREDIT_ARC${suffix}_ADDRESS=${proxy.address}`);
+    console.log(`HACKATHON_REGISTRY_ARC${suffix}_ADDRESS=${hackathonRegistry.address}`);
   }
 
   return { hackathonRegistry: hackathonRegistry.address, builderCreditCore: proxy.address, usdcAddress };

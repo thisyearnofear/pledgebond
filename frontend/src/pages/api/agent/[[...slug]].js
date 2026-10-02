@@ -584,8 +584,8 @@ async function executeHandler(req, res) {
   const contractAddress = process.env.BUILDER_CREDIT_ARC_ADDRESS;
   const agentWalletId = process.env.CIRCLE_AGENT_WALLET_ID;
   const { realCircleService } = await import("../../../services/RealCircleService");
-  const { TESTNET_USDC_ADDRESSES, ARC_TESTNET_CHAIN_ID } = await import("../../../config/tokens");
-  const USDC_ADDRESS = (TESTNET_USDC_ADDRESSES || {})[ARC_TESTNET_CHAIN_ID] || "0x3600000000000000000000000000000000000000";
+  const { USDC_ADDRESSES, ARC_CHAIN_ID, ARC_NETWORK } = await import("../../../config/tokens");
+  const USDC_ADDRESS = (USDC_ADDRESSES || {})[ARC_CHAIN_ID] || "0x3600000000000000000000000000000000000000";
 
   if (!contractAddress || !agentWalletId || !realCircleService.isClientConfigured()) {
     return res.status(500).json({ error: "Agent not configured", missing: [!agentWalletId && "CIRCLE_AGENT_WALLET_ID", !contractAddress && "BUILDER_CREDIT_ARC_ADDRESS", !realCircleService.isClientConfigured() && "CIRCLE_API_KEY/CIRCLE_ENTITY_SECRET"].filter(Boolean) });
@@ -623,7 +623,7 @@ async function executeHandler(req, res) {
     const failed = results.filter((r) => r.status === "failed");
     const runId = `exec_${Date.now()}`;
 
-    await db.collection("agent_runs").doc(runId).set({ type: "execution", timestamp: new Date().toISOString(), agentWalletId, chain: "arc-testnet", totalBacked: successful.length, totalFailed: failed.length, totalStaked: successful.reduce((s, r) => s + r.amount, 0), transactions: results });
+    await db.collection("agent_runs").doc(runId).set({ type: "execution", timestamp: new Date().toISOString(), agentWalletId, chain: `arc-${ARC_NETWORK}`, totalBacked: successful.length, totalFailed: failed.length, totalStaked: successful.reduce((s, r) => s + r.amount, 0), transactions: results });
 
     return res.status(200).json({ success: true, runId, agentWalletId, circleManaged: true, summary: { backed: successful.length, failed: failed.length, totalStaked: successful.reduce((s, r) => s + r.amount, 0).toFixed(2) + " USDC", txHashes: successful.map((r) => r.txHash).filter(Boolean) }, results });
   } catch (error) {

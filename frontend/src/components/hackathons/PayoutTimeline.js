@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/common/Card';
 import { LoadingSpinner } from '@/components/common/LoadingStates';
+import { ARC_EXPLORER } from '@/config/tokens';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import Link from 'next/link';
 
@@ -279,7 +280,7 @@ function PayoutTimelineRow({ entry, isFirst }) {
           {payoutTxHash && (
             <div className="mt-1">
               <a
-                href={`https://explorer.arc-test.net/tx/${payoutTxHash}`}
+                href={`${ARC_EXPLORER}/tx/${payoutTxHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"

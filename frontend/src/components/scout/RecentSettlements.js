@@ -3,6 +3,7 @@
  * Each row links to the Arc explorer for the tx hash.
  */
 import { Card } from "@/components/common/Card";
+import { ARC_EXPLORER } from "@/config/tokens";
 import { BanknotesIcon, TrophyIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 
 export default function RecentSettlements({ executions }) {
@@ -32,7 +33,7 @@ export default function RecentSettlements({ executions }) {
             </div>
             {exec.txHashes?.[0] && (
               <a
-                href={`https://explorer.arc.network/tx/${exec.txHashes[0]}`}
+                href={`${ARC_EXPLORER}/tx/${exec.txHashes[0]}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[10px] text-cyan-400 dark:text-cyan-500 hover:underline flex items-center gap-1"

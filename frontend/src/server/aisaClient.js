@@ -1,5 +1,5 @@
 /**
- * AIsa x402-paid fetch client for Arc Testnet
+ * AIsa x402-paid fetch client for Arc (testnet or mainnet via ARC_NETWORK)
  *
  * ⚠️  SERVER-ONLY — this file MUST NEVER be imported from client-side code.
  *     It reads OWS_MNEMONIC from process.env, which must never reach the browser.
@@ -18,13 +18,20 @@ import { createWalletClient, createPublicClient, http, getAddress, toHex } from 
 import { mnemonicToAccount } from "viem/accounts";
 import { toClientEvmSigner } from "@x402/evm";
 import { wrapFetchWithPayment, x402Client } from "@x402/fetch";
+import { ARC_CHAIN_ID, ARC_NETWORK, ARC_RPC_URL, ARC_CAIP2, CHAIN_INFO } from "../config/tokens";
 
-const arcTestnet = {
-  id: 5042002,
-  name: "Arc Testnet",
+const arcChain = {
+  id: ARC_CHAIN_ID,
+  name: CHAIN_INFO[ARC_CHAIN_ID]?.name || `Arc ${ARC_NETWORK}`,
   nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 18 },
-  rpcUrls: { default: { http: ["https://rpc.testnet.arc.network"] } },
+  rpcUrls: { default: { http: [ARC_RPC_URL] } },
 };
+
+// Sibling chains whose payment requirements this client can also sign for.
+const SIBLING_NETWORKS =
+  ARC_NETWORK === "mainnet"
+    ? ["eip155:1", "eip155:8453", "eip155:42161"]
+    : ["eip155:11155111", "eip155:84532", "eip155:421614"];
 
 const authorizationTypes = {
   TransferWithAuthorization: [
@@ -97,18 +104,18 @@ export function getAisaFetch() {
   }
 
   const account = mnemonicToAccount(mnemonic);
-  const walletClient = createWalletClient({ account, chain: arcTestnet, transport: http() });
-  const publicClient = createPublicClient({ chain: arcTestnet, transport: http() });
+  const walletClient = createWalletClient({ account, chain: arcChain, transport: http() });
+  const publicClient = createPublicClient({ chain: arcChain, transport: http() });
 
   const signer = toClientEvmSigner(walletClient, publicClient);
   const scheme = new GatewayEvmScheme(signer);
 
   const client = new x402Client((_, accepts) => {
-    const preferred = accepts.find((a) => a.network === "eip155:5042002");
+    const preferred = accepts.find((a) => a.network === ARC_CAIP2);
     return preferred || accepts[0];
   });
 
-  const networks = ["eip155:5042002", "eip155:11155111", "eip155:84532", "eip155:421614"];
+  const networks = [ARC_CAIP2, ...SIBLING_NETWORKS];
   networks.forEach((network) => client.register(network, scheme));
 
   _payingFetch = wrapFetchWithPayment(fetch, client);

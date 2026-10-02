@@ -15,6 +15,7 @@ async function main() {
     84532: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Base Sepolia
     44787: "0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B", // Celo Alfajores
     5042002: "0x3600000000000000000000000000000000000000", // Arc Testnet (native USDC ERC-20 interface, 6 decimals)
+    5042: "0x3600000000000000000000000000000000000000", // Arc Mainnet (native USDC ERC-20 interface, 6 decimals)
   };
 
   const chainId = network.config.chainId;

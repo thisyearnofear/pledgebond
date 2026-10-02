@@ -9,7 +9,7 @@
  */
 
 import { realCircleService } from './RealCircleService';
-import { TESTNET_CHAIN_INFO, TESTNET_USDC_ADDRESSES } from '../config/tokens';
+import { CHAIN_INFO, USDC_ADDRESSES } from '../config/tokens';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -49,6 +49,11 @@ export interface PayoutAttestation {
 
 const ERC20_TRANSFER_EVENT_SIG = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
+// On Arc, USDC Transfer events are emitted by the system emitter contract,
+// not the 0x3600... ERC-20 interface address (Arc EVM difference).
+const ARC_USDC_EMITTER = '0xfffffffffffffffffffffffffffffffffffffffe';
+const ARC_CHAIN_IDS = new Set([5042, 5042002]);
+
 /**
  * Get an RPC URL for a given chain ID, falling back to environment variable.
  */
@@ -59,8 +64,8 @@ function getRpcUrl(chainId: string | number): string | null {
     return process.env[envVar]!;
   }
 
-  // Fall back to known testnet config
-  const chainInfo = TESTNET_CHAIN_INFO[chainId as keyof typeof TESTNET_CHAIN_INFO];
+  // Fall back to known chain config
+  const chainInfo = CHAIN_INFO[chainId as keyof typeof CHAIN_INFO];
   return chainInfo?.rpcUrl || null;
 }
 
@@ -117,13 +122,20 @@ async function parseEVMTransferReceipt(
       }
     }
 
-    // USDC address for this chain
-    const usdcAddress = (TESTNET_USDC_ADDRESSES as Record<string, string>)[String(chainId)]?.toLowerCase();
+    // USDC address for this chain. On Arc the system emitter logs USDC
+    // Transfer events, so either address is accepted there.
+    const usdcAddress = (USDC_ADDRESSES as Record<string, string>)[String(chainId)]?.toLowerCase();
+    const isArc = ARC_CHAIN_IDS.has(Number(chainId));
+    const logIsUsdc = (addr?: string) => {
+      const a = addr?.toLowerCase();
+      if (!a) return false;
+      return a === usdcAddress || (isArc && a === ARC_USDC_EMITTER);
+    };
 
     // Scan logs for USDC Transfer events to the recipient
     for (const log of receipt.logs) {
       // Check if this log is from the USDC contract
-      if (usdcAddress && log.address?.toLowerCase() !== usdcAddress) continue;
+      if (usdcAddress && !logIsUsdc(log.address)) continue;
 
       // Check topics: Transfer event has 3 topics (sig, from, to)
       if (log.topics?.[0] !== ERC20_TRANSFER_EVENT_SIG) continue;

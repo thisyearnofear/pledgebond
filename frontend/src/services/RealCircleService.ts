@@ -12,7 +12,9 @@ import { db } from "@/lib/firebase/serverOnly";
 import {
   TESTNET_USDC_ADDRESSES,
   MAINNET_USDC_ADDRESSES,
-  ARC_TESTNET_CHAIN_ID,
+  USDC_ADDRESSES,
+  ARC_CHAIN_ID,
+  ARC_CIRCLE_BLOCKCHAIN,
   BUILDER_CREDIT_CORE_ADDRESSES,
 } from "../config/tokens";
 import { calculateFundingAmount as sharedCalculateFundingAmount } from "../lib/funding/calculateFundingAmount";
@@ -264,7 +266,7 @@ class RealCircleService {
       const response = await this.client!.createWallets({
         idempotencyKey,
         walletSetId: this.walletSetId!,
-        blockchains: ["ETH", "MATIC-AMOY", "BASE-SEPOLIA", "ARB-SEPOLIA"] as any,
+        blockchains: ["ETH", "MATIC-AMOY", "BASE-SEPOLIA", "ARB-SEPOLIA", ARC_CIRCLE_BLOCKCHAIN] as any,
         count: 1,
       });
 
@@ -377,7 +379,7 @@ class RealCircleService {
         walletId: config.walletId,
         tokenId:
           config.tokenId ||
-          (TESTNET_USDC_ADDRESSES as Record<number, string>)[ARC_TESTNET_CHAIN_ID],
+          (USDC_ADDRESSES as Record<number, string>)[ARC_CHAIN_ID],
         destinationAddress: config.destinationAddress,
         amount: [config.amount],
         fee: { feeLevel },

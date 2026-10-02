@@ -22,6 +22,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { Card } from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
+import { ARC_EXPLORER } from "@/config/tokens";
 import { trackEvent } from "@/lib/analytics";
 import {
   CpuChipIcon,
@@ -255,7 +256,7 @@ export default function ScoutTracePage() {
                     </div>
                     {r.txHash && (
                       <a
-                        href={`https://explorer.arc.network/tx/${r.txHash}`}
+                        href={`${ARC_EXPLORER}/tx/${r.txHash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] text-cyan-400 dark:text-cyan-500 hover:underline flex items-center gap-1"

@@ -16,18 +16,10 @@ declare module "@circle-fin/developer-controlled-wallets" {
   ): CircleDeveloperControlledWalletsClient;
 }
 
-declare module "@circle-fin/x402-batching/client" {
-  export class GatewayClient {
-    constructor(config?: any);
-    account: { address: string } | null;
-    getBalance(): Promise<any>;
-    deposit(params: any): Promise<any>;
-    withdraw(params: any): Promise<any>;
-    pay(url: string, options?: any): Promise<any>;
-    createPayment(params: any): Promise<any>;
-    getPaymentStatus(id: string): Promise<any>;
-  }
-}
+// @circle-fin/x402-batching ships its own types (v3+) — the ambient
+// declaration that previously stubbed /client was removed so the real
+// GatewayClient API (getBalances, decimal-string deposit/withdraw, arc
+// mainnet SupportedChainName) is used.
 
 declare module "@lifi/sdk" {
   export class LiFi {

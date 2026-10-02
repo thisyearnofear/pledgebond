@@ -5,7 +5,7 @@
 
 import { LiFi, RouteOptions, StatusResponse, SwitchChainHookData, ConfigUpdate } from "@lifi/sdk";
 import type { WalletClient } from 'viem';
-import { USDC_ADDRESSES, TESTNET_CHAIN_INFO } from "../config/tokens";
+import { USDC_ADDRESSES, CHAIN_INFO } from "../config/tokens";
 
 interface LiFiRoute {
   transactionHash?: string;
@@ -105,7 +105,7 @@ class RealLiFiService {
     try {
       const execution = await this.lifi.executeRoute(signer as any, route, {
         switchChainHook: async (chainId: number) => {
-          const chainInfo = TESTNET_CHAIN_INFO[chainId as keyof typeof TESTNET_CHAIN_INFO];
+          const chainInfo = CHAIN_INFO[chainId as keyof typeof CHAIN_INFO];
           console.warn(`[LiFi] switchChainHook: need to switch to chain ${chainId} (${chainInfo?.name || 'unknown'})`);
           throw new Error(`Chain switch to ${chainId} not handled automatically`);
         },

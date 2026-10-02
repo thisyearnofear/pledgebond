@@ -43,6 +43,8 @@ const EVM_CHAIN_ID_TO_ECOSYSTEM: Record<number, EcosystemId> = {
   59144: 'linea',
   42220: 'celo',
   1993: 'arc',
+  5042: 'arc',
+  5042002: 'arc',
 };
 
 interface EcosystemPreferenceResult {

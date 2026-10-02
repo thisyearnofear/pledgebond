@@ -10,7 +10,8 @@
  * 3. Check balances and withdraw earnings
  */
 
-import { GatewayClient } from "@circle-fin/x402-batching/client";
+import { GatewayClient, type SupportedChainName } from "@circle-fin/x402-batching/client";
+import { ARC_GATEWAY_CHAIN } from "../config/tokens";
 
 interface NanopaymentConfig {
   chain: string;
@@ -33,13 +34,16 @@ class NanopaymentService {
   async initialize(config: NanopaymentConfig) {
     this.config = config;
 
-    // Map user-facing chain names to the GatewayClient's SupportedChainName.
-    // The @circle-fin/x402-batching SDK natively supports "arcTestnet"
-    // (GATEWAY_DOMAINS.arcTestnet = 26). Previously this was incorrectly
-    // mapped to "arbitrum", which would route payments to the wrong chain.
-    const chain = config.chain === "arc" || config.chain === "arcTestnet"
-      ? "arcTestnet" as const
-      : "arbitrumSepolia" as const;
+    // Any Arc-family input resolves to the configured Arc network
+    // (NEXT_PUBLIC_ARC_NETWORK=mainnet → "arc", otherwise "arcTestnet").
+    // The env toggle wins over the caller's literal chain name so prod can
+    // flip networks without touching call sites. Non-Arc input falls back
+    // to arbitrumSepolia for backwards compatibility.
+    const chain = (
+      config.chain === "arc" || config.chain === "arcTestnet"
+        ? ARC_GATEWAY_CHAIN
+        : "arbitrumSepolia"
+    ) as SupportedChainName;
 
     this.client = new GatewayClient({
       chain,
@@ -56,9 +60,9 @@ class NanopaymentService {
     if (!this.client) {
       throw new Error("NanopaymentClient not initialized");
     }
-    const balance = await this.client.getBalance() as unknown as { available: string | number; locked?: string | number };
-    const available = String(balance.available);
-    const locked = balance.locked ? String(balance.locked) : '0';
+    const balances = await this.client.getBalances();
+    const available = balances.gateway.available.toString();
+    const locked = (balances.gateway.total - balances.gateway.available).toString();
     return { available, locked };
   }
 
@@ -66,18 +70,17 @@ class NanopaymentService {
     if (!this.client) {
       throw new Error("NanopaymentClient not initialized");
     }
-    const amountWei = (BigInt(amountUSDC) * BigInt(1e6)).toString();
-    const result = await this.client.deposit(amountWei) as { txHash?: string; hash?: string };
-    return { txHash: result.txHash || result.hash || '' };
+    // SDK v3 takes a decimal string ("10.5"), not atomic units
+    const result = await this.client.deposit(String(amountUSDC));
+    return { txHash: result.depositTxHash };
   }
 
   async withdraw(amountUSDC: number): Promise<{ txHash: string }> {
     if (!this.client) {
       throw new Error("NanopaymentClient not initialized");
     }
-    const amountWei = (BigInt(amountUSDC) * BigInt(1e6)).toString();
-    const result = await this.client.withdraw(amountWei) as { txHash?: string; hash?: string };
-    return { txHash: result.txHash || result.hash || '' };
+    const result = await this.client.withdraw(String(amountUSDC));
+    return { txHash: result.mintTxHash };
   }
 
   async pay(url: string, options?: {
@@ -94,22 +97,21 @@ class NanopaymentService {
         method: options?.method || 'GET',
         body: options?.body,
         headers: options?.headers,
-      }) as { data?: any; status?: number; headers?: Record<string, string> };
-      const { data, status, headers } = result;
+      });
 
-      if (status === 402) {
+      if (result.status === 402) {
         return {
           success: false,
           status: "payment_required",
-          error: headers?.["x-payment-requirement"] || "Payment required",
+          error: "Payment required",
         };
       }
 
       return {
         success: true,
         status: "paid",
-        data,
-        txHash: headers?.["x-settlement-hash"] || headers?.["x-tx-hash"],
+        data: result.data,
+        txHash: result.transaction,
       };
     } catch (error: unknown) {
       return {

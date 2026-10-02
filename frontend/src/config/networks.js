@@ -3,13 +3,19 @@
  * Centralized network definitions and utilities
  */
 
-import { TESTNET_USDC_ADDRESSES, TESTNET_CHAIN_INFO } from "./tokens";
+import {
+  TESTNET_USDC_ADDRESSES,
+  MAINNET_USDC_ADDRESSES,
+  TESTNET_CHAIN_INFO,
+  MAINNET_CHAIN_INFO,
+} from "./tokens";
+
+const toKey = (chainId) => (isNaN(parseInt(chainId)) ? chainId : parseInt(chainId));
 
 export const NETWORK_CONFIGS = {
   // Combine chain info with USDC addresses
   ...Object.keys(TESTNET_CHAIN_INFO).reduce((acc, chainId) => {
-    // Handle both numeric (EVM) and string (Solana) chain IDs
-    const id = isNaN(parseInt(chainId)) ? chainId : parseInt(chainId);
+    const id = toKey(chainId);
     acc[id] = {
       ...TESTNET_CHAIN_INFO[chainId],
       chainId: id,
@@ -18,14 +24,22 @@ export const NETWORK_CONFIGS = {
     };
     return acc;
   }, {}),
+  ...Object.keys(MAINNET_CHAIN_INFO).reduce((acc, chainId) => {
+    const id = toKey(chainId);
+    acc[id] = {
+      ...MAINNET_CHAIN_INFO[chainId],
+      chainId: id,
+      usdcAddress: MAINNET_USDC_ADDRESSES[chainId],
+      isTestnet: false,
+    };
+    return acc;
+  }, {}),
 };
 
-export const SUPPORTED_CHAINS = Object.keys(NETWORK_CONFIGS).map((id) =>
-  isNaN(parseInt(id)) ? id : parseInt(id)
-);
+export const SUPPORTED_CHAINS = Object.keys(NETWORK_CONFIGS).map(toKey);
 
-export const MAINNET_CHAIN_IDS = [1, 137, 10, 42161, 8453, 100]; // For future use
-export const TESTNET_CHAIN_IDS = SUPPORTED_CHAINS;
+export const MAINNET_CHAIN_IDS = Object.keys(MAINNET_CHAIN_INFO).map(toKey);
+export const TESTNET_CHAIN_IDS = Object.keys(TESTNET_CHAIN_INFO).map(toKey);
 
 // Helper functions
 export const getNetworkConfig = (chainId) => {
@@ -33,7 +47,7 @@ export const getNetworkConfig = (chainId) => {
 };
 
 export const getUSDCAddress = (chainId) => {
-  return TESTNET_USDC_ADDRESSES[chainId] || null;
+  return TESTNET_USDC_ADDRESSES[chainId] || MAINNET_USDC_ADDRESSES[chainId] || null;
 };
 
 export const isTestnet = (chainId) => {

@@ -14,15 +14,16 @@
 
 import crypto from 'crypto';
 import rateLimit from '@/utils/rateLimit';
-import { ARC_TESTNET_CHAIN_ID, TESTNET_USDC_ADDRESSES, TESTNET_CHAIN_INFO } from '@/config/tokens';
+import { ARC_CHAIN_ID, ARC_NETWORK, ARC_RPC_URL, USDC_ADDRESSES } from '@/config/tokens';
 
 const PRICE_PER_REQUEST = 0.05;
 const CURRENCY = "USDC";
 
-// Arc Testnet RPC — sourced from the canonical tokens config (single source of truth)
-const ARC_CHAIN_INFO = TESTNET_CHAIN_INFO[ARC_TESTNET_CHAIN_ID];
-const ARC_RPC = ARC_CHAIN_INFO?.rpcUrl || "https://rpc.testnet.arc.network";
-const ARC_USDC = TESTNET_USDC_ADDRESSES[ARC_TESTNET_CHAIN_ID];
+// Arc RPC + USDC — env-selected network (NEXT_PUBLIC_ARC_NETWORK), sourced
+// from the canonical tokens config (single source of truth).
+const ARC_RPC = ARC_RPC_URL;
+const ARC_USDC = USDC_ADDRESSES[ARC_CHAIN_ID];
+const ARC_NETWORK_LABEL = `arc-${ARC_NETWORK}`;
 
 // EIP-3009 authorizationState selector: authorizationState(address,bytes32) → uint8
 // 0 = Unused, 1 = Used, 2 = Canceled
@@ -49,7 +50,7 @@ function createPaymentRequirement(amountUSDC = PRICE_PER_REQUEST) {
       currency: CURRENCY,
       amount: (BigInt(Math.round(amountUSDC * 1e6))).toString(),
       recipient: process.env.CIRCLE_GATEWAY_WALLET_ADDRESS || "0x0000000000000000000000000000000000000000",
-      chainId: ARC_TESTNET_CHAIN_ID,
+      chainId: ARC_CHAIN_ID,
       token: ARC_USDC,
       description: "AI Agent API — per-request USDC nanopayment on Arc",
     },
@@ -130,8 +131,8 @@ export async function withNanopayment(handler, requiredAmount = PRICE_PER_REQUES
         req.nanopayment = {
           amount: requiredAmount,
           txHash: `0x${Buffer.from(crypto.randomBytes(32)).toString("hex")}`,
-          network: "arc",
-          chainId: ARC_TESTNET_CHAIN_ID,
+          network: ARC_NETWORK_LABEL,
+          chainId: ARC_CHAIN_ID,
           verified: false,
           serverSponsored: true,
           timestamp: new Date().toISOString(),
@@ -148,8 +149,8 @@ export async function withNanopayment(handler, requiredAmount = PRICE_PER_REQUES
           step2: "Sign an EIP-3009 TransferWithAuthorization and include the nonce in 'X-Nanopayment-Receipt'",
           learnMore: "https://developers.circle.com/gateway/nanopayments",
         },
-        network: "arc",
-        chainId: ARC_TESTNET_CHAIN_ID,
+        network: ARC_NETWORK_LABEL,
+        chainId: ARC_CHAIN_ID,
         priceUSD: requiredAmount,
         status: "payment_required",
       });
@@ -190,8 +191,8 @@ export async function withNanopayment(handler, requiredAmount = PRICE_PER_REQUES
       req.nanopayment = receipt || {
         amount: requiredAmount,
         txHash: `0x${Buffer.from(crypto.randomBytes(32)).toString("hex")}`,
-        network: "arc",
-        chainId: ARC_TESTNET_CHAIN_ID,
+        network: ARC_NETWORK_LABEL,
+        chainId: ARC_CHAIN_ID,
         signature: paymentSignature,
         verified: verificationStatus === "verified",
         verificationStatus,
@@ -239,7 +240,7 @@ function testModeFlow(handler, requiredAmount) {
     req.nanopayment = {
       amount: requiredAmount,
       txHash: `0x${Buffer.from(crypto.randomBytes(32)).toString("hex")}`,
-      network: "arc (testnet)",
+      network: ARC_NETWORK_LABEL,
       signature: paymentSignature,
       verified: false,
       testMode: true,

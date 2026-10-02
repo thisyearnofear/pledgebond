@@ -3,11 +3,49 @@
  * Updated with official Circle testnet addresses
  */
 
-// Single source of truth for Arc Testnet chain ID
+// ── Arc network selection ───────────────────────────────────────────
+// NEXT_PUBLIC_ARC_NETWORK="mainnet" flips every Arc-facing surface
+// (x402 Gateway client, chain configs, explorer links, Circle W3S
+// blockchain enum) to Arc Mainnet (chain 5042). Defaults to testnet so
+// dev/demo never touches real funds. The NEXT_PUBLIC_ prefix is required
+// because nanopaymentService runs client-side; ARC_NETWORK is accepted
+// as a server-side alias.
+export const ARC_MAINNET_CHAIN_ID = 5042;
 export const ARC_TESTNET_CHAIN_ID = 5042002;
 
-// Circle SDK blockchain identifier for Arc (matches SDK enum pattern)
-export const ARC_CIRCLE_BLOCKCHAIN = "ARC";
+export const ARC_NETWORK =
+  String(
+    process.env.NEXT_PUBLIC_ARC_NETWORK || process.env.ARC_NETWORK || "testnet"
+  ).toLowerCase() === "mainnet"
+    ? "mainnet"
+    : "testnet";
+
+export const ARC_CHAIN_ID =
+  ARC_NETWORK === "mainnet" ? ARC_MAINNET_CHAIN_ID : ARC_TESTNET_CHAIN_ID;
+
+// Chain name as understood by @circle-fin/x402-batching SupportedChainName
+export const ARC_GATEWAY_CHAIN =
+  ARC_NETWORK === "mainnet" ? "arc" : "arcTestnet";
+
+// CAIP-2 network id used in x402 payment requirements
+export const ARC_CAIP2 = `eip155:${ARC_CHAIN_ID}`;
+
+// Circle W3S blockchain enum: ARC (mainnet) / ARC-TESTNET (testnet)
+export const ARC_CIRCLE_BLOCKCHAIN =
+  ARC_NETWORK === "mainnet" ? "ARC" : "ARC-TESTNET";
+
+// Canonical endpoints (docs.arc.io). ARC_*_RPC_URL env vars can override.
+export const ARC_RPC_URL =
+  process.env.NEXT_PUBLIC_ARC_RPC_URL ||
+  process.env.ARC_RPC_URL ||
+  (ARC_NETWORK === "mainnet"
+    ? "https://rpc.mainnet.arc.io"
+    : "https://rpc.testnet.arc.network");
+
+export const ARC_EXPLORER =
+  ARC_NETWORK === "mainnet"
+    ? "https://explorer.arc.io"
+    : "https://explorer.testnet.arc.io";
 
 export const SOLANA_MAINNET_USDC = "EPjFW364Ac7H5keePybR7L5tS5sLwerZEv8oaW6wED7L";
 export const SOLANA_DEVNET_USDC = "4zMMC9srtvSqzRLsS51uVtoQpYp5yFdC8PYy8Y79zNLX";
@@ -58,6 +96,9 @@ export const MAINNET_USDC_ADDRESSES = {
   // Linea
   59144: "0x176211869cA2b568f2A7D4EE941E073a821EE1ff",
 
+  // Arc Mainnet (native USDC ERC-20 interface — same system address as testnet)
+  5042: "0x3600000000000000000000000000000000000000",
+
   // Solana
   'sol': SOLANA_MAINNET_USDC,
 };
@@ -105,6 +146,8 @@ export const BUILDER_CREDIT_CORE_ADDRESSES = {
   59141: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
   // Arc Testnet
   5042002: "0xC93Cf6034Bb2193bDA8B942eE91B244aa7DC7942", // deployed — real address
+  // Arc Mainnet — deploy via `npx hardhat run scripts/deployTestnet.js --network arc`
+  5042: process.env.BUILDER_CREDIT_ARC_MAINNET_ADDRESS || "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
 };
 
 export const HACKATHON_REGISTRY_ADDRESSES = {
@@ -134,6 +177,8 @@ export const HACKATHON_REGISTRY_ADDRESSES = {
   59141: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
   // Arc Testnet
   5042002: "0x78077d311e06A05720f50AeD6E42A0D5116D14c1", // deployed — real address
+  // Arc Mainnet — deploy via `npx hardhat run scripts/deployTestnet.js --network arc`
+  5042: process.env.HACKATHON_REGISTRY_ARC_MAINNET_ADDRESS || "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
 };
 
 export const TESTNET_CHAIN_INFO = {
@@ -184,7 +229,7 @@ export const TESTNET_CHAIN_INFO = {
     symbol: "USDC",
     decimals: 18,
     rpcUrl: "https://rpc.testnet.arc.network",
-    explorer: "https://testnet.arcscan.app",
+    explorer: "https://explorer.testnet.arc.io",
   },
   'sol-devnet': {
     name: "Solana Devnet",
@@ -193,6 +238,24 @@ export const TESTNET_CHAIN_INFO = {
     rpcUrl: "https://api.devnet.solana.com",
     explorer: "https://explorer.solana.com/?cluster=devnet",
   },
+};
+
+export const MAINNET_CHAIN_INFO = {
+  5042: {
+    name: "Arc",
+    symbol: "USDC",
+    decimals: 18,
+    rpcUrl: "https://rpc.mainnet.arc.io",
+    explorer: "https://explorer.arc.io",
+  },
+};
+
+// Combined lookup for services that resolve chain metadata by chainId at
+// runtime (payout verification, bridging). Prefer this over the
+// network-specific maps in generic lookups.
+export const CHAIN_INFO = {
+  ...TESTNET_CHAIN_INFO,
+  ...MAINNET_CHAIN_INFO,
 };
 
 export const USDC_TOKEN_INFO = {
