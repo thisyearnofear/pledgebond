@@ -362,13 +362,13 @@ export default function DeveloperDashboard() {
       setError(null);
       setSuccess(null);
 
-      const tx = await coreContract.distributePrize(selectedProjectId, parseUnits(prizeAmount, 6));
+      const tx = await coreContract.fundPrize(selectedProjectId, parseUnits(prizeAmount, 6));
       await tx.wait();
 
       setSuccess({
         amount: prizeAmount,
         transactionHash: tx.hash,
-        message: 'Prize distributed and backers repaid!'
+        message: 'Prize funded! Backers can now claim their payouts.'
       });
     } catch (err) {
       console.error('Failed to distribute prize:', err);

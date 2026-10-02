@@ -47,7 +47,14 @@ export const BUILDER_CREDIT_CORE_ABI = [
   "function requestFundingWithTeam(uint256[] hackathonIds, string githubUrl, string projectName, string[] milestoneDescriptions, uint256[] milestoneAmounts, address[] teamMembers, uint256[] teamShares) external returns (uint256)",
   "function backProject(uint256 projectId, uint256 multiplier, uint256 amount) external",
   "function pledgePrize(uint256 projectId, uint256 amount) external",
-  "function distributePrize(uint256 projectId, uint256 prizeAmount) external",
+  "function fundPrize(uint256 projectId, uint256 prizeAmount) external",
+  "function claimPayout(uint256 projectId) external",
+  "function claimBuilderPayout(uint256 projectId) external",
+  "function refundBacking(uint256 projectId) external",
+  "function projectPrizePool(uint256 projectId) public view returns (uint256)",
+  "function projectPrizeOwed(uint256 projectId) public view returns (uint256)",
+  "function maxBackingPerTx() public view returns (uint256)",
+  "function backingRefundDelay() public view returns (uint256)",
   "function approveMilestone(uint256 projectId, uint256 milestoneId) external",
   "function calculateFundingAmount(uint256 creditScore) public view returns (uint256)",
   "function calculateBoostedFundingAmount(uint256 creditScore, uint256 projectId) public view returns (uint256)",
@@ -63,7 +70,10 @@ export const BUILDER_CREDIT_CORE_ABI = [
   "function creditLines(address developer) public view returns (uint256 totalAmount, uint256 usedAmount, uint256 reputation, bool active, uint256 lastUpdated)",
   "event ProjectCreated(uint256 indexed projectId, uint256[] hackathonIds, address indexed developer, uint256 amount, string name)",
   "event ProjectBacked(uint256 indexed projectId, address indexed backer, uint256 amount, uint256 multiplier)",
-  "event PrizeDistributed(uint256 indexed projectId, uint256 totalAmount, uint256 backerPayout, uint256 builderPayout)"
+  "event PrizeFunded(uint256 indexed projectId, uint256 amount, uint256 totalPool)",
+  "event BackerPayoutClaimed(uint256 indexed projectId, address indexed backer, uint256 payout, uint256 owed)",
+  "event BuilderPayoutClaimed(uint256 indexed projectId, address indexed developer, uint256 payout)",
+  "event BackingRefunded(uint256 indexed projectId, address indexed backer, uint256 amount)"
 ];
 
 // HackathonRegistry ABI

@@ -216,7 +216,7 @@ Project
        Backers can always reclaim their principal.
 ```
 
-The protocol treasury accumulates loan repayments and sponsor contributions. `fund_backer_rewards` moves treasury USDC into a project's backer escrow vault to cover the `(multiplier - 100) / 100` premium on backer payouts — analogous to the EVM `distributePrize` function.
+The protocol treasury accumulates loan repayments and sponsor contributions. `fund_backer_rewards` moves treasury USDC into a project's backer escrow vault to cover the `(multiplier - 100) / 100` premium on backer payouts — analogous to the EVM `fundPrize` deposit (backers then pull via `claimPayout`).
 
 ### EVM (Solidity): UUPS Upgradeable
 

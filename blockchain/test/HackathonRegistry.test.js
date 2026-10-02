@@ -180,7 +180,7 @@ describe("HackathonRegistry", function () {
       // Try to remove a verifier when we have 2 verifiers and need 2 signatures
       await expect(
         hackathonRegistry.connect(host).removeVerifier(hackathonId, verifier1.address)
-      ).to.be.revertedWith("Cannot remove verifier: minimum threshold would not be met");
+      ).to.be.revertedWith("Would reduce verifiers below threshold");
     });
   });
 

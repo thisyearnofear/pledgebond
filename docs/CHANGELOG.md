@@ -666,7 +666,7 @@ and UI consistency.
   - `milestone_vault` — milestone funding only, paid out via `verify_milestone`
   - `backer_escrow_vault` — backer stakes only, paid out via `claim_reward`
 - Milestone payouts can no longer drain backer funds — each vault is isolated by PDA seed.
-- New `fund_backer_rewards` instruction: protocol treasury funds multiplier premiums into the backer escrow vault (mirrors EVM `distributePrize`).
+- New `fund_backer_rewards` instruction: protocol treasury funds multiplier premiums into the backer escrow vault (mirrors the EVM `fundPrize` deposit).
 - New `withdraw_treasury` instruction: addresses the previous "no withdraw instruction exists" gap.
 - `request_funding` creates both vault ATAs at project creation time.
 - Frontend `SolanaCreditService.ts` updated with new PDA helpers (`getMilestoneVaultAuthorityPda`, `getBackerVaultAuthorityPda`) and account mappings for all instructions.

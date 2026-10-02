@@ -24,6 +24,13 @@ interface IHackathonRegistry {
     function getRequiredSignatures(uint256 hackathonId) external view returns (uint256);
     
     /**
+     * @dev Checks whether a hackathon exists in the registry
+     * @param hackathonId ID of the hackathon
+     * @return bool True if the hackathon was created via createHackathon
+     */
+    function hackathonExists(uint256 hackathonId) external view returns (bool);
+    
+    /**
      * @dev Gets hackathon details by ID
      * @param hackathonId ID of the hackathon
      * @return name The name of the hackathon

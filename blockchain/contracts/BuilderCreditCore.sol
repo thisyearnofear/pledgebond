@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -93,6 +93,7 @@ contract BuilderCreditCore is
     struct MilestoneApproval {
         mapping(address => bool) hasApproved;
         uint8 approvalCount;
+        mapping(uint256 => uint8) approvalCountByHackathon;
         bool isCompleted;
     }
 
@@ -115,6 +116,27 @@ contract BuilderCreditCore is
     mapping(address => uint256[]) public developerProjects;
     mapping(address => uint256[]) public backerProjects;
     mapping(address => CreditLine) public creditLines;
+
+    // Project ID => USDC deposited for prize payouts (pull-based)
+    mapping(uint256 => uint256) public projectPrizePool;
+
+    // Project ID => USDC still owed to backers who have not claimed
+    mapping(uint256 => uint256) public projectPrizeOwed;
+
+    // Sum of all projectPrizePool entries; reserved and not withdrawable
+    uint256 public totalPrizePools;
+
+    // Launch safety limits (PLATFORM_ADMIN adjustable)
+    uint256 public maxBackingPerTx;
+    uint256 public backingRefundDelay;
+    uint256 public checkInInterval;
+    uint256 public maxCheckInReputation;
+
+    // Project ID => timestamp of last check-in (rate limits reputation farming)
+    mapping(uint256 => uint256) public lastCheckInAt;
+
+    // Developer => reputation points earned from check-ins (capped)
+    mapping(address => uint256) public checkInReputationEarned;
 
     // Events
     event ProjectCreated(
@@ -143,11 +165,32 @@ contract BuilderCreditCore is
         uint256 amount
     );
 
-    event PrizeDistributed(
+    event PrizeFunded(
         uint256 indexed projectId,
-        uint256 totalAmount,
-        uint256 backerPayout,
-        uint256 builderPayout
+        uint256 amount,
+        uint256 totalPool
+    );
+    event BackerPayoutClaimed(
+        uint256 indexed projectId,
+        address indexed backer,
+        uint256 payout,
+        uint256 owed
+    );
+    event BuilderPayoutClaimed(
+        uint256 indexed projectId,
+        address indexed developer,
+        uint256 payout
+    );
+    event BackingRefunded(
+        uint256 indexed projectId,
+        address indexed backer,
+        uint256 amount
+    );
+    event LimitsUpdated(
+        uint256 maxBackingPerTx,
+        uint256 backingRefundDelay,
+        uint256 checkInInterval,
+        uint256 maxCheckInReputation
     );
 
     event MilestoneCompleted(
@@ -214,6 +257,11 @@ contract BuilderCreditCore is
         baseCreditAmount = 500 * 1e6; // 500 USDC
         creditMultiplier = 10 * 1e6; // Legacy, unused in logic
         maxCreditAmount = 5000 * 1e6; // 5,000 USDC
+
+        maxBackingPerTx = 1000 * 1e6; // 1,000 USDC per backing transaction
+        backingRefundDelay = 30 days;
+        checkInInterval = 1 days;
+        maxCheckInReputation = 50;
 
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(PLATFORM_ADMIN_ROLE, _admin);
@@ -320,6 +368,13 @@ contract BuilderCreditCore is
         require(hackathonIds.length > 0, "At least one hackathon required");
         require(hackathonIds.length <= 5, "Too many hackathons");
 
+        for (uint i = 0; i < hackathonIds.length; i++) {
+            require(
+                registry.hackathonExists(hackathonIds[i]),
+                "Hackathon does not exist"
+            );
+        }
+
         uint256 totalAmount = 0;
         for (uint i = 0; i < milestoneAmounts.length; i++) {
             require(
@@ -411,6 +466,9 @@ contract BuilderCreditCore is
         );
 
         for (uint i = 0; i < teamMembers.length; i++) {
+            // Arc reverts on transfers to address(0); validate up front so a
+            // zero member cannot permanently DoS milestone payouts.
+            require(teamMembers[i] != address(0), "Invalid team member");
             projectTeams[projectId].push(
                 TeamMember({member: teamMembers[i], share: teamShares[i]})
             );
@@ -428,22 +486,6 @@ contract BuilderCreditCore is
     ) external whenNotPaused nonReentrant {
         Project storage project = projects[projectId];
         require(project.isActive, "Project is not active");
-
-        bool isAuthorized = false;
-        uint256 minRequiredSignatures = 999;
-
-        for (uint i = 0; i < project.hackathonIds.length; i++) {
-            uint256 hId = project.hackathonIds[i];
-            if (registry.isVerifier(hId, msg.sender)) {
-                isAuthorized = true;
-            }
-            uint256 req = registry.getRequiredSignatures(hId);
-            if (req < minRequiredSignatures) {
-                minRequiredSignatures = req;
-            }
-        }
-
-        require(isAuthorized, "Not an authorized verifier");
 
         require(
             milestoneId < projectMilestones[projectId].length,
@@ -463,9 +505,21 @@ contract BuilderCreditCore is
 
         emit MilestoneApproved(projectId, milestoneId, msg.sender);
 
-        if (approval.approvalCount >= minRequiredSignatures) {
-            _completeMilestone(projectId, milestoneId);
+        // Approvals accumulate per hackathon: a milestone completes only when
+        // one listed hackathon reaches its own required signature count.
+        bool isAuthorized = false;
+        for (uint i = 0; i < project.hackathonIds.length; i++) {
+            uint256 hId = project.hackathonIds[i];
+            if (registry.isVerifier(hId, msg.sender)) {
+                isAuthorized = true;
+                uint8 count = ++approval.approvalCountByHackathon[hId];
+                if (count >= registry.getRequiredSignatures(hId)) {
+                    _completeMilestone(projectId, milestoneId);
+                    break;
+                }
+            }
         }
+        require(isAuthorized, "Not an authorized verifier");
     }
 
     function _completeMilestone(uint256 projectId, uint256 milestoneId) internal {
@@ -473,6 +527,14 @@ contract BuilderCreditCore is
         milestone.completed = true;
         milestone.completedAt = block.timestamp;
         approvals[projectId][milestoneId].isCompleted = true;
+
+        // Milestone payouts cannot touch deposited prize pools, which are
+        // reserved for backer and builder claims.
+        require(
+            usdcToken.balanceOf(address(this)) >=
+                milestone.amount + totalPrizePools,
+            "Insufficient unreserved balance"
+        );
 
         Project storage project = projects[projectId];
         project.milestonesCompleted++;
@@ -519,18 +581,22 @@ contract BuilderCreditCore is
 
         if (creditLine.lastUpdated == 0) {
             creditLine.totalAmount = calculateFundingAmount(reputation);
-            creditLine.usedAmount = requestedAmount;
             creditLine.reputation = reputation;
             creditLine.active = true;
-            creditLine.lastUpdated = block.timestamp;
-        } else {
-            creditLine.usedAmount += requestedAmount;
-            if (reputation > creditLine.reputation) {
-                creditLine.totalAmount = calculateFundingAmount(reputation);
-                creditLine.reputation = reputation;
-            }
-            creditLine.lastUpdated = block.timestamp;
+        } else if (reputation > creditLine.reputation) {
+            creditLine.totalAmount = calculateFundingAmount(reputation);
+            creditLine.reputation = reputation;
         }
+
+        // Aggregate exposure cap: total outstanding across all of the
+        // developer's projects cannot exceed their current credit line.
+        require(
+            creditLine.usedAmount + requestedAmount <= creditLine.totalAmount,
+            "Exceeds credit line"
+        );
+
+        creditLine.usedAmount += requestedAmount;
+        creditLine.lastUpdated = block.timestamp;
 
         emit CreditLineUpdated(
             developer,
@@ -551,6 +617,10 @@ contract BuilderCreditCore is
         Project storage project = projects[projectId];
         require(project.isActive, "Project not active");
         require(amount > 0, "Amount must be > 0");
+        require(
+            amount <= maxBackingPerTx,
+            "Amount exceeds per-transaction limit"
+        );
 
         uint256 maxAllowedMultiplier = getMaxMultiplier(project.creditScore);
         require(
@@ -571,17 +641,8 @@ contract BuilderCreditCore is
         );
 
         totalProjectBacking[projectId] += amount;
+        projectPrizeOwed[projectId] += (amount * multiplier) / 100;
         backerProjects[msg.sender].push(projectId);
-
-        if (msg.sender == project.developer) {
-            CreditLine storage devCredit = creditLines[project.developer];
-            uint256 repBonus = amount / 200e6;
-            if (repBonus > 0) {
-                devCredit.reputation += repBonus;
-                if (devCredit.reputation > MAX_CREDIT_SCORE)
-                    devCredit.reputation = MAX_CREDIT_SCORE;
-            }
-        }
 
         CreditLine storage creditLine = creditLines[project.developer];
         creditLine.totalAmount += (amount * 2);
@@ -595,7 +656,7 @@ contract BuilderCreditCore is
     function pledgePrize(
         uint256 projectId,
         uint256 amount
-    ) external {
+    ) external whenNotPaused {
         require(
             projects[projectId].developer == msg.sender,
             "Only developer can pledge"
@@ -605,46 +666,142 @@ contract BuilderCreditCore is
     }
 
     /**
-     * @dev Distributes prize and handles backer repayments
+     * @dev Deposits a prize into the project's pool. Backers claim their
+     * share via claimPayout and the developer claims the remainder via
+     * claimBuilderPayout. Pull-based so payout cannot be DoS'd by a large
+     * backer set or a reverting recipient (e.g. a blocklisted address).
      */
-    function distributePrize(
+    function fundPrize(
         uint256 projectId,
         uint256 prizeAmount
-    ) external onlyRole(TREASURY_ROLE) nonReentrant {
+    ) external onlyRole(TREASURY_ROLE) nonReentrant whenNotPaused {
         require(prizeAmount > 0, "Prize amount must be > 0");
+        // Existence check, not isActive: prizes typically arrive after the
+        // final milestone completes and the project deactivates.
+        require(
+            projects[projectId].developer != address(0),
+            "Project does not exist"
+        );
 
         usdcToken.safeTransferFrom(msg.sender, address(this), prizeAmount);
+        projectPrizePool[projectId] += prizeAmount;
+        totalPrizePools += prizeAmount;
 
-        uint256 totalBackerPayout = 0;
-        Backing[] storage backings = projectBackings[projectId];
-
-        for (uint i = 0; i < backings.length; i++) {
-            if (!backings[i].claimed) {
-                uint256 payout = (backings[i].amount * backings[i].multiplier) /
-                    100;
-                if (prizeAmount >= totalBackerPayout + payout) {
-                    backings[i].claimed = true;
-                    totalBackerPayout += payout;
-                    usdcToken.safeTransfer(backings[i].backer, payout);
-                }
-            }
-        }
-
-        uint256 builderPayout = 0;
-        if (prizeAmount > totalBackerPayout) {
-            builderPayout = prizeAmount - totalBackerPayout;
-            usdcToken.safeTransfer(
-                projects[projectId].developer,
-                builderPayout
-            );
-        }
-
-        emit PrizeDistributed(
+        emit PrizeFunded(
             projectId,
             prizeAmount,
-            totalBackerPayout,
-            builderPayout
+            projectPrizePool[projectId]
         );
+    }
+
+    /**
+     * @dev Claims the caller's backer payout for a project. If the prize
+     * pool is underfunded relative to total owed, pays a pro-rata share of
+     * the pool rather than first-come-first-served.
+     */
+    function claimPayout(
+        uint256 projectId
+    ) external nonReentrant whenNotPaused {
+        Backing[] storage backings = projectBackings[projectId];
+        uint256 owed = 0;
+        for (uint i = 0; i < backings.length; i++) {
+            if (
+                backings[i].backer == msg.sender && !backings[i].claimed
+            ) {
+                backings[i].claimed = true;
+                owed += (backings[i].amount * backings[i].multiplier) / 100;
+            }
+        }
+        require(owed > 0, "Nothing to claim");
+
+        uint256 pool = projectPrizePool[projectId];
+        require(pool > 0, "No prize funded");
+        uint256 owedTotal = projectPrizeOwed[projectId];
+
+        uint256 payout = owedTotal > pool
+            ? (owed * pool) / owedTotal
+            : owed;
+
+        projectPrizePool[projectId] = pool - payout;
+        totalPrizePools -= payout;
+        projectPrizeOwed[projectId] = owedTotal - owed;
+
+        usdcToken.safeTransfer(msg.sender, payout);
+        emit BackerPayoutClaimed(projectId, msg.sender, payout, owed);
+    }
+
+    /**
+     * @dev Claims the developer's share of the prize pool: anything in
+     * excess of what is still owed to unclaimed backers.
+     */
+    function claimBuilderPayout(
+        uint256 projectId
+    ) external nonReentrant whenNotPaused {
+        require(
+            msg.sender == projects[projectId].developer,
+            "Only developer can claim"
+        );
+
+        uint256 pool = projectPrizePool[projectId];
+        uint256 owed = projectPrizeOwed[projectId];
+        require(pool > owed, "No builder payout available");
+
+        uint256 payout = pool - owed;
+        projectPrizePool[projectId] = owed;
+        totalPrizePools -= payout;
+
+        usdcToken.safeTransfer(msg.sender, payout);
+        emit BuilderPayoutClaimed(projectId, msg.sender, payout);
+    }
+
+    /**
+     * @dev Refunds the caller's backing if the project has not deployed any
+     * capital (no completed milestones) and no prize has been funded, after
+     * backingRefundDelay has elapsed since the project was funded.
+     */
+    function refundBacking(
+        uint256 projectId
+    ) external nonReentrant whenNotPaused {
+        Project storage project = projects[projectId];
+        require(
+            project.milestonesCompleted == 0,
+            "Backing already deployed"
+        );
+        require(
+            projectPrizePool[projectId] == 0,
+            "Prize funded; claim payout instead"
+        );
+        require(
+            block.timestamp >= project.fundedAt + backingRefundDelay,
+            "Refund delay not elapsed"
+        );
+
+        Backing[] storage backings = projectBackings[projectId];
+        uint256 refund = 0;
+        uint256 owedRemoved = 0;
+        for (uint i = 0; i < backings.length; i++) {
+            if (
+                backings[i].backer == msg.sender && !backings[i].claimed
+            ) {
+                backings[i].claimed = true;
+                refund += backings[i].amount;
+                owedRemoved +=
+                    (backings[i].amount * backings[i].multiplier) / 100;
+            }
+        }
+        require(refund > 0, "Nothing to refund");
+
+        totalProjectBacking[projectId] -= refund;
+        projectPrizeOwed[projectId] -= owedRemoved;
+
+        uint256 boost = refund * 2;
+        CreditLine storage line = creditLines[project.developer];
+        line.totalAmount = line.totalAmount > boost
+            ? line.totalAmount - boost
+            : 0;
+
+        usdcToken.safeTransfer(msg.sender, refund);
+        emit BackingRefunded(projectId, msg.sender, refund);
     }
 
     /**
@@ -716,13 +873,18 @@ contract BuilderCreditCore is
     function postCheckIn(
         uint256 projectId,
         string calldata metadata
-    ) external {
+    ) external whenNotPaused {
         require(
             projects[projectId].developer == msg.sender,
             "Only developer can check-in"
         );
         require(projects[projectId].isActive, "Project is not active");
+        require(
+            block.timestamp >= lastCheckInAt[projectId] + checkInInterval,
+            "Check-in interval not elapsed"
+        );
 
+        lastCheckInAt[projectId] = block.timestamp;
         projectCheckIns[projectId].push(
             CheckIn({
                 timestamp: block.timestamp,
@@ -730,9 +892,14 @@ contract BuilderCreditCore is
             })
         );
 
-        creditLines[msg.sender].reputation += 1;
-        if (creditLines[msg.sender].reputation > MAX_CREDIT_SCORE) {
-            creditLines[msg.sender].reputation = MAX_CREDIT_SCORE;
+        // Check-in reputation is rate-limited and capped so it cannot be
+        // farmed to unlock funding tiers.
+        if (checkInReputationEarned[msg.sender] < maxCheckInReputation) {
+            creditLines[msg.sender].reputation += 1;
+            checkInReputationEarned[msg.sender] += 1;
+            if (creditLines[msg.sender].reputation > MAX_CREDIT_SCORE) {
+                creditLines[msg.sender].reputation = MAX_CREDIT_SCORE;
+            }
         }
 
         emit CheckInPosted(projectId, block.timestamp, metadata);
@@ -801,10 +968,39 @@ contract BuilderCreditCore is
             tokenContract.balanceOf(address(this)) >= amount,
             "Insufficient balance"
         );
+        if (token == address(usdcToken)) {
+            require(
+                tokenContract.balanceOf(address(this)) >=
+                    amount + totalPrizePools,
+                "Cannot withdraw prize pools"
+            );
+        }
 
         tokenContract.safeTransfer(msg.sender, amount);
 
         emit FundsWithdrawn(token, msg.sender, amount);
+    }
+
+    /**
+     * @dev Updates launch safety limits
+     */
+    function setLimits(
+        uint256 _maxBackingPerTx,
+        uint256 _backingRefundDelay,
+        uint256 _checkInInterval,
+        uint256 _maxCheckInReputation
+    ) external onlyRole(PLATFORM_ADMIN_ROLE) {
+        maxBackingPerTx = _maxBackingPerTx;
+        backingRefundDelay = _backingRefundDelay;
+        checkInInterval = _checkInInterval;
+        maxCheckInReputation = _maxCheckInReputation;
+
+        emit LimitsUpdated(
+            _maxBackingPerTx,
+            _backingRefundDelay,
+            _checkInInterval,
+            _maxCheckInReputation
+        );
     }
 
     function getBackerProjects(

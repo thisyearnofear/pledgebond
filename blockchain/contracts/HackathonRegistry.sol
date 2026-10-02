@@ -281,6 +281,20 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
     }
     
     /**
+     * @dev Checks whether a hackathon exists in the registry
+     * @param hackathonId ID of the hackathon
+     * @return True if the hackathon was created via createHackathon
+     */
+    function hackathonExists(uint256 hackathonId)
+        external
+        view
+        override
+        returns (bool)
+    {
+        return hackathons[hackathonId].host != address(0);
+    }
+
+    /**
      * @dev Gets the required number of signatures for a hackathon
      * @param hackathonId ID of the hackathon
      * @return Number of required signatures
