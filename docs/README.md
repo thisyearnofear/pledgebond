@@ -1,20 +1,17 @@
 # PledgeBond
 
-Decentralized platform where backers fund builders and hackathon prizes collateralize credit.
+A liquidity rail for hackathon winners — paid in hours, not 90 days.
 
-> **6★ Winner Experience:** See [SIX_STAR_ROADMAP.md](./SIX_STAR_ROADMAP.md) for the full initiative tracking — what's done (security hardening, winner moments, dark-mode migration) and what remains (scale, lifecycle, organizer tools).
->
-> **New:** See [VISION.md](./VISION.md) for the wedge (builders-as-businesses, verified track record as collateral) plus the unified capital-stack narrative (Bags Token → x402 Credit → Prize Routing) and how the agentic layer prices, scouts, and verifies across all three rails.
->
-> **Arc update:** See [HACKATHON_ARC.md](./HACKATHON_ARC.md) for the current Arc agent integration, including the simplified `setup → analyze → review` flow, explicit demo/live payment states, and result-source metadata.
+> **Read first:** [VISION.md](./VISION.md) is the product source of truth — the wedge, the two-pool separation, and the invariants. [MONETIZATION_STRATEGY.md](./MONETIZATION_STRATEGY.md) covers how fees are taken.
 
-## How It Works
+## How it works
 
-1. **Backers** stake USDC on builders with 1.5x, 2x, or 3x reward multipliers.
-2. **Builders** pledge expected hackathon prizes to collateralize their credit line.
-3. **Market confidence** (total backing) determines the builder's credit limit.
-4. **AI analysis** helps users decide what to back, with small USDC payments settling on Arc.
-5. **Prize wins** are routed through the platform to automatically repay backers (principal + interest), then the builder.
+1. A builder wins a hackathon and the win is anchored on-chain via `declareWinner` — a dated, public claim on money that hasn't moved yet.
+2. They **draw a bridge loan** against that claim, choosing their own rate and duration within bounds. Overcollateralized or backed by a first-loss tranche — the platform never carries the loss.
+3. When the organizer pays out, `recordPayout` closes the loop: the loan is repaid, collateral released, and the builder's public payment history updated.
+4. Alongside the loan, a **market** on whether each declared win will actually be settled. Bettors are held in a pool structurally separate from lending capital — they never fund a loan or absorb an organizer's default.
+
+Credibility is **derived** from that payment history — coverage, speed, defaults. No admin assigns it. No credit scores, no multipliers.
 
 ## Architecture
 
@@ -145,21 +142,21 @@ Activities written to the `activities` collection are polled by `useNotification
 | Activity type | Notification | Recipient | Trigger |
 |---|---|---|---|
 | `winner_verified` | 🏆 You're a Verified Winner! | Builder | Admin approves claim |
-| `backing_received` | 💰 You just got backed! | Builder | Backer stakes on project |
+| `loan_opened` | 💰 Loan opened | Builder | Bridge loan drawn against a declared win |
 | `payout_verified` | 🎉 Payout verified! | Builder | Cron confirms payout on-chain |
-| `rank_change` | 📈 You moved up! | Builder | Weekly snapshot detects upward rank movement |
 | `project_submitted` | 🚢 Project shipped! | Builder | Project submission |
-| `milestone_verified` | ✅ Milestone verified | Builder/Backer | Milestone verification |
-| `payout_processed` | 💰 Payout secured! | Builder/Backer | Funding processed |
+| `payout_processed` | 💰 Payout secured! | Builder/Lender | Prize recorded as paid |
 | `follow` | 👥 New follower | Builder | Follow event |
 
-### On-Chain Self-Verification Guard
+### Self-Verification
 
-The Anchor program enforces `require!(verifier != developer.key(), ErrorCode::SelfVerificationNotAllowed)` in `request_funding`. The client-side `SolanaCreditService.requestFunding` adds a parallel guard. Developers cannot set themselves as their own milestone verifier at either layer.
+A builder cannot declare their own win as credible evidence about themselves — the derived-credibility model depends on the win being independently evidenced. This is enforced in `HackathonRegistry.declareWinner` / `recordPayout` (host or admin only) and, in the Solana program, by `ErrorCode::SelfVerificationNotAllowed`.
+
+Note the Solana guard is currently **client-side only** in `SolanaCreditService`, so it is bypassable; treat it as a UX affordance, not a security boundary.
 
 ### Activity Logging
 
-`POST /api/activity/log` — authenticated, allowlisted-types-only endpoint for client-initiated activity logging. Currently supports `backing_received` (resolves builder uid from wallet address via `wallet_index` lookup). Recipient must differ from the actor.
+`POST /api/activity/log` — authenticated, allowlisted-types-only endpoint for client-initiated activity logging. Activity types were retired with the credit model; `backing_received` no longer exists. Recipient must differ from the actor.
 
 ### Badge System
 
@@ -216,21 +213,27 @@ Project
        Backers can always reclaim their principal.
 ```
 
-The protocol treasury accumulates loan repayments and sponsor contributions. `fund_backer_rewards` moves treasury USDC into a project's backer escrow vault to cover the `(multiplier - 100) / 100` premium on backer payouts — analogous to the EVM `fundPrize` deposit (backers then pull via `claimPayout`).
+> **Legacy:** the Solana program still implements the previous credit-line model
+> (credit lines, backing multipliers, milestone verification, a protocol treasury
+> funding multiplier premiums). It is being reworked to match the EVM rail and
+> should be treated as legacy until then. `fund_backer_rewards` and
+> `verify_milestone` are slated for removal.
 
 ### EVM (Solidity): UUPS Upgradeable
 
-`BuilderCreditCore` is deployed behind an OpenZeppelin UUPS proxy. The `initialize(registry, usdcToken, admin)` function replaces the constructor pattern. `_authorizeUpgrade()` is gated to `DEFAULT_ADMIN_ROLE`.
+`LiquidityRail` is deployed behind an OpenZeppelin UUPS proxy. `initialize(registry, usdcToken, admin, feeRecipient)` replaces the constructor pattern. `_authorizeUpgrade()` is gated to `DEFAULT_ADMIN_ROLE`.
+
+Because it's UUPS, `DEFAULT_ADMIN_ROLE` can upgrade the contract to arbitrary code. It should be held by a multisig, never a hot deploy key — `scripts/deployTestnet.js` accepts `ADMIN_ADDRESS` for exactly this reason and warns if it's unset on mainnet.
 
 ```bash
-# Deploy (deploys implementation + ERC1967 proxy in one go)
-npx hardhat run scripts/deploy.js --network localhost
-npx hardhat run scripts/deployTestnet.js --network arcTestnet
-npx hardhat run scripts/deployProduction.js --network base
+ADMIN_ADDRESS=<multisig> FEE_RECIPIENT_ADDRESS=<treasury> \
+  npx hardhat run scripts/deployTestnet.js --network arcTestnet
 
-# Upgrade later
-BUILDER_CREDIT_PROXY_ADDRESS=0x26272b... npx hardhat run scripts/upgrade.js --network arcTestnet
+# Read-only post-deploy verification; exits non-zero on failure
+npx hardhat run scripts/smoke.js --network arcTestnet
 ```
+
+`ADMIN_ADDRESS` receives `DEFAULT_ADMIN_ROLE` and **must be a multisig** — on a UUPS proxy that role can upgrade the contract to arbitrary code. `FEE_RECIPIENT_ADDRESS` receives `FEE_ROLE` and withdraws origination fees; it defaults to `ADMIN_ADDRESS`.
 
 When upgrading, new implementations must preserve the existing storage layout — append new variables at the end, never reorder or delete.
 
@@ -238,20 +241,22 @@ When upgrading, new implementations must preserve the existing storage layout �
 
 | Contract | Network | Address |
 |----------|---------|---------|
-| Solana Program | devnet | `DVzV16mVG9vHdrum9Fx9kGhzRv2GJa2mNnmTWUnKa6st` |
-| BuilderCreditCore (proxy) | Arc Testnet | `0x26272b687df2c3607aCa3B6116c24B7400c3fC94` |
+| Solana Program | devnet | `DVzV16mVG9vHdrum9Fx9kGhzRv2GJa2mNnmTWUnKa6st` — **legacy**, still runs the retired credit model |
+| LiquidityRail (proxy) | Arc Testnet | _pending deploy_ |
 | HackathonRegistry | Arc Testnet | `0x6E303E2B8F386BfDEb201AeD5c2c011b98F2c6Bd` |
+
+Addresses per network are written to `blockchain/deployments/<network>_deployment.json` by the deploy script.
 
 ### Upgrading
 
-To upgrade BuilderCreditCore with new logic:
-1. Write a new contract preserving storage layout (append new vars at end)
-2. Deploy the new implementation: `npx hardhat run scripts/upgrade.js --network <network>`
-3. Set `BUILDER_CREDIT_PROXY_ADDRESS` env var to the proxy address
+`LiquidityRail` is UUPS. To upgrade:
+1. Write a new contract preserving storage layout (append new vars at the end)
+2. Deploy the implementation and point the proxy at it via `upgrades.upgradeProxy` from a script
+3. The caller must hold `DEFAULT_ADMIN_ROLE` — i.e. the multisig, not an EOA
 
 ## Integrations
 
-- **Circle W3S (Developer-Controlled Wallets)** — USDC settlement, wallet management, and smart contract execution on Arc. Single service (`RealCircleService`) handles all Circle API calls. Webhook endpoint at `/api/circle/webhook` for push-based transaction settlement. Contract calls validated against an allowlist of `BuilderCreditCore` deployments.
+- **Circle W3S (Developer-Controlled Wallets)** — USDC settlement, wallet management, and smart contract execution on Arc. Single service (`RealCircleService`) handles all Circle API calls. Webhook endpoint at `/api/circle/webhook` for push-based transaction settlement. Contract calls validated against an allowlist of server-controlled deployments. Outbound transfers may only source from wallets in `RealCircleService.getServerControlledWallets()` — callers may not name the source wallet.
 - **MetaMask SDK** — wallet connection
 - **Solana Name Service (SNS)** — .sol identity
 - **Cloak** — private USDC transfers

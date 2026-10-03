@@ -1,57 +1,59 @@
 # PledgeBond Scripts
 
-This directory contains utility scripts for the PledgeBond platform.
+Utility scripts for the PledgeBond platform.
 
-## Deployment Scripts
+## Contract deployment
 
-- **deploy.js** - Main deployment script for the smart contracts
-- **deploy-contracts.js** - Alternative deployment script for the contracts
-- **deploy-production.sh** - Shell script for production deployment
-- **deploy-firestore-rules.js** - Script to deploy Firestore security rules
+- **deployTestnet.js** — deploys `HackathonRegistry` + `LiquidityRail` (impl + ERC1967 proxy), seeds hackathon #1, writes `./deployments/<network>_deployment.json`
+- **smoke.js** — read-only post-deploy checks; exits non-zero on failure so it can gate a cutover
+- **deploy-contracts.js**, **deployAll.js**, **deployProduction.js**, **deploy-production.sh** — legacy/one-off deployment helpers
 
-## Data Management Scripts
+### Deploying
 
-- **list-projects.js** - Lists all projects in the system
-- **list-users.js** - Lists all users in the system
-- **import-projects.js** - Imports projects from external sources
-- **delete-dummy-projects.js** - Removes test projects from the database
-- **migrate-to-firebase.js** - Migrates data to Firebase
-- **migrate-celo-projects.js** - Migrates Celo projects to the platform
+```bash
+ADMIN_ADDRESS=<multisig> FEE_RECIPIENT_ADDRESS=<treasury> \
+  npx hardhat run scripts/deployTestnet.js --network arcTestnet
 
-## Permission Management Scripts
+npx hardhat run scripts/smoke.js --network arcTestnet
+```
 
-- **auto-grant-permissions.js** - Automatically grants permissions based on rules
-- **grant-project-ownership.js** - Grants ownership of projects to users
-- **grant-project-ownership-by-github.js** - Grants project ownership based on GitHub identity
-- **grant-project-permissions.js** - Grants specific permissions for projects
-- **verify-repo-ownership.js** - Verifies GitHub repository ownership
+| Env var | Purpose |
+|---|---|
+| `ADMIN_ADDRESS` | Receives `DEFAULT_ADMIN_ROLE`. **Use a multisig.** On a UUPS proxy this role can upgrade the contract to arbitrary code. The script warns if it's unset on mainnet. |
+| `FEE_RECIPIENT_ADDRESS` | Receives `FEE_ROLE` and withdraws origination fees. Defaults to `ADMIN_ADDRESS`. |
 
-## Creating Resources
+## Data management
 
-- **create-project.js** - Creates a new project in the system
+- **list-projects.js**, **list-users.js** — inspect current data
+- **import-projects.js**, **migrate-to-firebase.js**, **migrate-celo-projects.js** — imports and migrations
+- **delete-dummy-projects.js**, **cleanup.js** — removals
+- **sync-github.js** — GitHub sync
+
+## Permissions
+
+- **auto-grant-permissions.js**, **grant-project-ownership.js**, **grant-project-ownership-by-github.js**, **grant-project-permissions.js**, **verify-repo-ownership.js**
+
+## Other
+
+- **create-project.js**, **setup-env.js**
+- **deploy-firestore-rules.js**, **deploy-storage-cors.js**
 
 ## Usage
 
-Most scripts can be run using Node.js:
+Most scripts run directly with Node:
 
 ```bash
 node scripts/script-name.js
 ```
 
-For deployment scripts, use Hardhat:
+Hardhat scripts need a network:
 
 ```bash
-npx hardhat run scripts/deploy.js --network localhost
-```
-
-For shell scripts:
-
-```bash
-./scripts/deploy-production.sh
+npx hardhat run scripts/deployTestnet.js --network arcTestnet
 ```
 
 ## Notes
 
-- Some scripts may require environment variables to be set
-- Check each script for specific requirements and command-line options
-- For production use, always review scripts before running them
+- Some scripts require environment variables to be set
+- Check each script for its specific requirements
+- **Review any deployment script before running it against a live network**

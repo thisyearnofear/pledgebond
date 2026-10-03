@@ -1,21 +1,39 @@
 # PledgeBond
 
-Credit infrastructure for builders: verified hackathon wins become collateral. We turn a hackathon win from a trophy into a receivable — and the receivable into credit. AI agents underwrite, scout, and verify via x402 nanopayments on Circle's Arc network; backers fund builders and are repaid from prize payouts.
+A liquidity rail for hackathon winners — paid in hours, not 90 days. A confirmed win becomes a bridgeable asset: the winner draws USDC against the unpaid prize and repays when the organizer pays out. Alongside it runs a market on whether declared wins will actually be settled.
+
+We take basis points on the transactions we enable. We never underwrite, never take a share of winnings, and never absorb a credit loss.
+
+## Product model
+
+**Two pools, structurally separate.** This is the load-bearing design decision:
+
+| | **Bridge lenders** | **Bettors** |
+|---|---|---|
+| Believe | The builder repays | The organizer pays out |
+| Risk | Credit risk | Speculative, bounded at stake |
+| Absorb defaults? | Yes | **Never** |
+
+Bettor capital must never fund a loan. A bettor must never absorb an organizer that simply doesn't pay — that isn't the bet they placed.
+
+**Every loan is either overcollateralized or backed by a first-loss tranche.** That's what makes "the platform never takes risk" true rather than aspirational. **No multipliers** — any leverage above 100 is a promise backed by someone other than the prize.
+
+**Credibility is derived, never assigned.** Coverage rate, time-to-pay, and defaults, computed from public payment history by the contract. There is no admin who sets a score, and none can.
 
 ## Features
 
-- **Explore** — Browse projects across 7 ecosystems (Arc, Celo, Base, Linea, Arbitrum, Ethereum, Optimism) with search & filtering. *Note: Multi-chain backing is achieved via seamless cross-chain bridging to Solana using LI.FI, rather than relying on native smart contracts deployed to each respective chain.*
-- **AI Agents** — Underwriter ($0.05), Scout ($0.01), Verifier ($0.01) analyze projects via x402 micropayments
-- **SNS Identity** — Builders and AI agents use .sol domain names (pledgebond-scout.sol, pledgebond-underwriter.sol, etc.) via Solana Name Service integration, and Solana project creation can anchor a signed SNS ownership proof on-chain
-- **Private Staking** — Backers can shield stake amounts from public explorers via Cloak (UTXO shielded pool on Solana)
+- **Explore** — Browse projects across 7 ecosystems (Arc, Celo, Base, Linea, Arbitrum, Ethereum, Optimism) with search & filtering
+- **Public payout truth** — Who pays winners, and how fast. Verified against on-chain receipts across EVM and Solana, anchored by `HackathonRegistry.declareWinner` / `recordPayout`
+- **AI Agents** — Scout ($0.01) and Verifier ($0.001) analyze projects and payouts via x402 micropayments on Arc
+- **SNS Identity** — Builders and AI agents use .sol domain names via Solana Name Service; Solana project creation anchors a signed SNS ownership proof on-chain
+- **Private positions** — Shield position amounts via Cloak (UTXO shielded pool on Solana)
 - **AI Chat Assistant** — Floating helper widget powered by Featherless AI (DeepSeek-V3) with AIsa fallback, collapsible/dismissable
-- **Local-First AI** — QVAC (Tether) on-device inference option keeps project data private; falls back to cloud providers when unavailable
+- **Local-First AI** — QVAC (Tether) on-device inference keeps project data private; falls back to cloud providers when unavailable
 - **Submit Projects** — GitHub auto-populate, collapsible optional sections, localStorage draft saving
-- **Back Projects** — Nanopayment widget with live transaction feed and balance tracking
-- **Badges** — Client-side achievement inference: Verified Winner, Multi-Ecosystem, Prolific, Proof-Backed, etc. Gold/silver/bronze tiers with animated shimmer
-- **Leaderboard Sharing** — Shareable OG images for all 5 leaderboard categories (proof-builder, project, hackathon, builder, backer) with rank, movement, and metrics
-- **Onboarding** — Dual-mode banner: guest value props + authenticated role-based guide. Dismissible per-mode with fade-in animation
-- **SEO & Sharing** — Open Graph meta tags with dynamic badge pills, X/Farcaster share buttons on project pages and leaderboard entries
+- **Badges** — Client-side achievement inference: Verified Winner, Multi-Ecosystem, Prolific, Proof-Backed, etc.
+- **Leaderboard Sharing** — Shareable OG images for leaderboard categories with rank, movement, and metrics
+- **Onboarding** — Dual-mode banner: guest value props + authenticated role-based guide
+- **SEO & Sharing** — Open Graph meta tags with dynamic badge pills, X/Farcaster share buttons
 
 ## AI Provider Chain
 
@@ -63,7 +81,12 @@ firebase emulators:start
 **Program:** `14uLETygxjh89fHFwYUaRRhHE9E9XrYcSh6SsF8SEw1K` ([Explorer](https://explorer.solana.com/address/14uLETygxjh89fHFwYUaRRhHE9E9XrYcSh6SsF8SEw1K?cluster=devnet))
 **IDL:** `HGBAP7xUeuR3Nt99z8d2AhNDFGK5iN5sVdGd4W9jrdHr`
 
-7 confirmed transactions on devnet — Treasury init, 2 projects created, 2 backings, milestone verification, loan repayment.
+7 confirmed transactions on devnet — treasury init, 2 projects created, 2 position opens, verification, loan repayment.
+
+> **Note:** the Solana program still implements the previous credit-line model
+> (credit lines, backing multipliers, milestone verification). It is being
+> reworked to match the EVM rail; until then, treat `blockchain-solana` as
+> legacy. See [`docs/VISION.md`](docs/VISION.md) for the target model.
 
 Latest local Solana flow:
 

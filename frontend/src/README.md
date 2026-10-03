@@ -11,7 +11,6 @@ The `components/` directory contains React components organized by feature:
 - **Auth/** - Authentication-related components
 - **common/** - Reusable UI components
 - **contracts/** - Components for interacting with smart contracts
-- **credit/** - Credit-related components
 - **dashboard/** - Dashboard components
 - **funding/** - Funding-related components
 - **github/** - GitHub integration components
@@ -21,17 +20,17 @@ The `components/` directory contains React components organized by feature:
 - **testing/** - Test components
 - **wallet/** - Wallet connection components
 
-### Contexts
+### State
 
-The `contexts/` directory contains React context providers:
+The `contexts/` tree was replaced by `stores/` in Phase 3. State lives in
+`useSyncExternalStore` stores rather than React context:
 
-- **AuthContext.js** - Authentication context
-- **BuilderCreditContext.js** - PledgeBond contract context
-- **CircleWalletContext.js** - Circle wallet integration
-- **LiFiContext.js** - Li.Fi cross-chain integration
-- **MetaMaskContext.js** - MetaMask wallet integration
-- **ThemeContext.js** - Theme management
-- **UserBehaviorContext.js** - User behavior tracking
+- `stores/authStore.ts` - authentication
+- `stores/walletStore.ts` - wallets, nanopayments, and the liquidity `rail` slice
+- `stores/notificationStore.ts` - in-app notifications
+
+`BuilderCreditContext` is gone; the rail is reached through
+`services/liquidityRailService.ts` and `useBuilderCredit()`.
 
 ### Pages
 

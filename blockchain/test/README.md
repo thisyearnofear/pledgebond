@@ -1,43 +1,36 @@
 # PledgeBond Test Suite
 
-This directory contains tests for the PledgeBond platform's smart contracts and frontend integrations.
+Tests for the PledgeBond smart contracts.
 
-## Smart Contract Tests
+## Contract Tests
 
-### Current Implementation Tests
+- **LiquidityRail.test.js** — bridge loans against confirmed wins, plus the payout market. Written around the five invariants an auditor asks first:
+  1. Can any legitimate sequence of user actions make the platform pay principal? (Must be no.)
+  2. Can `withdrawFees` reach anything but `accruedFees`?
+  3. Can bet capital ever fund or subsidise a lending payout?
+  4. Is there a setter for reputation? (There must not be.)
+  5. Can a settlement be claimed on an unrelated winner's payout?
+- **HackathonRegistry.test.js** — hackathons, verifiers, and the `declareWinner` / `recordPayout` credibility anchor.
 
-- **BuilderCreditCore.test.js** - Tests for the core contract that handles project funding, milestone verification, and credit line management
-- **HackathonRegistry.test.js** - Tests for the registry contract that manages hackathons and their verification committees
-
-### Legacy Implementation Tests
-
-- **BuilderCredit.test.js** - Tests for the previous modular implementation with multiple component contracts
-
-## Integration Tests
-
-- **CircleWalletContext.test.js** - Tests for the Circle Wallet integration
-- **CrossChainTransfer.test.js** - Tests for cross-chain transfer functionality
+`BuilderCreditCore` and its tests were removed when the credit-line model was
+retired. See [`docs/CHANGELOG.md`](../../docs/CHANGELOG.md) for the pivot.
 
 ## Running Tests
 
-Run the full test suite using:
-
 ```bash
-npm test
+npx hardhat test
 ```
 
-Run a specific test file using:
+A single file:
 
 ```bash
-npx hardhat test test/BuilderCreditCore.test.js
+npx hardhat test test/LiquidityRail.test.js
 ```
 
 ## Test Coverage
-
-To generate a test coverage report:
 
 ```bash
 npm run coverage
 ```
 
-This will create a coverage report in the `coverage/` directory.
+Writes to `coverage/`.

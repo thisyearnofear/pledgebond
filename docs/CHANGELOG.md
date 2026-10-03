@@ -1,5 +1,109 @@
 # Changelog
 
+## 2026-10-02 — Product pivot: liquidity rail for hackathon winners
+
+PledgeBond is now a **liquidity rail**, not a credit-line protocol. Hackathon
+winners wait 60–90 days to get paid; we bridge that gap with a loan against a
+confirmed win, plus a market on whether the organizer will actually pay.
+
+Historical entries below describe the previous model and are left intact as a
+factual record.
+
+### Removed
+- **Credit scoring** — the admin-assigned 0–850 score, `SCORER_ROLE`,
+  `CreditLine`, `calculateFundingAmount`, and four divergent client-side copies
+  of the funding curve (`lib/funding/`, `getFundingTier`, `format.js`,
+  `CircularProgress`, `projectMetrics`).
+- **Multipliers** — `backProject(projectId, multiplier, amount)` and every
+  surface that advertised "1.5x–3x reward multipliers". Any leverage above 100
+  is a promise backed by someone other than the prize.
+- **Milestone-backed credit** — `requestFunding`, `requestFundingWithTeam`,
+  `approveMilestone`, team-share milestone splitting.
+- **Prize escrow** — `fundPrize`, `pledgePrize`, `claimPayout`,
+  `claimBuilderPayout`, `refundBacking` and the treasury-funded prize pool.
+- **Agent-wallet backing** — `/api/agent/execute` let a 0.01 USDC toll authorize
+  leveraged platform staking; the route now returns 410.
+
+### Security fixes (Phase 0)
+- **Unauthenticated wallet drain closed.** `/api/funding` `transferUSDC`
+  accepted a caller-supplied `sourceWalletId` with no auth check — any
+  unauthenticated POST could drain any Circle wallet in the set. Removed.
+  `RealCircleService.getServerControlledWallets()` is now the single source of
+  truth; `handleTransactions` and `approveTesterReward` reject any wallet not on
+  it.
+- **$5k untracked outflow removed.** `processDeveloperFunding` disbursed up to
+  $5,000 per developer from the platform wallet on a credit score, with no
+  repayment ledger.
+- **Payment verification now fails closed.** `verifyAuthorizationNonce` returned
+  `null` on RPC error and the request was served anyway with `verified:false`.
+  Now rejected with 503.
+- **Fabricated payment receipts removed.** `serverSponsored` minted a random
+  32-byte hex as a fake `txHash` and served the request without payment. Sponsorship
+  is now behind a transactional decrement and a global cap that defaults to
+  **disabled**.
+- **Claim-credential inheritance closed.** `mergeHackathonsWithVerification`
+  correlated verified claims by name + URL — both duplicable — letting a builder
+  inherit `payout_verified` and a real attestation id. Now keyed on `claimId`,
+  then payout tx hash; name + URL confer nothing.
+
+### Added
+- `RealCircleService.recordDisbursement` + `reconcilePayouts` — every outbound
+  transfer writes a `PayoutLogs` row and it advances past `initiated`, so total
+  disbursement is answerable.
+- Credibility anchor documented as first-class: `HackathonRegistry.declareWinner`
+  / `recordPayout` anchor `declaredAt` / `paidAt`.
+
+### Rewritten docs
+`VISION.md`, `GLOSSARY.md`, `MONETIZATION_STRATEGY.md`, `docs/README.md`,
+`API.md`, root `README.md`, `blockchain/contracts/README.md`, and the invariants
+section of `AGENTS.md`.
+
+### Contracts
+- **`LiquidityRail.sol`** replaces `BuilderCreditCore` — bridge loans against
+  confirmed wins, plus a payout market. 30 invariant tests, organised around the
+  questions an auditor asks first.
+- **Principal is never custodiable.** Capital flows lender → builder directly;
+  the contract escrows only collateral or first-loss tranche. This makes "the
+  platform cannot be made to pay principal" true *by construction* rather than by
+  accounting — the first draft pulled principal in and paid it back, which
+  satisfied the invariant only on paper.
+- `withdrawFees` can only ever reach `accruedFees`, which `openLoan` increments
+  atomically.
+- Settlement requires a payout recorded against **this builder** — matching on
+  hackathon-level `paidWinners` would let an unrelated winner's payout settle
+  someone else's loan.
+- First-loss capital is escrowed from a **third-party** tranche provider, never
+  the lender. Self-funded "protection" proves nothing.
+- `BuilderCreditCore.sol`, `IBuilderCredit.sol`, its 28 tests, `deploy.js` and
+  `upgrade.js` removed.
+
+### Latency basis corrected
+`payoutLatencyDays` was measured from `hackathonEndDate`, which conflates a
+hackathon running long with an organizer paying late — the difference between
+"repay in ~14 days" and "repay in ~90 days" for a lender. New claims set
+`winDeclaredAt` at first evidence; `/api/projects/migrate-win-declared-at`
+backfills existing rows from `hackathonEndDate` so no published number moves.
+
+### Frontend
+- **New**: `BridgeLoanCard` (three gates — no win / declared / open-or-settled)
+  and `LoanTermsModal`. Both offer **risk structure** (overcollateralized vs
+  tranche-backed), never leverage, and disclose what happens on default.
+- **New**: `liquidityRailService` + a `rail` slice in `walletStore`, replacing
+  `creditService`.
+- **Removed**: `BackingPanel` (527 LOC), `BackingModal`, `FundingInterface`,
+  `compassScore`, `FundingHistory`'s mock data, `FairScoreBadge`, the dead
+  `chains/registry.ts`, the multiplier/boost filters, and the fabricated
+  "Uptime 99.9% / Latency 24ms" telemetry.
+- **False claims fixed**: "No interest, no collateral" appeared in `build.js`
+  and `FastestPayoutHero`. Rate is builder-set and overcollateralization is the
+  default structure, so both were untrue.
+- `build.js` used a hand-rolled win check that missed verified wins whose project
+  shape didn't match; it now reads `useWinnerStatus().isVerified`.
+- `handlePostCheckIn` set an error unconditionally, and the page-level error
+  guard then replaced the entire dashboard. It now reports honestly.
+
+---
+
 ## 2026-09-14 — GenLayer Agent Tank: MilestoneArbiter jury (Future of Work)
 
 Decentralized milestone verdicts via a GenLayer Intelligent Contract, wired end-to-end in mock-safe mode ahead of the Sep 17 Tank deadline.

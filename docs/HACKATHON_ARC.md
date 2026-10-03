@@ -8,7 +8,9 @@
 
 ## 30-Second Pitch
 
-PledgeBond is a builder discovery platform powered by **autonomous AI agents** that evaluate, score, and back blockchain projects on **Arc** using **Circle USDC nanopayments**. Every agent decision produces a **transparent reasoning trace**. Users can **copy-trade the Scout agent's portfolio** — when the agent finds a project worth backing, subscriber wallets auto-execute the same backing on-chain.
+PledgeBond is a **liquidity rail for hackathon winners** on **Arc**. A confirmed win is anchored on-chain and becomes the basis for a bridge loan against the unpaid prize. Paid in hours rather than 90 days.
+
+AI agents (Scout, Verifier) run as paid services over x402 USDC nanopayments and produce a transparent reasoning trace. **There is no copy-trading**: no agent stakes capital on a user's behalf, because the platform never underwrites and no agent holds a position.
 
 The value is the reasoning trace, not just the trade.
 
@@ -20,7 +22,7 @@ The value is the reasoning trace, not just the trade.
 - **What it does:** Continuously evaluates all builder projects across Solana, Arc, Celo, Base, Linea, Arbitrum, Ethereum, and Optimism. Scores each project on GitHub velocity, completeness, and community signals. Recommends micro-backings with specific multipliers.
 - **Why it wins:** Not just scores — it produces **structured reasoning traces** explaining WHY each project was selected. These traces are persisted on-chain and shareable at `/scout/trace/{runId}`.
 - **Monetization:** `0.01 USDC` per scout run via Circle nanopayments on Arc.
-- **On-chain execution:** With `?execute=1`, the Scout auto-executes backings via Circle Developer-Controlled Wallets on Arc testnet.
+- **On-chain execution:** Removed. Agent-wallet staking was deleted in Phase 0 — a 0.01 USDC toll could authorize leveraged platform capital. `/api/agent/execute` returns 410.
 
 ### 2. AI Underwriter — Per-Project Health Analysis
 - **What it does:** Deep-dive analysis of a single project with AI enrichment (Perplexity/sonar via AIsa). Returns health score, strategic advice, and investment recommendation.
@@ -32,14 +34,10 @@ The value is the reasoning trace, not just the trade.
 - **Why it wins:** The verification pipeline can serve as an oracle for prediction markets — "Will this project's claim be verified?" — creating a natural bridge to market primitives.
 - **Monetization:** `0.001 USDC` per verification batch.
 
-### 4. Executor Agent — Circle Wallet On-Chain Backings
-- **What it does:** Receives project recommendations from Scout and executes `backProject()` contract calls on Arc using Circle Developer-Controlled Wallets.
-- **Why it wins:** Real USDC flowing through real smart contracts with sub-second Arc finality. Every transaction is logged with txHash in the audit trail.
+### 4. Executor Agent — **removed**
+- The Executor staked platform capital on chain at leverage multipliers. That made the platform an underwriter, which the product rule forbids, and a single 0.01 USDC toll could authorize thousands of dollars of platform exposure.
+- `/api/agent/execute` now returns **410 Gone**. A lender staking their own capital is done client-side via `LiquidityRail.openLoan`.
 
-### 5. Copy the Scout — Social Trading Intelligence
-- **What it does:** Users subscribe to automatically back every project the Scout recommends. 1% agent fee on each fill.
-- **Why it wins:** Demonstrates **traction** and **network effects** — the agent becomes more valuable as more users copy it.
-- **API:** `/api/agent/copy` with subscribe/unsubscribe/status actions.
 
 ---
 
@@ -115,7 +113,6 @@ These traces are:
 - `src/pages/api/agent/payout-verify.js` — Payout attestation oracle
 - `src/pages/api/agent/execute.js` — Circle wallet contract execution
 - `src/pages/api/agent/runs.js` — Public query endpoint for agent activity
-- `src/pages/api/agent/copy.js` — Copy Scout subscription API
 
 **Frontend**
 - `src/pages/scout.js` — Agent portfolio with stats, traces, settlements
@@ -134,7 +131,7 @@ These traces are:
 2. **0:30-1:00** — Scroll the Latest Reasoning Traces. Click one. Show the `/scout/trace/{runId}` page with full reasoning, ecosystem summary, and raw data.
 3. **1:00-1:45** — Click "View Full Trail" in Agent Audit Log. Show live agent runs scrolling with real data. Hover over a run and click "View Trace →".
 4. **1:45-2:30** — Show the Live Agent Ticker at the top of the page. Real runs cycling with live stats.
-5. **2:30-3:00** — Click "Copy Scout". Show the subscription modal. Explain social trading: users deposit USDC, auto-back when Scout signals, 1% fee to agent.
+5. **2:30-3:00** — Open a declared win and walk through the bridge-loan terms picker. Show overcollateralized vs tranche-backed and what each means on default.
 
 ---
 
@@ -142,7 +139,7 @@ These traces are:
 
 1. **Real agents, real USDC, real traces** — Not mock data. Every ticker item, every audit log entry, every reasoning trace is from actual agent execution.
 2. **Reasoning-first architecture** — The LLM prompt explicitly asks "WHY" and produces structured JSON traces. This is the Trading-R1 insight applied to builder discovery.
-3. **Social trading primitive** — "Copy the Scout" is a genuine network effect. More users = more fees = more agent compute = better recommendations.
+3. **Derived credibility** — the public record of who pays winners, and how fast, is the asset. It cannot be copied because the wins and payouts happen in private Discords and off-platform accounts.
 4. **Circle + Arc integration depth** — Not just "accepts USDC." Circle Developer-Controlled Wallets execute contract calls. Arc Paymaster pays gas in USDC. Sub-second finality.
 5. **Shareable audit trail** — Every run has a permalink. Judges can share specific reasoning traces on Twitter.
 

@@ -1,41 +1,52 @@
 # PledgeBond Smart Contracts
 
-This directory contains the smart contracts for the PledgeBond platform.
+## Current implementation
 
-## Current Implementation
+Two contracts:
 
-The current implementation uses a streamlined approach with two main contracts:
+- **`HackathonRegistry.sol`** — hackathons, verifiers, and the **credibility anchor**. `declareWinner` / `recordPayout` anchor the `declaredAt` / `paidAt` pair for a win. That pair is what makes an unpaid prize legible as an asset: it is the receipt a bridge loan is written against, and it is the public record that produces a builder's coverage rate and time-to-pay. `getPayoutStats` returns the latency distribution the leaderboard markets.
+- **`LiquidityRail.sol`** — the core rail. Bridge loans against confirmed wins, plus a payout market. Holds principal, collateral, bet stakes, and accrued fees as **separately accounted reserves**.
 
-- `BuilderCreditCore.sol` - Core contract for managing credit lines, projects, and milestones
-- `HackathonRegistry.sol` - Registry contract for hackathons and their verification committees
+### The invariants the contract enforces
 
-These contracts work together to provide a complete solution for hackathon funding, milestone verification, and builder reputation management.
+1. **The platform never absorbs a credit loss.** Every loan is `OVERCOLLATERALIZED` (collateral ≥ principal, default means liquidation) or `TRANCHE_BACKED` (a designated first-loss slice absorbs defaults up to its size).
+2. **Fees on notional only.** `accruedFees` is the sole withdrawable balance for `FEE_ROLE`. It is incremented atomically inside `openLoan` / `settleLoan`. There is no code path that can reach principal or collateral.
+3. **Lenders and bettors never mix.** Bet stakes sit in a separate accounting pool from lending principal. `settleBet` can only ever pay from the bet pool.
+4. **Credibility is derived, never assigned.** `BuilderHistory` updates from settled outcomes. There is no setter and no admin role.
+5. **No multiplier.** A routed prize splits by principal. Any value above 100 is a promise backed by someone other than the prize.
+
+The audit question to answer before mainnet: *can any legitimate sequence of user actions make the platform pay principal?* It must be no.
 
 ### Interfaces
 
-- `IHackathonRegistry.sol` - Interface for the HackathonRegistry contract
-- `IBuilderCredit.sol` - Interface definitions for the PledgeBond system
+- `IHackathonRegistry.sol` — registry interface
+- `ILiquidityRail.sol` — rail interface
 
-### Mock Contracts
+### Mock contracts
 
-- `MockUSDC.sol` - Mock USDC token for testing
-
-## Legacy Implementation
-
-The following contracts are from a previous implementation that used a more modular approach:
-
-- `BuilderCreditFactory.sol` - Factory contract for deploying the PledgeBond system
-- `BuilderCreditScoring.sol` - Handles credit scoring and reputation
-- `BuilderCreditSecurity.sol` - Manages access control and security
-- `BuilderCreditStorage.sol` - Handles data storage for the PledgeBond system
+- `MockUSDC.sol` — mock USDC for tests
 
 ## Testing
 
-Each implementation has its own test files in the `/test` directory:
+Tests live in `/test`:
 
-- Current implementation: `BuilderCreditCore.test.js` and `HackathonRegistry.test.js`
-- Legacy implementation: `BuilderCredit.test.js`
+- `LiquidityRail.test.js`
+- `HackathonRegistry.test.js`
 
-## Architecture
+Run with `npx hardhat test`.
 
-For more details on the architecture of the current implementation, see `docs/ARCHITECTURE.md`.
+## Deploying
+
+```bash
+ADMIN_ADDRESS=<multisig> npx hardhat run scripts/deployTestnet.js --network arcTestnet
+npx hardhat run scripts/smoke.js --network arcTestnet
+```
+
+`ADMIN_ADDRESS` should be a multisig. Without it the deployer key holds `DEFAULT_ADMIN_ROLE` — which on a UUPS proxy means a leaked key can upgrade the contract to arbitrary code. The deploy script warns loudly if it's unset on mainnet.
+
+`smoke.js` runs read-only post-deploy checks and exits non-zero on any failure, so it can gate a cutover.
+
+## See also
+
+- [`docs/VISION.md`](../../docs/VISION.md) — product thesis and invariants
+- [`docs/MONETIZATION_STRATEGY.md`](../../docs/MONETIZATION_STRATEGY.md) — how fees are taken
