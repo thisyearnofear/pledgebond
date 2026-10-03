@@ -31,15 +31,9 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
         uint256 createdAt;
         string name;
     }
-    
-    struct WinnerDeclaration {
-        address winner;
-        string projectName;
-        uint256 prizeAmount;
-        uint256 declaredAt;     // block.timestamp when declareWinner was called
-        uint256 paidAt;          // block.timestamp when recordPayout was called (0 = unpaid)
-        string payoutTxHash;    // transaction hash of the actual USDC transfer
-    }
+
+    // WinnerDeclaration is declared once, in IHackathonRegistry, so that
+    // consumers (LiquidityRail) can decode it unambiguously.
     
     // Hackathon ID => Verifier Configuration
     mapping(uint256 => HackathonVerifiers) public hackathons;
@@ -48,7 +42,7 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
     mapping(string => uint256) public hackathonsByName;
     
     // Winner declarations: hackathonId => winnerAddress[] (ordered by declaration time)
-    mapping(uint256 => WinnerDeclaration[]) public winnerDeclarations;
+    mapping(uint256 => IHackathonRegistry.WinnerDeclaration[]) public winnerDeclarations;
     
     // Events
     event HackathonCreated(uint256 indexed hackathonId, string name, address host, uint8 requiredSignatures);
@@ -483,7 +477,7 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
     function getWinnerDeclarations(uint256 hackathonId)
         external
         view
-        returns (WinnerDeclaration[] memory)
+        returns (IHackathonRegistry.WinnerDeclaration[] memory)
     {
         return winnerDeclarations[hackathonId];
     }

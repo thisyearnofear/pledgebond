@@ -39,10 +39,10 @@ async function main() {
   await hackathonRegistry.deployed();
   console.log(`✅ HackathonRegistry deployed to: ${hackathonRegistry.address}`);
 
-  // Deploy BuilderCreditCore implementation
-  console.log("\n🏗️ Deploying BuilderCreditCore implementation...");
-  const BuilderCreditCore = await ethers.getContractFactory("BuilderCreditCore");
-  const impl = await BuilderCreditCore.deploy();
+  // Deploy LiquidityRail implementation
+  console.log("\n🏗️ Deploying LiquidityRail implementation...");
+  const LiquidityRail = await ethers.getContractFactory("LiquidityRail");
+  const impl = await LiquidityRail.deploy();
   await impl.deployed();
   console.log(`✅ Implementation deployed to: ${impl.address}`);
 
@@ -56,11 +56,17 @@ async function main() {
   }
   console.log(`🔐 Contract admin: ${adminAddress}`);
 
+  // Fee recipient: where origination fees are withdrawn. Defaults to the admin
+  // so a first deployment doesn't strand revenue.
+  const feeRecipient = process.env.FEE_RECIPIENT_ADDRESS || adminAddress;
+  console.log(`💸 Fee recipient: ${feeRecipient}`);
+
   // Encode the initialize call
   const initData = impl.interface.encodeFunctionData("initialize", [
     hackathonRegistry.address,
     usdcAddress,
     adminAddress,
+    feeRecipient,
   ]);
 
   // Deploy ERC1967 proxy manually using the ERC1967Proxy artifact from upgrades-core
@@ -75,16 +81,18 @@ async function main() {
   await proxy.deployed();
   console.log(`✅ Proxy deployed to: ${proxy.address}`);
 
-  // Wrap the proxy as BuilderCreditCore for verification calls
-  const builderCreditCore = BuilderCreditCore.attach(proxy.address);
+  // Wrap the proxy as LiquidityRail for verification calls
+  const rail = LiquidityRail.attach(proxy.address);
 
   // Verify deployment
-  const storedRegistry = await builderCreditCore.registry();
-  const storedToken = await builderCreditCore.usdcToken();
+  const storedRegistry = await rail.registry();
+  const storedToken = await rail.usdcToken();
   console.log(`\n🔍 Verification:`);
   console.log(`   registry: ${storedRegistry}`);
   console.log(`   usdcToken: ${storedToken}`);
-  console.log(`   admin role: ${await builderCreditCore.hasRole(await builderCreditCore.DEFAULT_ADMIN_ROLE(), deployer.address)}`);
+  console.log(`   admin role: ${await rail.hasRole(await rail.DEFAULT_ADMIN_ROLE(), adminAddress)}`);
+  console.log(`   fee role: ${await rail.hasRole(await rail.FEE_ROLE(), feeRecipient)}`);
+  console.log(`   maxLoanSize: ${await rail.maxLoanSize()}`);
 
   console.log("\n⏳ Waiting for confirmations...");
   await hackathonRegistry.deployTransaction.wait(3);
@@ -93,10 +101,13 @@ async function main() {
   // Setup sample hackathon
   console.log("\n⚙️ Setting up initial configuration...");
   const now = Math.floor(Date.now() / 1000);
+  // Seed hackathon ownership follows the admin, not the deployer: a host set to
+  // the hot deploy key would leave the seeded hackathon administered by a key
+  // that should hold no powers.
   const tx1 = await hackathonRegistry.createHackathon(
     "Agentic Economy on Arc",
-    deployer.address,
-    [deployer.address],
+    adminAddress,
+    [adminAddress],
     1,
     now,
     now + 7 * 24 * 60 * 60
@@ -109,14 +120,15 @@ async function main() {
     network: networkName,
     chainId: chainId,
     usdcAddress: usdcAddress,
-    contractVersion: "2.0.0",
+    contractVersion: "3.0.0",
     contracts: {
+      LiquidityRail: proxy.address,
+      LiquidityRailImpl: impl.address,
       HackathonRegistry: hackathonRegistry.address,
-      BuilderCreditCore: proxy.address,
-      BuilderCreditCoreImpl: impl.address,
     },
     deployer: deployer.address,
     admin: adminAddress,
+    feeRecipient,
     deploymentTime: new Date().toISOString(),
     blockNumber: await ethers.provider.getBlockNumber(),
     proxyKind: "uups",
@@ -132,8 +144,8 @@ async function main() {
   console.log(`📍 Network: ${networkName} (${chainId})`);
   console.log(`🏦 USDC Address: ${usdcAddress}`);
   console.log(`📋 HackathonRegistry: ${hackathonRegistry.address}`);
-  console.log(`🏗️ BuilderCreditCore (proxy): ${proxy.address}`);
-  console.log(`🔧 BuilderCreditCore (impl): ${impl.address}`);
+  console.log(`🏗️ LiquidityRail (proxy): ${proxy.address}`);
+  console.log(`🔧 LiquidityRail (impl): ${impl.address}`);
   console.log(`👤 Deployer: ${deployer.address}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
@@ -143,7 +155,7 @@ async function main() {
     console.log(`HACKATHON_REGISTRY_ARC${suffix}_ADDRESS=${hackathonRegistry.address}`);
   }
 
-  return { hackathonRegistry: hackathonRegistry.address, builderCreditCore: proxy.address, usdcAddress };
+  return { hackathonRegistry: hackathonRegistry.address, liquidityRail: proxy.address, usdcAddress };
 }
 
 main()

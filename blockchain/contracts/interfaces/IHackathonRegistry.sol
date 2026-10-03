@@ -9,6 +9,19 @@ pragma solidity ^0.8.17;
  */
 interface IHackathonRegistry {
     /**
+     * @dev A recorded win, with the declaredAt/paidAt pair that makes an
+     * unpaid prize legible as an asset and a builder's payment history public.
+     */
+    struct WinnerDeclaration {
+        address winner;
+        string projectName;
+        uint256 prizeAmount;
+        uint256 declaredAt;
+        uint256 paidAt;
+        string payoutTxHash;
+    }
+
+    /**
      * @dev Checks if an address is an authorized verifier for a hackathon
      * @param hackathonId ID of the hackathon
      * @param verifier Address to check
@@ -76,9 +89,11 @@ interface IHackathonRegistry {
     ) external;
     
     /**
-     * @dev Gets the number of winners declared for a hackathon
+     * @dev Gets all winner declarations for a hackathon.
+     * Used to verify that a specific builder's payout was actually recorded,
+     * not merely that the hackathon paid some other winner.
      */
-    function getWinnerCount(uint256 hackathonId) external view returns (uint256);
+    function getWinnerDeclarations(uint256 hackathonId) external view returns (WinnerDeclaration[] memory);
     
     /**
      * @dev Gets payout statistics for a hackathon
