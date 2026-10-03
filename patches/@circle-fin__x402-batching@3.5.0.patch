@@ -1,0 +1,57 @@
+diff --git a/dist/client/chains.mjs b/dist/client/chains.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..3a665010c5ad6f29c65966590fde0bb5caf0c45a
+--- /dev/null
++++ b/dist/client/chains.mjs
+@@ -0,0 +1,38 @@
++/**
++ * viem/chains plus Arc mainnet.
++ *
++ * viem 2.48.x exports only `arcTestnet`, so `chains.arc` is undefined and both
++ * Turbopack and webpack fail the build on the missing named export — before the
++ * `?? defineChain` fallback in index.mjs can run.
++ *
++ * This module re-exports viem's real chain table and defines `arc` explicitly,
++ * so the existing fallback path works as written and the exported surface is
++ * statically complete.
++ */
++import * as viemChains from "viem/chains";
++import { defineChain } from "viem";
++
++export * from "viem/chains";
++
++export const arc = defineChain({
++  id: 5042,
++  name: "Arc",
++  nativeCurrency: { decimals: 18, name: "USDC", symbol: "USDC" },
++  rpcUrls: {
++    default: { http: ["https://rpc.mainnet.arc.io"] }
++  },
++  blockExplorers: {
++    default: { name: "ArcScan", url: "https://arcscan.app" }
++  },
++  testnet: false
++});
++
++export const arcTestnet = viemChains.arcTestnet ?? defineChain({
++  id: 5042002,
++  name: "Arc Testnet",
++  nativeCurrency: { decimals: 18, name: "USDC", symbol: "USDC" },
++  rpcUrls: {
++    default: { http: ["https://rpc.testnet.arc.network"] }
++  },
++  testnet: true
++});
+diff --git a/dist/client/index.mjs b/dist/client/index.mjs
+index 8879bd30b6961f2e8cfacea9bb17e2bab54c4119..70ab3e92e381936fbfb406264aed9e44a09860cf 100644
+--- a/dist/client/index.mjs
++++ b/dist/client/index.mjs
+@@ -313,7 +313,7 @@ import {
+   erc20Abi
+ } from "viem";
+ import { privateKeyToAccount } from "viem/accounts";
+-import * as chains from "viem/chains";
++import * as chains from "./chains.mjs";
+ import { randomBytes } from "crypto";
+ var ARC_MAINNET_RPC_URL = "https://rpc.mainnet.arc.io";
+ var arcMainnet = chains.arc ?? defineChain({

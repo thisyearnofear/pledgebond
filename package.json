@@ -45,5 +45,10 @@
   "devDependencies": {
     "dotenv": "^16.0.3",
     "firebase-admin": "^13.4.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@circle-fin/x402-batching@3.5.0": "patches/@circle-fin__x402-batching@3.5.0.patch"
+    }
   }
 }
