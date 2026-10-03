@@ -125,19 +125,25 @@ export async function withNanopayment(handler, requiredAmount = PRICE_PER_REQUES
     const receiptHeader = req.headers["x-nanopayment-receipt"];
 
     if (!paymentSignature && !receiptHeader) {
-      // Server-sponsored mode: auto-pay using the configured AGENT_PRIVATE_KEY
-      // This enables premium features without requiring users to manage a wallet.
+      // Server-sponsored mode used to fabricate a txHash and serve the request
+      // anyway, letting any caller skip the toll. Free calls now go through
+      // the explicit sponsorship budget instead (see lib/agentSponsorship),
+      // which is metered and capped.
       if (options.serverSponsored && process.env.AGENT_PRIVATE_KEY) {
-        req.nanopayment = {
-          amount: requiredAmount,
-          txHash: `0x${Buffer.from(crypto.randomBytes(32)).toString("hex")}`,
+        return res.status(402).json({
+          error: "Payment Required",
+          message: `This Agent API requires a nanopayment of ${requiredAmount} ${CURRENCY}.`,
+          payment: createPaymentRequirement(requiredAmount).payment,
+          instructions: {
+            step1: "Deposit USDC into your Circle Gateway wallet",
+            step2: "Sign an EIP-3009 TransferWithAuthorization and include the nonce in 'X-Nanopayment-Receipt'",
+            learnMore: "https://developers.circle.com/gateway/nanopayments",
+          },
           network: ARC_NETWORK_LABEL,
           chainId: ARC_CHAIN_ID,
-          verified: false,
-          serverSponsored: true,
-          timestamp: new Date().toISOString(),
-        };
-        return handler(req, res);
+          priceUSD: requiredAmount,
+          status: "payment_required",
+        });
       }
 
       return res.status(402).json({
@@ -173,41 +179,47 @@ export async function withNanopayment(handler, requiredAmount = PRICE_PER_REQUES
 
       let verificationStatus = "unverified";
 
-      // Verify the EIP-3009 nonce on Arc when authorizer + nonce are present
+      // Verify the EIP-3009 nonce on Arc when authorizer + nonce are present.
+      // RPC failure is NOT treated as success: we cannot prove the nonce is
+      // unused, so the request is rejected rather than served unverified.
       if (receipt?.authorizer && receipt?.nonce) {
         const nonceValid = await verifyAuthorizationNonce(receipt.authorizer, receipt.nonce);
-        if (nonceValid === false) {
-          // Definitively used or canceled — reject
-          return res.status(402).json({
-            error: "Payment nonce already used or canceled",
-            details: "The EIP-3009 authorization nonce has already been consumed on Arc.",
-            status: "payment_required",
+        if (nonceValid !== true) {
+          if (nonceValid === false) {
+            return res.status(402).json({
+              error: "Payment nonce already used or canceled",
+              details: "The EIP-3009 authorization nonce has already been consumed on Arc.",
+              status: "payment_required",
+            });
+          }
+          return res.status(503).json({
+            error: "Payment verification unavailable",
+            details: "Could not verify the payment nonce. No request was served.",
+            status: "verification_unavailable",
           });
         }
 
-        verificationStatus = nonceValid === null ? "degraded" : "verified";
+        verificationStatus = "verified";
       }
 
-      req.nanopayment = receipt || {
-        amount: requiredAmount,
-        txHash: `0x${Buffer.from(crypto.randomBytes(32)).toString("hex")}`,
-        network: ARC_NETWORK_LABEL,
-        chainId: ARC_CHAIN_ID,
-        signature: paymentSignature,
-        verified: verificationStatus === "verified",
-        verificationStatus,
-        testMode: false,
-        timestamp: new Date().toISOString(),
-      };
-
-      if (receipt) {
-        req.nanopayment = {
-          ...req.nanopayment,
-          verified: verificationStatus === "verified",
-          verificationStatus,
-          testMode: false,
-        };
-      }
+      // A paid request must carry the caller's own receipt; we never invent a
+      // transaction hash for it.
+      req.nanopayment = receipt
+        ? {
+            ...receipt,
+            verified: verificationStatus === "verified",
+            verificationStatus,
+            testMode: false,
+            timestamp: new Date().toISOString(),
+          }
+        : {
+            amount: requiredAmount,
+            signature: paymentSignature,
+            verified: verificationStatus === "verified",
+            verificationStatus,
+            testMode: false,
+            timestamp: new Date().toISOString(),
+          };
 
       return handler(req, res);
     } catch (error) {

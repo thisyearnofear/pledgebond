@@ -41,62 +41,60 @@ export const DETECTION_ABI = [
   "function ownerOf(uint256) view returns (address)"
 ];
 
-// BuilderCreditCore ABI
-export const BUILDER_CREDIT_CORE_ABI = [
-  "function requestFunding(uint256[] hackathonIds, string githubUrl, string projectName, string[] milestoneDescriptions, uint256[] milestoneAmounts) external returns (uint256)",
-  "function requestFundingWithTeam(uint256[] hackathonIds, string githubUrl, string projectName, string[] milestoneDescriptions, uint256[] milestoneAmounts, address[] teamMembers, uint256[] teamShares) external returns (uint256)",
-  "function backProject(uint256 projectId, uint256 multiplier, uint256 amount) external",
-  "function pledgePrize(uint256 projectId, uint256 amount) external",
-  "function fundPrize(uint256 projectId, uint256 prizeAmount) external",
-  "function claimPayout(uint256 projectId) external",
-  "function claimBuilderPayout(uint256 projectId) external",
-  "function refundBacking(uint256 projectId) external",
-  "function projectPrizePool(uint256 projectId) public view returns (uint256)",
-  "function projectPrizeOwed(uint256 projectId) public view returns (uint256)",
-  "function maxBackingPerTx() public view returns (uint256)",
-  "function backingRefundDelay() public view returns (uint256)",
-  "function approveMilestone(uint256 projectId, uint256 milestoneId) external",
-  "function calculateFundingAmount(uint256 creditScore) public view returns (uint256)",
-  "function calculateBoostedFundingAmount(uint256 creditScore, uint256 projectId) public view returns (uint256)",
-  "function getMaxMultiplier(uint256 creditScore) public pure returns (uint256)",
-  "function totalProjectBacking(uint256 projectId) public view returns (uint256)",
-  "function projectPledgedPrize(uint256 projectId) public view returns (uint256)",
-  "function projects(uint256 projectId) public view returns (uint256[] hackathonIds, address developer, string githubUrl, string name, uint256 fundingAmount, bool isActive, uint256 fundedAt, uint256 creditScore, uint256 milestonesCompleted, uint256 milestonesCount)",
-  "function getDeveloperProjects(address developer) external view returns (uint256[] memory)",
-  "function getBackerProjects(address backer) external view returns (uint256[] memory)",
-  "function getProjectMilestones(uint256 projectId) external view returns (tuple(string description, uint256 amount, bool completed, uint256 completedAt)[] memory)",
-  "function getMilestoneApprovalStatus(uint256 projectId, uint256 milestoneId, address verifier) external view returns (bool hasApproved, uint8 approvalCount, bool isCompleted)",
-  "function projectBackings(uint256 projectId, uint256 backingId) public view returns (address backer, uint256 amount, uint256 multiplier, bool claimed)",
-  "function creditLines(address developer) public view returns (uint256 totalAmount, uint256 usedAmount, uint256 reputation, bool active, uint256 lastUpdated)",
-  "event ProjectCreated(uint256 indexed projectId, uint256[] hackathonIds, address indexed developer, uint256 amount, string name)",
-  "event ProjectBacked(uint256 indexed projectId, address indexed backer, uint256 amount, uint256 multiplier)",
-  "event PrizeFunded(uint256 indexed projectId, uint256 amount, uint256 totalPool)",
-  "event BackerPayoutClaimed(uint256 indexed projectId, address indexed backer, uint256 payout, uint256 owed)",
-  "event BuilderPayoutClaimed(uint256 indexed projectId, address indexed developer, uint256 payout)",
-  "event BackingRefunded(uint256 indexed projectId, address indexed backer, uint256 amount)"
-];
-
 // HackathonRegistry ABI
+// declareWinner/recordPayout are the credibility anchor: the declaredAt/paidAt
+// pair makes a win underwritable and a builder's payment history public.
 export const HACKATHON_REGISTRY_ABI = [
   "function isVerifier(uint256 hackathonId, address account) external view returns (bool)",
+  "function hackathonExists(uint256 hackathonId) external view returns (bool)",
   "function getRequiredSignatures(uint256 hackathonId) external view returns (uint256)",
   "function getHackathonVerifiers(uint256 hackathonId) external view returns (address[] memory)",
   "function getHackathonIdByName(string name) external view returns (uint256)",
-  "function getHackathonDetails(uint256 hackathonId) external view returns (string name, address organizer, uint256 startDate, uint256 endDate, bool isActive)",
+  "function getHackathonDetails(uint256 hackathonId) external view returns (string name, address organizer, uint256 startDate, uint256 endDate, bool active)",
   "function hackathons(uint256 hackathonId) public view returns (address host, uint8 requiredSignatures, bool active, uint256 startDate, uint256 endDate, uint256 createdAt, string name)",
+  "function declareWinner(uint256 hackathonId, address winner, string projectName, uint256 prizeAmount) external",
+  "function recordPayout(uint256 hackathonId, address winner, string payoutTxHash) external",
+  "function getWinnerDeclarations(uint256 hackathonId) external view returns (tuple(address winner, string projectName, uint256 prizeAmount, uint256 declaredAt, uint256 paidAt, string payoutTxHash)[] memory)",
+  "function getWinnerCount(uint256 hackathonId) external view returns (uint256)",
+  "function getPayoutStats(uint256 hackathonId) external view returns (uint256 totalWinners, uint256 paidWinners, uint256 totalPrizeAmount, uint256 minPayoutLatency, uint256 maxPayoutLatency)",
   "event HackathonCreated(uint256 indexed hackathonId, string name, address host, uint8 requiredSignatures)",
   "event VerifierAdded(uint256 indexed hackathonId, address verifier)",
-  "event VerifierRemoved(uint256 indexed hackathonId, address verifier)"
+  "event VerifierRemoved(uint256 indexed hackathonId, address verifier)",
+  "event WinnerDeclared(uint256 indexed hackathonId, address indexed winner, string projectName, uint256 prizeAmount, uint256 declaredAt)",
+  "event PayoutRecorded(uint256 indexed hackathonId, address indexed winner, string payoutTxHash, uint256 paidAt)"
 ];
 
-// BuilderCreditScoring ABI
-// Bug fix (Phase 3): pages/api/credit/score.js imports this symbol but it
-// was never exported. Added a minimal read-only surface — the route is
-// currently mocked, but having the ABI in place makes the wire-up trivial
-// when the contract is live.
-export const BUILDER_CREDIT_SCORING_ABI = [
-  "function getCreditScore(address developer) external view returns (uint256)",
-  "function getBreakdown(address developer) external view returns (uint256 profile, uint256 activity, uint256 community, uint256 repositories, uint256 consistency)",
-  "function getTier(address developer) external view returns (string memory)",
-  "function isVerified(address developer) external view returns (bool)"
+
+// LiquidityRail ABI — bridge loans against confirmed wins, plus a payout
+// market. Replaces BuilderCreditCore: no credit scores, no multipliers.
+export const LIQUIDITY_RAIL_ABI = [
+  "function declareWin(uint256 hackathonId, address builder, string projectName, uint256 prizeAmount) external returns (uint256)",
+  "function openLoan(uint256 winId, uint256 principal, uint256 collateral, uint256 trancheSize, address trancheProvider, uint256 rateBps, uint256 durationDays, uint256 incentives) external",
+  "function settleLoan(uint256 winId) external",
+  "function defaultLoan(uint256 winId) external",
+  "function releaseTranche(uint256 winId) external",
+  "function withdrawFees(address to, uint256 amount) external",
+  "function wins(uint256 winId) external view returns (uint256 hackathonId, address builder, uint256 prizeAmount, uint256 declaredAt, uint256 settledAt, uint8 status)",
+  "function loans(uint256 winId) external view returns (uint256 winId, address lender, address builder, address trancheProvider, uint256 principal, uint256 collateral, uint256 trancheSize, uint256 originationFee, uint256 dueAt, uint8 mode, uint8 status, uint256 incentives)",
+  "function bets(uint256 winId, uint256 index) external view returns (address bettor, uint256 amount, bool expectsPayment, bool claimed)",
+  "function builderHistory(address builder) external view returns (uint256 winsDeclared, uint256 loansTaken, uint256 loansRepaid, uint256 winsSettledInFull, uint256 winsDefaulted, uint256 totalDaysToPay, uint256 fastestDaysToPay)",
+  "function coverageRateBps(address builder) external view returns (uint256)",
+  "function averageDaysToPay(address builder) external view returns (uint256)",
+  "function maxLoanSize() external view returns (uint256)",
+  "function maxRateBps() external view returns (uint256)",
+  "function maxLoanDuration() external view returns (uint256)",
+  "function totalLoanPrincipal() external view returns (uint256)",
+  "function totalCollateral() external view returns (uint256)",
+  "function totalBetStakes() external view returns (uint256)",
+  "function accruedFees() external view returns (uint256)",
+  "function usdcToken() external view returns (address)",
+  "function registry() external view returns (address)",
+  "function FEE_ROLE() external view returns (bytes32)",
+  "event WinDeclared(uint256 indexed winId, uint256 indexed hackathonId, address indexed builder, string projectName, uint256 prizeAmount, uint256 declaredAt)",
+  "event LoanOpened(uint256 indexed winId, address indexed lender, uint256 principal, uint256 collateral, uint256 trancheSize, uint256 originationFee, uint256 dueAt, uint8 mode)",
+  "event LoanRepaid(uint256 indexed winId, address indexed lender, uint256 principal)",
+  "event LoanDefaulted(uint256 indexed winId, address indexed builder, uint256 principal, uint256 collateralLiquidated, uint256 trancheAbsorbed)",
+  "event CollateralReleased(uint256 indexed winId, address indexed builder, uint256 amount)",
+  "event WinSettled(uint256 indexed winId, address indexed builder, uint256 daysToPay)",
+  "event FeesWithdrawn(address indexed to, uint256 amount)"
 ];

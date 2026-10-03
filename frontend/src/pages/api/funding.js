@@ -1,4 +1,5 @@
-import { usdcPaymentService, getFundingTier } from '../../lib/usdcPayments';
+import { usdcPaymentService } from '../../lib/usdcPayments';
+import { realCircleService } from '../../services/RealCircleService';
 
 import { withApiMiddleware, isAdmin } from '../../utils/apiMiddleware';
 import { db } from '@/lib/firebase/serverOnly';
@@ -34,68 +35,9 @@ async function handler(req, res) {
         const balance = await usdcPaymentService.getWalletBalance(data.walletId);
         return res.status(200).json({ success: true, balance });
 
-      case 'processFunding':
-        const { developerAddress, creditScore, creditData } = data;
-        
-        // Validate input
-        if (!developerAddress || !creditScore) {
-          return res.status(400).json({ 
-            error: 'Missing required fields: developerAddress, creditScore' 
-          });
-        }
-
-        // Check minimum credit score
-        if (creditScore < 400) {
-          return res.status(400).json({ 
-            error: 'Credit score too low for funding eligibility' 
-          });
-        }
-
-        const result = await usdcPaymentService.processDeveloperFunding(
-          developerAddress,
-          creditScore,
-          creditData
-        );
-
-        // Log to engagement feed
-        if (result.success) {
-          await logActivity({
-            type: "payout_processed",
-            userHandle: developerAddress,
-            description: `Developer ${developerAddress.substring(0, 6)}... received ${result.amount} USDC funding based on their credit score of ${creditScore}!`,
-            amount: result.amount,
-            metadata: { creditScore }
-          });
-        }
-
-        return res.status(200).json(result);
-
-      case 'getTransferStatus':
-        const status = await usdcPaymentService.getTransferStatus(data.transferId);
-        return res.status(200).json({ success: true, status });
-
       case 'getFundingHistory':
         const history = await usdcPaymentService.getFundingHistory(data.developerAddress);
         return res.status(200).json({ success: true, history });
-
-      case 'calculateFunding':
-        const { creditScore: score } = data;
-        if (!score || score < 0 || score > 850) {
-          return res.status(400).json({ 
-            error: 'Invalid credit score. Must be between 0 and 850.' 
-          });
-        }
-        
-        const calculatedAmount = usdcPaymentService.calculateFundingAmount(score);
-        const tier = getFundingTier(score);
-        
-        return res.status(200).json({ 
-          success: true, 
-          amount: calculatedAmount,
-          creditScore: score,
-          tier,
-          eligible: score >= 400
-        });
 
       case 'checkConfiguration':
         const isConfigured = usdcPaymentService.isConfigured();
@@ -110,28 +52,27 @@ async function handler(req, res) {
             : 'Circle API not configured'
         });
 
-      case 'transferUSDC':
-        const { sourceWalletId, destinationAddress, amount, reason } = data;
-        
-        if (!sourceWalletId || !destinationAddress || !amount) {
-          return res.status(400).json({ 
-            error: 'Missing required fields: sourceWalletId, destinationAddress, amount' 
-          });
-        }
-
-        const transferResult = await usdcPaymentService.transferUSDCWithReason(
-          sourceWalletId,
-          destinationAddress,
-          amount,
-          reason
-        );
-        
-        return res.status(200).json({ success: true, transfer: transferResult });
+      case 'getTransferStatus':
+        const status = await usdcPaymentService.getTransferStatus(data.transferId);
+        return res.status(200).json({ success: true, status });
 
       case 'approveTesterReward': {
         const { feedbackId, projectSlug, taskId, sourceWalletId, destinationAddress, amount } = data;
-        if (!feedbackId || !projectSlug || !taskId || !sourceWalletId || !destinationAddress) {
+        if (!feedbackId || !projectSlug || !taskId || !destinationAddress) {
           return res.status(400).json({ error: 'Missing required fields for approveTesterReward' });
+        }
+        // The source wallet is never taken from the request body: an admin
+        // approving a reward must not be able to spend an arbitrary wallet,
+        // and the reward must always come from the payout wallet.
+        const payoutWalletId = process.env.CIRCLE_PAYOUT_WALLET_ID;
+        if (!payoutWalletId) {
+          return res.status(500).json({ error: 'Payout wallet not configured' });
+        }
+        if (sourceWalletId && sourceWalletId !== payoutWalletId) {
+          return res.status(400).json({ error: 'Invalid source wallet for tester reward' });
+        }
+        if (!realCircleService.isServerControlledWallet(payoutWalletId)) {
+          return res.status(500).json({ error: 'Payout wallet is not server-controlled' });
         }
         // Validate feedback exists and matches project/task
         const fbSnap = await db.collection('feedback').doc(feedbackId).get();
@@ -164,7 +105,13 @@ async function handler(req, res) {
         }
 
         // Transfer
-        const transfer = await usdcPaymentService.transferUSDCWithReason(sourceWalletId, destinationAddress, payoutAmount, `tester_reward:${projectSlug}:${taskId}:${feedbackId}`);
+        const transfer = await usdcPaymentService.transferUSDCWithReason(
+          payoutWalletId,
+          destinationAddress,
+          payoutAmount,
+          `tester_reward:${projectSlug}:${taskId}:${feedbackId}`,
+          { testerId: destinationAddress, projectSlug }
+        );
 
         // Deduct budget
         if (typeof proj.budgetRemainingUSDC === 'number') {

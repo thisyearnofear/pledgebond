@@ -184,6 +184,18 @@ async function handleTransactions(req, res) {
       validateRequiredFields(req.body, ['walletId', 'destinationAddress', 'amount']);
 
       const { walletId, tokenId, destinationAddress, amount, feeLevel, contractAddress, calldata } = req.body;
+
+      // A logged-in caller may not spend from an arbitrary Circle wallet. Only
+      // wallets the server itself controls are spendable here; user-initiated
+      // transfers must be signed by the user's own key, not proxied through
+      // this route.
+      if (!realCircleService.isServerControlledWallet(walletId)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Wallet is not server-controlled; user transfers must be signed client-side'
+        });
+      }
+
       const result = await realCircleService.createTransaction({ walletId, tokenId, destinationAddress, amount, feeLevel, contractAddress, calldata });
 
       return res.status(201).json({

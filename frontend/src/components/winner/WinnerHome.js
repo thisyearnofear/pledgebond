@@ -10,6 +10,7 @@ import useWinnerStatus from "@/hooks/useWinnerStatus";
 import { Card } from "@/components/common/Card";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
 import WinnerPacket from "@/components/winner/WinnerPacket";
+import BridgeLoanCard from "./BridgeLoanCard";
 import {
   CheckCircleIcon,
   ClockIcon,
@@ -118,7 +119,7 @@ export default function WinnerHome() {
       <div>
         <h2 className="text-xl font-bold text-primary">Your post-win desk</h2>
         <p className="text-sm text-secondary mt-1">
-          Claim status, payout clock, and an Underwriter packet — the spine before credit rails.
+          Claim status, payout clock, and your verified win record — the spine before any loan.
         </p>
       </div>
 
@@ -210,6 +211,8 @@ export default function WinnerHome() {
           )}
         </Card>
       </div>
+
+      <BridgeLoanCard />
 
       {(isVerified || pendingClaim || projects.length > 0) && (
         <WinnerPacket wins={wins} projects={projects} payoutMatch={payoutMatch} />

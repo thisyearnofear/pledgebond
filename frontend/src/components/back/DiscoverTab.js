@@ -9,7 +9,6 @@ import { useWallet, useNanopayment } from "@/stores/walletStore";
 import { useProjectData } from "@/hooks/useProjectData";
 import useProjectFilters from "@/hooks/useProjectFilters";
 import ProjectCard from "@/components/backer/ProjectCard";
-import BackingModal from "@/components/back/BackingModal";
 import { Card } from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
@@ -18,7 +17,6 @@ import { exploreHref } from "@/config/navigation";
 import {
   ECOSYSTEM_FILTER_OPTIONS,
   BACKER_SORT_OPTIONS,
-  BACKER_MULTIPLIER_OPTIONS,
   BACKER_SHORTLIST_LIMIT,
 } from "@/components/explore/constants";
 import {
@@ -46,7 +44,6 @@ export default function DiscoverTab() {
     setSearchQuery,
     filterEcosystem,
     setFilterEcosystem,
-    filterMultiplier,
     setFilterMultiplier,
     sortBy,
     setSortBy,
@@ -206,15 +203,6 @@ export default function DiscoverTab() {
             ))}
           </select>
           <select
-            value={filterMultiplier}
-            onChange={(e) => setFilterMultiplier(e.target.value)}
-            className="border border-gray-300 dark:border-gray-600 rounded text-sm px-2 py-1.5 font-medium bg-white dark:bg-gray-800"
-          >
-            {BACKER_MULTIPLIER_OPTIONS.map((opt) => (
-              <option key={opt.id} value={opt.id}>{opt.label}</option>
-            ))}
-          </select>
-          <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
             className="border border-gray-300 dark:border-gray-600 rounded text-sm px-2 py-1.5 font-medium bg-white dark:bg-gray-800"
@@ -288,8 +276,8 @@ export default function DiscoverTab() {
       )}
 
       {backingProject && (
-        <BackingModal
-          project={backingProject}
+        <LoanTermsModal
+          opportunity={backingProject}
           wallet={wallet}
           onClose={() => setBackingProject(null)}
           onSuccess={refresh}

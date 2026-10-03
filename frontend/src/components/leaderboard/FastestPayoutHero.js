@@ -173,7 +173,7 @@ export default function FastestPayoutHero({ entries }) {
                 Waiting on a payout?
               </p>
               <p className="text-xs text-secondary">
-                Get funded upfront while you wait. No interest, no collateral.
+                Won and still waiting? Draw USDC against the unpaid prize and repay when it lands.
               </p>
             </div>
           </div>

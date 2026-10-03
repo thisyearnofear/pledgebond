@@ -40,6 +40,10 @@ export async function convertLeadToClaim(leadDoc) {
     outcome: "winner",
     prizeAmount: lead.prizeAmount || 0,
     hackathonEndDate: new Date().toISOString(),
+    // Set once, when the win is first evidenced. Latency is measured from here,
+    // not from hackathonEndDate, so "organizer paid late" isn't conflated with
+    // "hackathon ended late".
+    winDeclaredAt: lead.createdAt || new Date().toISOString(),
     payoutAt: null,
     payoutVerifiedAt: null,
     // Trust gate: without evidence the claim stays "pending" and never

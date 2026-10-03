@@ -27,7 +27,10 @@ const VERIFICATION_STATUSES = [
   { value: "self_attested", label: "Self-attested" },
   { value: "evidence_attached", label: "Evidence attached" },
   { value: "wallet_linked", label: "Wallet linked" },
-  { value: "payout_verified", label: "Payout verified" },
+  // `payout_verified` is deliberately not offered here: it may only be set by
+  // the payout verification pipeline after a real on-chain receipt is matched.
+  // Self-selecting it would corrupt the credibility signal the platform is
+  // built on, so it is read-only in the editor.
 ];
 
 export default function ProjectEditorProof({

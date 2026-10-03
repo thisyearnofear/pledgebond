@@ -1,12 +1,34 @@
 /**
  * Tests for USDC Payment Service
- * These tests validate the core functionality of the USDC payment service
+ *
+ * Phase 0 focus: the service must never disburse platform capital and must
+ * refuse to spend from a wallet the caller chooses. The credit-scoring
+ * funding model was removed; these tests lock in that it cannot return.
  */
 
-import { USDCPaymentService, formatUSDC, getFundingTier } from '../usdcPayments';
+import { USDCPaymentService, formatUSDC } from '../usdcPayments';
 import { vi } from 'vitest';
 
-// Mock environment variables for testing
+// RealCircleService pulls in server-only Circle SDK + node:crypto, which the
+// jsdom environment cannot resolve. Mock at the module boundary.
+vi.mock('../../services/RealCircleService', () => ({
+  realCircleService: {
+    isServerControlledWallet: (walletId) =>
+      ['wallet-payout-server', 'wallet-agent-server'].includes(walletId),
+    getServerControlledWallets: () => [
+      'wallet-payout-server',
+      'wallet-agent-server',
+    ],
+    createTransaction: vi.fn(),
+    recordDisbursement: vi.fn(async () => 'pb_test'),
+    reconcilePayouts: vi.fn(async () => ({ checked: 0, completed: 0, failed: 0 })),
+    getTransactionStatus: vi.fn(),
+    getWalletBalances: vi.fn(),
+    createWallet: vi.fn(),
+    isWalletConfigured: () => false,
+  },
+}));
+
 const originalEnv = process.env;
 
 beforeEach(() => {
@@ -14,7 +36,10 @@ beforeEach(() => {
   process.env = {
     ...originalEnv,
     CIRCLE_API_KEY: undefined,
-    CIRCLE_ENVIRONMENT: 'sandbox'
+    CIRCLE_ENVIRONMENT: 'sandbox',
+    CIRCLE_PAYOUT_WALLET_ID: 'wallet-payout-server',
+    CIRCLE_AGENT_WALLET_ID: 'wallet-agent-server',
+    CIRCLE_PLATFORM_WALLET_ID: 'wallet-platform-legacy',
   };
 });
 
@@ -29,42 +54,95 @@ describe('USDCPaymentService', () => {
     service = new USDCPaymentService();
   });
 
-  describe('calculateFundingAmount', () => {
-    test('returns 0 for credit scores below 400', () => {
-      expect(service.calculateFundingAmount(300)).toBe(0);
-      expect(service.calculateFundingAmount(399)).toBe(0);
+  describe('platform funding removal', () => {
+    test('does not expose executeFundingTransfer', () => {
+      expect(service.executeFundingTransfer).toBeUndefined();
     });
 
-    test('returns maximum funding for excellent credit scores', () => {
-      expect(service.calculateFundingAmount(800)).toBe(5000);
-      expect(service.calculateFundingAmount(850)).toBe(5000);
+    test('does not expose a platform-wallet getter', () => {
+      expect(service.getPlatformWallet).toBeUndefined();
     });
 
-    test('calculates proportional funding for mid-range scores', () => {
-      const amount600 = service.calculateFundingAmount(600);
-      const amount700 = service.calculateFundingAmount(700);
-      
-      expect(amount600).toBeGreaterThan(500);
-      expect(amount600).toBeLessThan(5000);
-      expect(amount700).toBeGreaterThan(amount600);
+    test('does not expose credit-based funding helpers', () => {
+      expect(service.calculateFundingAmount).toBeUndefined();
+      expect(service.getFundingEligibility).toBeUndefined();
+      expect(service.processDeveloperFunding).toBeUndefined();
     });
   });
 
-  describe('getFundingEligibility', () => {
-    test('returns ineligible for low credit scores', () => {
-      const eligibility = service.getFundingEligibility(350);
-      
-      expect(eligibility.eligible).toBe(false);
-      expect(eligibility.amount).toBe(0);
-      expect(eligibility.requirements.length).toBeGreaterThan(0);
+  describe('server-controlled wallet enforcement', () => {
+    test('refuses to spend from a wallet the caller supplied', async () => {
+      await expect(
+        service.transferUSDCWithReason(
+          'wallet-someone-elses',
+          '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+          '100',
+          'test'
+        )
+      ).rejects.toThrow('Refusing to spend from a non-server-controlled wallet');
     });
 
-    test('returns eligible for good credit scores', () => {
-      const eligibility = service.getFundingEligibility(720);
-      
-      expect(eligibility.eligible).toBe(true);
-      expect(eligibility.amount).toBeGreaterThan(0);
-      expect(eligibility.benefits.length).toBeGreaterThan(0);
+    test('refuses the legacy platform wallet', async () => {
+      // CIRCLE_PLATFORM_WALLET_ID is deliberately NOT in the allowlist.
+      await expect(
+        service.transferUSDCWithReason(
+          'wallet-platform-legacy',
+          '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+          '5000',
+          'developer funding'
+        )
+      ).rejects.toThrow('Refusing to spend from a non-server-controlled wallet');
+    });
+
+    test('rejects an empty wallet id', async () => {
+      await expect(
+        service.transferUSDCWithReason(
+          '',
+          '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+          '100',
+          'test'
+        )
+      ).rejects.toThrow('Refusing to spend from a non-server-controlled wallet');
+    });
+
+    test('records a disbursement row for every successful transfer', async () => {
+      const { realCircleService } = await import('../../services/RealCircleService');
+      realCircleService.createTransaction.mockResolvedValueOnce({
+        data: { id: 'circle-tx-1' },
+      });
+
+      await service.transferUSDCWithReason(
+        'wallet-payout-server',
+        '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+        '250',
+        'tester_reward:demo',
+        { projectSlug: 'demo' }
+      );
+
+      expect(realCircleService.recordDisbursement).toHaveBeenCalledWith(
+        expect.objectContaining({
+          circleTxId: 'circle-tx-1',
+          amount: '250',
+          reason: 'tester_reward:demo',
+          projectSlug: 'demo',
+        })
+      );
+    });
+
+    test('records nothing when the transfer is refused', async () => {
+      const { realCircleService } = await import('../../services/RealCircleService');
+      realCircleService.recordDisbursement.mockClear();
+
+      await expect(
+        service.transferUSDCWithReason(
+          'wallet-not-ours',
+          '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+          '250',
+          'tester_reward:demo'
+        )
+      ).rejects.toThrow();
+
+      expect(realCircleService.recordDisbursement).not.toHaveBeenCalled();
     });
   });
 
@@ -79,28 +157,6 @@ describe('USDCPaymentService', () => {
       expect(service.validateWalletAddress('')).toBe(false);
       expect(service.validateWalletAddress(null)).toBe(false);
       expect(service.validateWalletAddress('0x123')).toBe(false);
-    });
-  });
-
-  describe('processDeveloperFunding', () => {
-    test('throws when Circle API is not configured', async () => {
-      await expect(
-        service.processDeveloperFunding(
-          '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
-          720,
-          {}
-        )
-      ).rejects.toThrow();
-    });
-
-    test('throws error for low credit scores', async () => {
-      await expect(
-        service.processDeveloperFunding(
-          '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
-          300,
-          {}
-        )
-      ).rejects.toThrow('Credit score too low');
     });
   });
 
@@ -121,24 +177,6 @@ describe('Helper Functions', () => {
       expect(formatUSDC(1000)).toBe('$1,000.00');
       expect(formatUSDC(1234.56)).toBe('$1,234.56');
       expect(formatUSDC(0)).toBe('$0.00');
-    });
-  });
-
-  describe('getFundingTier', () => {
-    test('returns correct tiers for different scores', () => {
-      expect(getFundingTier(850).tier).toBe('Excellent');
-      expect(getFundingTier(750).tier).toBe('Good');
-      expect(getFundingTier(650).tier).toBe('Fair');
-      expect(getFundingTier(550).tier).toBe('Poor');
-      expect(getFundingTier(450).tier).toBe('Very Poor');
-    });
-
-    test('returns correct colors for tiers', () => {
-      expect(getFundingTier(850).color).toBe('green');
-      expect(getFundingTier(750).color).toBe('blue');
-      expect(getFundingTier(650).color).toBe('yellow');
-      expect(getFundingTier(550).color).toBe('orange');
-      expect(getFundingTier(450).color).toBe('red');
     });
   });
 });

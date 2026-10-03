@@ -75,42 +75,42 @@ export const CAPITAL_RAILS = [
     footerRight: "Risk: Market-driven",
   },
   {
-    id: "x402",
+    id: "loan",
     status: "live",
     tone: "blue",
-    eyebrow: "Rail 2",
-    tag: "Mid-stage",
-    title: "x402 Credit Line",
-    shortTitle: "Credit",
+    eyebrow: "The loan",
+    tag: "Bridge",
+    title: "Bridge Loan",
+    shortTitle: "Loan",
     emoji: "💳",
     description:
-      "Have milestones to ship? Get a USDC credit line backed by your future hackathon prizes.",
+      "Won already, paid later? Draw USDC against your confirmed win and repay when the organizer pays out.",
     bullets: [
-      "Up to $5,000 USDC credit",
-      "Collateralized by prize pipeline",
-      "AI agents verify milestones",
+      "Cash in hours, not 90 days",
+      "Overcollateralized or tranche-backed",
+      "Repaid on prize settlement",
     ],
-    footerLeft: "Backer yield: Principal + multiplier",
-    footerRight: "Risk: Milestone-driven",
+    footerLeft: "You set your rate and duration",
+    footerRight: "Default risk sits with you and the tranche",
   },
   {
-    id: "prize",
+    id: "market",
     status: "live",
     tone: "green",
-    eyebrow: "Rail 3",
-    tag: "Settlement",
-    title: "Prize Routing",
-    shortTitle: "Prize Routing",
+    eyebrow: "The market",
+    tag: "Speculation",
+    title: "Payout Market",
+    shortTitle: "Market",
     emoji: "🏆",
     description:
-      "Won a hackathon? Route the prize through the platform to auto-repay backers and keep the rest.",
+      "Back the organizers who pay. Bet on whether a declared win will actually be settled — and be ranked by what happens next.",
     bullets: [
-      "Auto-repay backers from prize",
       "Payout verification on 3 chains",
-      "Leaderboard ranks fastest payouts",
+      "Leaderboard ranks fastest payers",
+      "Credibility derived from real history",
     ],
-    footerLeft: "Backer yield: Principal + multiplier",
-    footerRight: "Risk: Prize-dependent",
+    footerLeft: "Your stake, your call",
+    footerRight: "Speculative — bounded at your stake",
   },
 ];
 
@@ -146,14 +146,14 @@ export function isRailIntegrated(id) {
   return isRailAvailable(getRailStatus(id));
 }
 
-export const CAPITAL_STACK_HEADING = "Capital That Grows With You";
+export const CAPITAL_STACK_HEADING = "Win Now, Settle Later";
 export const CAPITAL_STACK_SUBHEADING =
-  "Three capital instruments, one progression. Start where you are, level up as you ship.";
+  "Two instruments on one fact: you won, and they haven't paid yet. Borrow against the win, or bet on whether it gets paid.";
 export const CAPITAL_STACK_FOOTNOTE =
-  "The rails are composable — use one or all three. The agent layer recommends which fits your stage.";
+  "Lenders carry credit risk. Bettors carry bounded speculation. The pools never mix.";
 
 /** Landing page anchor for deep links from Agents tab and elsewhere. */
 export const CAPITAL_STACK_ANCHOR_ID = "capital-stack";
 export const CAPITAL_STACK_HREF = `/#${CAPITAL_STACK_ANCHOR_ID}`;
 export const AGENTS_CAPITAL_HINT =
-  "Start with payout truth and an Underwriter packet — credit rails come after the win is verified.";
+  "Payout truth first — loans and market open once the win is verified on-chain.";

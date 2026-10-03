@@ -394,7 +394,11 @@ async function handlePayoutTimeline(req, res, hackathonId) {
 
     const timeline = claims.map(claim => {
       const paidAt = claim.payoutVerifiedAt || claim.payoutAt || null;
-      const declaredAt = claim.hackathonEndDate || null;
+      // Latency is measured from when the win was declared, matching the
+      // on-chain declaredAt → paidAt anchor in HackathonRegistry.
+      // hackathonEndDate is only a fallback for claims that predate
+      // winDeclaredAt — it overstates latency, so new claims must set the field.
+      const declaredAt = claim.winDeclaredAt || claim.hackathonEndDate || null;
       let payoutLatencyDays = null;
 
       if (declaredAt && paidAt) {
@@ -460,6 +464,7 @@ async function handlePayoutTimeline(req, res, hackathonId) {
         totalPrizeAmount,
         avgPayoutDays,
         payoutCompletionRate,
+        latencyBasis: 'winDeclaredAt',
         timeline,
       },
     });

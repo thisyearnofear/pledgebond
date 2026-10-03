@@ -5,7 +5,7 @@ export default function Document() {
     <Html lang="en">
       <Head>
         <meta charSet="utf-8" />
-        <meta name="description" content="PledgeBond — the post-win layer for hackathon builders. Public payout truth, verified wins, and Underwriter packets that unlock credit." />
+        <meta name="description" content="PledgeBond — a liquidity rail for hackathon winners. Get paid in hours against a confirmed win, not 90 days." />
         <meta property="og:type" content="website" />
         <meta property="og:title" content="PledgeBond — Post-Win Layer for Hackathon Builders" />
         <meta property="og:description" content="You won. Now get paid — and keep building. Public payout speeds, verified wins, and underwriting packets for ecosystems and angels." />
@@ -35,7 +35,7 @@ export default function Document() {
                 "Hackathon payout speed leaderboards",
                 "Winner verification and claim flow",
                 "Underwriter packets via AI agents",
-                "Credit against verified wins",
+                "Bridge loans against verified wins",
               ],
             }),
           }}

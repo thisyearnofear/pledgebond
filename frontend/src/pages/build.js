@@ -13,7 +13,6 @@ import { useRouter } from "next/router";
 
 import DeveloperDashboard from "@/components/DeveloperDashboard";
 import BuilderProjectGrowth from "@/components/projects/BuilderProjectGrowth";
-import FundingInterface from "@/components/FundingInterface";
 import CrossChainTransfer from "@/components/CrossChainTransfer";
 import TransferHistory from "@/components/TransferHistory";
 import Button from "@/components/common/Button";
@@ -27,6 +26,7 @@ import PageHeader from "@/components/common/PageHeader";
 import Card from "@/components/common/Card";
 import CapitalStack from "@/components/sections/CapitalStack";
 import WinnerHome from "@/components/winner/WinnerHome";
+import BridgeLoanCard from "@/components/winner/BridgeLoanCard";
 import WalletLinkBanner from "@/components/common/WalletLinkBanner";
 import LinkWalletPrompt from "@/components/common/LinkWalletPrompt";
 import useWinnerStatus from "@/hooks/useWinnerStatus";
@@ -38,7 +38,7 @@ import {
   RAIL_STATUS_STYLES,
 } from "@/config/capitalStack";
 
-const BUILD_TABS = ["wins", "credit", "projects", "funding", "crosschain"];
+const BUILD_TABS = ["wins", "projects", "funding", "crosschain"];
 
 export default function BuildPage() {
   const { userRole, currentUser } = useUser();
@@ -99,9 +99,10 @@ export default function BuildPage() {
   const bagsRail = getRailById("bags");
   const hasBagsToken = false; // user-level: Bags SDK not wired yet
   const bagsIntegrated = isRailIntegrated("bags");
-  const hasHackathonWins = Array.isArray(developerProjects) && developerProjects.some(
-    p => Array.isArray(p.hackathons) && p.hackathons.some(h => h.outcome === 'winner' || h.outcome === 'finalist')
-  );
+  // useWinnerStatus().isVerified is the source of truth. Scanning
+  // developerProjects[].hackathons[] here missed verified wins whose project
+  // shape didn't match, which hid the win desk entirely.
+  const hasHackathonWins = Boolean(isVerified);
 
   // Auto-detect connected wallet — if Solana is connected and EVM isn't,
   // default to Solana without requiring the user to click the toggle
@@ -155,7 +156,7 @@ export default function BuildPage() {
             title={isPayoutReferral ? "Get Paid Today, Not in 67 Days" : "Connect wallet for credit tools"}
             subtitle={
               isPayoutReferral
-                ? "PledgeBond advances you USDC against your hackathon prize — so you can keep building while the organizers take their time. No interest, no collateral."
+                ? "You won. The organizer hasn't paid yet. PledgeBond advances USDC against that prize so you can keep building — you set the rate and repay when they pay."
                 : currentUser
                   ? "Your win desk above works without a wallet. Connect to manage credit, funding, and cross-chain tools."
                   : `Connect your ${activeChainFamily === "solana" ? "Solana" : "EVM"} wallet to view your credit score, request funding, and manage projects.`
@@ -238,9 +239,8 @@ export default function BuildPage() {
 
   const tabs = [
     { id: "wins", label: winsBadge },
-    { id: "credit", label: "Credit" },
     { id: "projects", label: doesHaveProjects ? `Projects (${developerProjects.length})` : "Projects" },
-    { id: "funding", label: "Get Funded" },
+    { id: "funding", label: "Get a Loan" },
     { id: "crosschain", label: "Cross-Chain" },
   ];
 
@@ -253,7 +253,7 @@ export default function BuildPage() {
         {currentUser && !anyWalletConnected && <WalletLinkBanner />}
         <PageHeader
           title="Builder Hub"
-          subtitle="Claim status, payout clock, and Underwriter packets — then credit tools."
+          subtitle="Your declared wins, your loans, and what you get paid for them."
         />
         {/* Rail progression indicator — demoted visually; still available for funding context */}
         {activeTab !== "wins" && (
@@ -270,8 +270,7 @@ export default function BuildPage() {
                   <span
                     className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full ${
                       (rail.id === "bags" && hasBagsToken) ||
-                      (rail.id === "x402" && doesHaveProjects) ||
-                      (rail.id === "prize" && hasHackathonWins)
+                      (rail.id === "loan" && hasHackathonWins)
                         ? "bg-blue-200 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
                         : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
                     }`}
@@ -287,19 +286,21 @@ export default function BuildPage() {
             <div className="flex-1 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
               {!doesHaveProjects && !hasHackathonWins && (
                 <span>
-                  {bagsIntegrated
-                    ? <>Start on <strong>Rail 1</strong> — launch a project token on Bags, or submit a project to unlock <strong>Rail 2</strong> credit.</>
-                    : <>Submit a project to unlock <strong>Rail 2</strong> credit. <strong>Rail 1</strong> (Bags) is {RAIL_STATUS_LABELS.coming_soon.toLowerCase()}.</>}
+                  Declare a hackathon win to unlock <strong>The loan</strong> — paid in hours
+                  against money you have already won.
                 </span>
               )}
               {doesHaveProjects && !hasHackathonWins && (
-                <span>You're on <strong>Rail 2</strong> (credit). Win a hackathon to unlock <strong>Rail 3</strong> — auto-repay backers from your prize.</span>
+                <span>
+                  Win something, then declare it here. Once your win is on-chain you can draw
+                  against it instead of waiting for the organizer.
+                </span>
               )}
               {hasHackathonWins && (
-                <span>You're on <strong>Rail 3</strong> (prize routing). Your hackathon wins are verified and can auto-repay backers.</span>
-              )}
-              {hasBagsToken && !doesHaveProjects && (
-                <span>You're on <strong>Rail 1</strong> (Bags). Submit a project with milestones to unlock <strong>Rail 2</strong> credit.</span>
+                <span>
+                  Your win is declared. Draw a <strong>bridge loan</strong> against the unpaid
+                  prize and repay when it lands.
+                </span>
               )}
             </div>
           </div>
@@ -323,12 +324,6 @@ export default function BuildPage() {
         {activeTab === "wins" && (
           <ErrorBoundary name="WinsTab" errorMessage="Failed to load winner desk.">
             <WinnerHome />
-          </ErrorBoundary>
-        )}
-
-        {activeTab === "credit" && (
-          <ErrorBoundary name="CreditTab" errorMessage="Failed to load credit data.">
-            <div className="p-6 text-center text-text-secondary">Credit dashboard has moved to your <a href="/profile" className="text-blue-600 dark:text-blue-400 underline">profile</a>.</div>
           </ErrorBoundary>
         )}
 
@@ -356,7 +351,7 @@ export default function BuildPage() {
                       <p className="text-sm text-secondary mt-1 max-w-xl">
                         {bagsIntegrated
                           ? "Don't have a prize pipeline yet? Launch a project token on Solana via Bags. Community buys in, you earn fee-share yield from trading volume."
-                          : "Bags token launch is coming soon. For now, submit a project with milestones to access Rail 2 credit."}
+                          : "Bags token launch is coming soon. For now, declare a hackathon win to draw a bridge loan."}
                       </p>
                     </div>
                     <Button
@@ -384,10 +379,7 @@ export default function BuildPage() {
               <LinkWalletPrompt reason="request funding" />
             ) : (
               <div className="space-y-6">
-                <FundingInterface
-                  creditScore={creditProfile?.creditScore || 0}
-                  onFundingComplete={() => setActiveTab("credit")}
-                />
+                <BridgeLoanCard />
               </div>
             )}
           </ErrorBoundary>

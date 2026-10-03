@@ -143,35 +143,6 @@ export default function EcosystemPage() {
               </div>
             </div>
           </Card>
-
-          {/* Trade Winds (Boosts) */}
-          {ecosystemConfig.tradeWinds && ecosystemConfig.tradeWinds.length > 0 && (
-            <Card className="p-6 border-2 border-orange-100 bg-orange-50/30">
-              <h3 className="text-lg font-bold text-primary mb-4 flex items-center">
-                <span className="mr-2">🌬️</span> Active Trade Winds
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {ecosystemConfig.tradeWinds.map((boost, i) => (
-                  <div key={i} className="bg-surface p-4 rounded-lg border-default border-orange-100 shadow-sm flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 dark:text-orange-300 uppercase tracking-wider">
-                          {boost.label}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">{boost.description}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                        {boost.boost}x
-                      </div>
-                      <div className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-tighter">Boost</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
         </div>
 
         <div className="lg:col-span-1">

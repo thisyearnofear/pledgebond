@@ -10,7 +10,7 @@ import { Card } from '../common/Card';
 import Button from '../common/Button';
 import VelocityBadge from '../common/VelocityBadge';
 import { getEcosystemConfig, getEcosystemClasses } from '../../config/ecosystems';
-import { getGitHubUrl, calculateScoutingFlags, calculateProjectBoost } from '../../utils/projectUtils';
+import { getGitHubUrl, calculateScoutingFlags } from '../../utils/projectUtils';
 import ChainBadges from '../showcase/ChainBadges';
 import SectorBadges from '../showcase/SectorBadges';
 import AgentVerifiedBadge from '../common/AgentVerifiedBadge';
@@ -122,7 +122,6 @@ export const ProjectDetailCard = ({ project, showEcosystem = true, onClick }) =>
   const githubUrl = getGitHubUrl(project);
   const tier = getEvolutionTier(project.stats?.healthScore || 0);
   const scoutFlags = calculateScoutingFlags(project);
-  const boost = calculateProjectBoost(project, ecosystemConfig);
   
   const handleLinkClick = (e, url) => {
     e.stopPropagation();
@@ -191,14 +190,8 @@ export const ProjectDetailCard = ({ project, showEcosystem = true, onClick }) =>
       )}
 
       {/* AI Scouting Flags & Trade Winds */}
-      {(scoutFlags.highVelocity || scoutFlags.underBacked || boost > 1) && (
+      {(scoutFlags.highVelocity || scoutFlags.underBacked) && (
         <div className="flex flex-wrap gap-2 mb-3">
-          {boost > 1 && (
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-100 text-orange-800 dark:text-orange-300 border border-orange-200 rounded-lg text-[10px] font-bold uppercase">
-              <span className="animate-pulse">🌬️</span>
-              {boost}x Boost
-            </div>
-          )}
           {scoutFlags.isScoutChoice && (
             <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-100 text-amber-800 border border-amber-200 rounded-lg text-xs font-bold animate-pulse">
               <MagnifyingGlassCircleIcon className="w-4 h-4" />
@@ -490,21 +483,11 @@ export const ProjectListItem = ({ project, onClick }) => {
 export const ProjectGridCard = ({ project, onClick }) => {
   const ecosystemConfig = getEcosystemConfig(project.ecosystem);
   const tier = getEvolutionTier(project.stats?.healthScore || 0);
-  const boost = calculateProjectBoost(project, ecosystemConfig);
   
   const projectBadges = useMemo(() => computeProjectBadges(project), [project]);
 
   return (
     <BaseProjectCard project={project} onClick={onClick} className={`p-5 h-full flex flex-col relative overflow-hidden ${tier.class}`}>
-      {/* Boost Badge */}
-      {boost > 1 && (
-        <div className="absolute top-0 right-0 mt-2 mr-2 z-10">
-          <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 dark:text-orange-300 border border-orange-200 rounded text-[10px] font-bold uppercase tracking-tighter shadow-sm">
-            <span className="animate-pulse">🌬️</span>
-            {boost}x
-          </div>
-        </div>
-      )}
       {/* Project Image */}
       {project.imageUrl && (
         <div className="mb-3 -mx-5 -mt-5 overflow-hidden border-b border-gray-100">

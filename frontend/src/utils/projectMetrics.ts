@@ -23,9 +23,6 @@ interface ProjectData {
   backerCount?: number;
   totalBacked?: number;
   targetFunding?: number;
-  activeMultiplier?: number;
-  backingMultiplier?: number;
-  founderStakedAmount?: number;
   lastCheckInTimestamp?: string;
   sectors?: string[];
   category?: string;
@@ -155,36 +152,6 @@ export function calculateConfidence(project: ProjectData): number {
 /**
  * Derive active multiplier from backing data.
  * Uses different tiers based on project maturity signals when no explicit data.
- */
-export function deriveMultiplier(project: ProjectData): number {
-  if (project.activeMultiplier) return project.activeMultiplier;
-  if (project.backingMultiplier) return project.backingMultiplier / 100;
-
-  const backerCount = project.backerCount || 0;
-  if (backerCount > 0) {
-    const multipliers = [1.5, 2.0, 3.0];
-    return multipliers[Math.min(Math.floor(backerCount / 5), 2)];
-  }
-
-  // No backing data — derive from project quality signals
-  const description = project.description || '';
-  const hasRepo = !!(project.owner && project.repo) || !!(project.githubUrl);
-  const completeness = [
-    description.length > 100,
-    hasRepo,
-    !!(project.ecosystem),
-    !!(project.category),
-    !!(project.socials?.website || project.socials?.twitter),
-    (project.founders?.length || 0) > 0,
-  ].filter(Boolean).length;
-
-  // Higher completeness → higher multiplier tier
-  if (completeness >= 5) return 2.5;
-  if (completeness >= 4) return 2.0;
-  if (completeness >= 3) return 1.5;
-  return 1.2;
-}
-
 /**
  * Derive hours since last check-in from available data.
  */
@@ -213,7 +180,6 @@ export function deriveLastCheckIn(project: ProjectData, now: number = Date.now()
 export function enhanceProject(p: ProjectData, now: number = Date.now()) {
   const health = calculateHealth(p, now);
   const confidence = calculateConfidence(p);
-  const activeMultiplier = deriveMultiplier(p);
   const totalBacked = p.totalBacked || 0;
   const targetFunding = p.targetFunding || 10000;
   const lastCheckIn = deriveLastCheckIn(p, now);
@@ -240,12 +206,8 @@ export function enhanceProject(p: ProjectData, now: number = Date.now()) {
     ...p,
     confidence,
     health,
-    activeMultiplier,
-    projectedROI: (activeMultiplier - 1) * 100,
     totalBacked,
     targetFunding,
-    founderStaked: (p.founderStakedAmount || 0) > 0,
-    founderStakedAmount: p.founderStakedAmount || 0,
     lastCheckIn,
     category,
     submissionQuality,

@@ -44,7 +44,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/lib/firebase/clientApp";
 import { getSolanaConnection } from "@/lib/chains/solanaConnection";
 import { walletService } from "@/services/walletService";
-import { creditService } from "@/services/creditService";
+import { liquidityRailService } from "@/services/liquidityRailService";
 import { solanaCreditService } from "@/services/SolanaCreditService";
 import { nanopaymentService } from "@/services/nanopaymentService";
 import { crossChainUSDCService } from "@/lib/lifiIntegration";
@@ -72,8 +72,10 @@ export interface WalletState {
     wallet: any;
   };
   activeChainFamily: "evm" | "solana";
-  credit: {
-    profile: any;
+  rail: {
+    credibility: any;
+    positions: any[];
+    loading: boolean;
     usdcBalance: string;
     chainBalances: Record<string, string>;
     developerProjects: any[];
@@ -106,7 +108,7 @@ const initialState: WalletState = {
   evm: { account: undefined, chainId: undefined, publicClient: null, walletClient: null, connected: false, connecting: false, balance: null },
   solana: { address: null, connected: false, connecting: false, balance: null, wallet: null },
   activeChainFamily: "evm",
-  credit: { profile: null, usdcBalance: "0.00", chainBalances: {}, developerProjects: [], projectDetails: [], loadingProjects: false, isFetchingBalances: false },
+  rail: { credibility: null, positions: [], loading: false, usdcBalance: "0.00", chainBalances: {}, developerProjects: [], projectDetails: [], loadingProjects: false, isFetchingBalances: false },
   nanopayment: { isInitialized: false, balance: { available: "0", locked: "0" }, transactions: [], demoMode: false, walletAddress: null, loading: false, error: null },
   lifi: { transferHistory: [], loading: false, error: null },
   circle: { wallets: [], config: null, loading: false },
@@ -134,29 +136,51 @@ function disconnectSolana() {
 // Credit actions (delegate to existing services)
 // ============================================================================
 
-async function requestFunding(projectData: any) {
-  const { activeChainFamily, evm, solana } = walletStore.getState();
-  if (activeChainFamily === "solana" && solana.wallet) {
-    return solanaCreditService.requestFunding(getSolanaConnection({ commitment: "processed" }), solana.wallet, projectData);
+/** EVM-only rail. The LiquidityRail contract has no Solana counterpart yet. */
+function requireRail() {
+  const { activeChainFamily, evm } = walletStore.getState();
+  if (activeChainFamily === "solana") {
+    throw new Error("The liquidity rail is EVM-only for now.");
   }
   if (!evm.publicClient || !evm.walletClient || !evm.chainId) {
     throw new Error("EVM wallet not connected");
   }
-  return creditService.requestFunding(evm.chainId, evm.publicClient, evm.walletClient, projectData);
+  return { chainId: evm.chainId, publicClient: evm.publicClient, walletClient: evm.walletClient };
 }
 
-async function repayLoan(amount: any) {
-  const { activeChainFamily, evm, solana } = walletStore.getState();
-  if (activeChainFamily === "solana" && solana.wallet) {
-    // Solana path: needs (connection, wallet, amount, projectPda) — projectPda
-    // is a runtime concern; surface it as a separate arg in the future. For
-    // now this branch is intentionally narrow.
-    throw new Error("Solana repayLoan requires a projectPda — use solanaCreditService.repayLoan directly");
+async function declareWin(args: { hackathonId: number; builder: string; projectName: string; prizeAmount: string }) {
+  const ctx = requireRail();
+  return liquidityRailService.declareWin(ctx.chainId, ctx.publicClient, ctx.walletClient!, args);
+}
+
+async function openLoan(winId: number, terms: any) {
+  const ctx = requireRail();
+  return liquidityRailService.openLoan(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId, terms);
+}
+
+async function settleLoan(winId: number) {
+  const ctx = requireRail();
+  return liquidityRailService.settleLoan(ctx.chainId, ctx.publicClient, winId);
+}
+
+/** Reads rail state for the connected builder. Never throws. */
+async function loadRailState() {
+  const { evm, activeChainFamily } = walletStore.getState();
+  if (activeChainFamily === "solana" || !evm.publicClient || !evm.chainId || !evm.account) {
+    walletStore.setState((s) => ({ rail: { ...s.rail, credibility: null, positions: [], loading: false } }));
+    return;
   }
-  if (!evm.publicClient || !evm.walletClient || !evm.chainId) {
-    throw new Error("EVM wallet not connected");
+  walletStore.setState((s) => ({ rail: { ...s.rail, loading: true } }));
+  try {
+    const credibility = await liquidityRailService.getBuilderCredibility(
+      evm.chainId,
+      evm.publicClient,
+      evm.account
+    );
+    walletStore.setState((s) => ({ rail: { ...s.rail, credibility, loading: false } }));
+  } catch {
+    walletStore.setState((s) => ({ rail: { ...s.rail, loading: false } }));
   }
-  return creditService.repayLoan(evm.chainId, evm.publicClient, evm.walletClient, amount);
 }
 
 async function getUSDCBalanceAsync(): Promise<string> {
@@ -172,7 +196,7 @@ async function getUSDCBalanceAsync(): Promise<string> {
       balance = "0.00";
     }
   }
-  walletStore.setState((s) => ({ credit: { ...s.credit, usdcBalance: balance } }));
+  walletStore.setState((s) => ({ rail: { ...s.rail, usdcBalance: balance } }));
   return balance;
 }
 
@@ -184,7 +208,7 @@ async function loadCreditProfile() {
         getSolanaConnection({ commitment: "processed" }),
         solana.wallet.publicKey,
       );
-      walletStore.setState((s) => ({ credit: { ...s.credit, profile } }));
+      walletStore.setState((s) => ({ rail: { ...s.rail, profile } }));
     } catch {}
   } else if (evm.account && evm.publicClient) {
     try {
@@ -192,13 +216,13 @@ async function loadCreditProfile() {
         getSolanaConnection({ commitment: "processed" }),
         evm.account,
       );
-      walletStore.setState((s) => ({ credit: { ...s.credit, profile: projects } }));
+      walletStore.setState((s) => ({ rail: { ...s.rail, profile: projects } }));
     } catch {}
   }
 }
 
 async function loadUserProjects(githubUsername: string, uid: string) {
-  walletStore.setState((s) => ({ credit: { ...s.credit, loadingProjects: true } }));
+  walletStore.setState((s) => ({ rail: { ...s.rail, loadingProjects: true } }));
   try {
     const projectsRef = collection(db, "projects");
     const byGithub = await getDocs(query(projectsRef, where("submittedBy", "==", githubUsername)));
@@ -212,10 +236,10 @@ async function loadUserProjects(githubUsername: string, uid: string) {
     }
     projects.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
     walletStore.setState((s) => ({
-      credit: { ...s.credit, developerProjects: projects, loadingProjects: false },
+      rail: { ...s.rail, developerProjects: projects, loadingProjects: false },
     }));
   } catch {
-    walletStore.setState((s) => ({ credit: { ...s.credit, loadingProjects: false } }));
+    walletStore.setState((s) => ({ rail: { ...s.rail, loadingProjects: false } }));
   }
 }
 
@@ -509,13 +533,16 @@ export function useCircleWallet() {
 export function useBuilderCredit() {
   const s = useStore(walletStore, (st) => st);
   return {
-    creditProfile: s.credit.profile,
-    developerProjects: s.credit.developerProjects,
-    projectDetails: s.credit.projectDetails,
-    loadingProjects: s.credit.loadingProjects,
-    usdcBalance: s.credit.usdcBalance,
-    chainBalances: s.credit.chainBalances,
-    isFetchingBalances: s.credit.isFetchingBalances,
+    creditProfile: s.rail.credibility,
+    railCredibility: s.rail.credibility,
+    positions: s.rail.positions,
+    railLoading: s.rail.loading,
+    developerProjects: s.rail.developerProjects,
+    projectDetails: s.rail.projectDetails,
+    loadingProjects: s.rail.loadingProjects,
+    usdcBalance: s.rail.usdcBalance,
+    chainBalances: s.rail.chainBalances,
+    isFetchingBalances: s.rail.isFetchingBalances,
     activeChainFamily: s.activeChainFamily,
     chainId: s.evm.chainId,
     account: s.evm.account,
@@ -523,15 +550,15 @@ export function useBuilderCredit() {
     connected: s.evm.connected || s.solana.connected,
     signer: s.evm.walletClient,
     contractLoading: false,
-    repayLoan,
-    loadCreditProfile,
-    requestFunding,
+    declareWin,
+    openLoan,
+    settleLoan,
+    loadRailState,
     switchChain: setActiveChainFamily,
     getUSDCBalanceAsync,
     loadUserProjects,
   };
 }
-
 export function useNanopayment() {
   const s = useStore(walletStore, (st) => st.nanopayment);
   return {
@@ -576,10 +603,11 @@ export const walletActions = {
   setActiveChainFamily,
   disconnect: disconnectEvm,
   disconnectSolana,
-  requestFunding,
-  repayLoan,
+  declareWin,
+  openLoan,
+  settleLoan,
   getUSDCBalance: getUSDCBalanceAsync,
-  loadCreditProfile,
+  loadRailState,
   loadUserProjects,
   setNanopaymentDemoMode,
   initializeWithDemo,

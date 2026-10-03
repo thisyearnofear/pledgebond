@@ -95,7 +95,7 @@ function backerCreatedAt(value) {
 /**
  * Filter backer-facing projects (enhanced metrics from useProjectData).
  * @param {object[]} projects
- * @param {{ search?: string, ecosystem?: string, minMultiplier?: string }} filters
+ * @param {{ search?: string, ecosystem?: string }} filters
  * @returns {object[]}
  */
 export const filterBackerProjects = (projects, filters = {}) => {
@@ -103,7 +103,6 @@ export const filterBackerProjects = (projects, filters = {}) => {
 
   const search = (filters.search || "").trim().toLowerCase();
   const ecosystem = filters.ecosystem || "all";
-  const minMultiplier = filters.minMultiplier || "all";
 
   return projects.filter((project) => {
     const matchesSearch = !search || [
@@ -113,12 +112,9 @@ export const filterBackerProjects = (projects, filters = {}) => {
       project.ecosystem,
     ].some((field) => field && String(field).toLowerCase().includes(search));
 
-    const matchesMultiplier = minMultiplier === "all"
-      || (project.activeMultiplier || 0) >= parseFloat(minMultiplier);
-
     const matchesEcosystem = ecosystem === "all" || project.ecosystem === ecosystem;
 
-    return matchesSearch && matchesMultiplier && matchesEcosystem;
+    return matchesSearch && matchesEcosystem;
   });
 };
 
@@ -136,8 +132,6 @@ export const sortBackerProjects = (projects, sortBy = "health") => {
     switch (sortBy) {
       case "confidence":
         return (b.confidence || 0) - (a.confidence || 0);
-      case "multiplier":
-        return (b.activeMultiplier || 0) - (a.activeMultiplier || 0);
       case "newest":
         return backerCreatedAt(b.createdAt) - backerCreatedAt(a.createdAt);
       case "health":
@@ -490,22 +484,4 @@ export const calculateScoutingFlags = (project) => {
   };
 };
 
-/**
- * Calculate trade winds boost for a project
- */
-export const calculateProjectBoost = (project, ecosystemConfig) => {
-  if (!project || !ecosystemConfig || !ecosystemConfig.tradeWinds) {
-    return 1.0;
-  }
 
-  const activeBoosts = ecosystemConfig.tradeWinds.filter(boost => 
-    boost.category === project.category || (project.tags && project.tags.includes(boost.category))
-  );
-
-  if (activeBoosts.length === 0) {
-    return 1.0;
-  }
-
-  // Use the highest boost if multiple apply
-  return Math.max(...activeBoosts.map(b => b.boost));
-};

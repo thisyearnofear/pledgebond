@@ -37,9 +37,6 @@ export const ECOSYSTEM_CONFIGS = {
     dataSource: 'static', // static (repos.json) or dynamic (firestore)
     hasSeasons: true,
     seasons: [1, 2, 3],
-    tradeWinds: [
-      { category: 'mobile', boost: 1.2, label: 'Mobile-First Boost', description: '20% boost for mobile focus' }
-    ],
     
     // Display preferences
     defaultSort: 'season',
@@ -74,10 +71,6 @@ export const ECOSYSTEM_CONFIGS = {
     hasSeasons: false,
     hasCategories: true,
     categories: ['defi', 'ai-agents', 'payments', 'infrastructure', 'social', 'dao', 'other'],
-    tradeWinds: [
-      { category: 'ai-agents', boost: 1.5, label: 'Agentic Boost', description: '50% credit boost for AI agent projects' },
-      { category: 'payments', boost: 1.3, label: 'Payments Boost', description: '30% credit boost for payment innovations' }
-    ],
     defaultSort: 'recent',
     showHealthScore: true,
     showActivity: true,
@@ -111,9 +104,6 @@ export const ECOSYSTEM_CONFIGS = {
     hasSeasons: false,
     hasCategories: true,
     categories: ['defi', 'nft', 'gaming', 'social', 'infrastructure', 'dao', 'other'],
-    tradeWinds: [
-      { category: 'defi', boost: 1.5, label: 'DeFi Summer', description: '50% credit boost for DeFi projects' }
-    ],
     defaultSort: 'recent',
     showHealthScore: true,
     showActivity: true,
@@ -146,7 +136,6 @@ export const ECOSYSTEM_CONFIGS = {
     hasSeasons: false,
     hasCategories: true,
     categories: ['defi', 'nft', 'gaming', 'social', 'infrastructure', 'dao', 'other'],
-    tradeWinds: [],
     defaultSort: 'recent',
     showHealthScore: true,
     showActivity: true,
@@ -178,9 +167,6 @@ export const ECOSYSTEM_CONFIGS = {
     hasSeasons: false,
     hasCategories: true,
     categories: ['defi', 'nft', 'gaming', 'social', 'infrastructure', 'dao', 'other'],
-    tradeWinds: [
-      { category: 'defi', boost: 1.3, label: 'DeFi Hub', description: '30% credit boost for DeFi projects' }
-    ],
     defaultSort: 'recent',
     showHealthScore: true,
     showActivity: true,
@@ -212,7 +198,6 @@ export const ECOSYSTEM_CONFIGS = {
     hasSeasons: false,
     hasCategories: true,
     categories: ['defi', 'nft', 'gaming', 'social', 'infrastructure', 'dao', 'other'],
-    tradeWinds: [],
     defaultSort: 'recent',
     showHealthScore: true,
     showActivity: true,
@@ -244,9 +229,6 @@ export const ECOSYSTEM_CONFIGS = {
     hasSeasons: false,
     hasCategories: true,
     categories: ['defi', 'nft', 'gaming', 'social', 'infrastructure', 'dao', 'other'],
-    tradeWinds: [
-      { category: 'infrastructure', boost: 1.2, label: 'Public Goods', description: '20% credit boost for public goods' }
-    ],
     defaultSort: 'recent',
     showHealthScore: true,
     showActivity: true,
@@ -278,7 +260,6 @@ export const ECOSYSTEM_CONFIGS = {
     hasSeasons: false,
     hasCategories: true,
     categories: ['defi', 'nft', 'gaming', 'social', 'infrastructure', 'dao', 'other'],
-    tradeWinds: [],
     defaultSort: 'recent',
     showHealthScore: true,
     showActivity: true,

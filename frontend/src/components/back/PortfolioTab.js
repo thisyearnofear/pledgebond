@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { formatUnits } from 'viem';
 import { useWallet } from "@/stores/walletStore";
 import { useBuilderCredit } from "@/stores/walletStore";
-import { calculateCompassScore, getCompassTier } from "@/utils/compassScore";
 import { Card } from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import SnsIdentityBadge from "@/components/common/SnsIdentityBadge";
@@ -16,12 +14,32 @@ import {
   ReceiptPercentIcon,
 } from "@heroicons/react/24/outline";
 
+/** Share of settled loans that were repaid, as a whole percent. */
+function computeRepaymentRate(details) {
+  const settled = details.filter((d) => d.status === "repaid");
+  const resolved = details.filter((d) => d.status === "repaid" || d.status === "defaulted");
+  if (resolved.length === 0) return null;
+  return Math.round((settled.length / resolved.length) * 100);
+}
+
+/** Median days between a loan opening and being repaid. */
+function computeMedianDays(details) {
+  const spans = details
+    .filter((d) => typeof d.daysToRepay === "number")
+    .map((d) => d.daysToRepay)
+    .sort((a, b) => a - b);
+  if (spans.length === 0) return null;
+  const mid = Math.floor(spans.length / 2);
+  return spans.length % 2 ? spans[mid] : Math.round((spans[mid - 1] + spans[mid]) / 2);
+}
+
 export default function PortfolioTab({ setTab, onPositions, compact = false }) {
   const wallet = useWallet();
   const { chainId, signer } = useBuilderCredit();
   const [loading, setLoading] = useState(true);
   const [backedDetails, setBackedDetails] = useState([]);
-  const [compassScore, setCompassScore] = useState(400);
+  const [repaymentRate, setRepaymentRate] = useState(null);
+  const [medianDaysToRepay, setMedianDaysToRepay] = useState(null);
 
   // Bags fee claiming state
   const [claimableFees, setClaimableFees] = useState([]);
@@ -40,72 +58,15 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
       }
       try {
         if (!cancelled) setLoading(true);
-        const { creditService } = await import('@/services/creditService');
-        const contracts = creditService.getContracts(chainId, signer);
-        const projectIds = contracts ? await contracts.core.read.getBackerProjects([wallet.account]) : [];
-        if (cancelled) return;
-        
-        if (!projectIds || projectIds.length === 0) {
-          setBackedDetails([]);
-          setCompassScore(400);
-          setLoading(false);
-          return;
-        }
-        
-        if (!contracts || cancelled) {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-        
+        // Loan positions come from LiquidityRail (WS2 wires the service).
+        // Until the rail is deployed on this network there are no positions to
+        // show, so return empty rather than reading a contract that is being
+        // retired.
         const details = [];
-        const roiHistory = [];
-        for (const id of projectIds) {
-          if (cancelled) return;
-          try {
-            const project = await contracts.core.projects(id);
-            const backings = [];
-            let idx = 0;
-            try {
-              while (true) {
-                const b = await contracts.core.projectBackings(id, idx);
-                backings.push(b);
-                idx++;
-              }
-            } catch (e) { /* end of array */ }
-
-            const myBacking = backings.find(
-              (b) => b.backer.toLowerCase() === wallet.account?.toLowerCase()
-            );
-            const stakeAmount = myBacking
-              ? parseFloat(formatUnits(myBacking.amount, 6))
-              : 0;
-            const multiplier = myBacking
-              ? myBacking.multiplier.toNumber() / 100
-              : 0;
-
-            const detail = {
-              id: id.toString(),
-              name: project.name,
-              developer: project.developer,
-              isActive: project.isActive,
-              milestonesCompleted: project.milestonesCompleted.toNumber(),
-              milestonesCount: project.milestonesCount.toNumber(),
-              fundingAmount: formatUnits(project.fundingAmount, 6),
-              myStake: stakeAmount.toFixed(2),
-              myMultiplier: multiplier.toFixed(1),
-              potentialReturn: (stakeAmount * multiplier).toFixed(2),
-              claimed: myBacking?.claimed || false,
-            };
-            details.push(detail);
-            if (!project.isActive && stakeAmount > 0) {
-              roiHistory.push({ projectId: detail.id, amountStaked: stakeAmount, amountReturned: parseFloat(detail.potentialReturn), timestamp: new Date().toISOString() });
-            }
-          } catch (err) { /* skip failed project */ }
-        }
-        
         if (!cancelled) {
           setBackedDetails(details);
-          setCompassScore(calculateCompassScore(roiHistory));
+          setRepaymentRate(computeRepaymentRate(details));
+          setMedianDaysToRepay(computeMedianDays(details));
           // Report up for the tab badge + adaptive landing on /back:
           // total positions and how many have a ready-to-claim return.
           const readyCount = details.filter(
@@ -179,7 +140,6 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
     }
   }, [wallet.solanaWallet, claimableFees]);
 
-  const compassTier = getCompassTier(compassScore);
 
   // Attention state: milestones done but return not claimed = money on the
   // table. Drives the badge deep-link + per-card highlight.
@@ -236,27 +196,29 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
       <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${compact ? "gap-3" : "gap-4"}`}>
         <Card className={compact ? "p-4 bg-indigo-50 border-indigo-100" : "p-5 bg-indigo-50 border-indigo-100"}>
           <div className="flex items-center gap-3">
-            <span className="text-2xl">{compassTier.icon}</span>
+            <ShieldCheckIcon className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
             <div>
-              <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase">Compass Score</p>
-              <p className="text-2xl font-black text-indigo-900">{compassScore}</p>
-              <p className={`text-xs font-bold ${compassTier.color}`}>{compassTier.name}</p>
+              <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase">Repaid</p>
+              <p className="text-2xl font-black text-indigo-900">
+                {repaymentRate === null ? "—" : `${repaymentRate}%`}
+              </p>
+              <p className="text-xs font-bold text-indigo-500">of loans settled</p>
             </div>
           </div>
         </Card>
         <Card className={compact ? "p-4" : "p-5"}>
           <BanknotesIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mb-1" />
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Total Staked</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Principal at risk</p>
           <p className="text-xl font-bold">${backedDetails.reduce((s, p) => s + parseFloat(p.myStake), 0).toFixed(2)}</p>
         </Card>
         <Card className={compact ? "p-4" : "p-5"}>
           <TrophyIcon className="w-5 h-5 text-green-600 dark:text-green-400 mb-1" />
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Potential Returns</p>
-          <p className="text-xl font-bold">${backedDetails.reduce((s, p) => s + parseFloat(p.potentialReturn), 0).toFixed(2)}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Median days to repay</p>
+          <p className="text-xl font-bold">{medianDaysToRepay === null ? "—" : `${medianDaysToRepay}d`}</p>
         </Card>
         <Card className={compact ? "p-4" : "p-5"}>
           <RocketLaunchIcon className="w-5 h-5 text-purple-600 dark:text-purple-400 mb-1" />
-          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Active Stakes</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Open positions</p>
           <p className="text-xl font-bold">{backedDetails.length}</p>
         </Card>
 
@@ -327,12 +289,12 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
                 </div>
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="p-2 bg-blue-50 rounded-lg">
-                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase">Stake</p>
+                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase">Principal</p>
                     <p className="text-lg font-bold text-blue-900 dark:text-blue-200">${project.myStake}</p>
                   </div>
                   <div className="p-2 bg-indigo-50 rounded-lg">
-                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase">Return (est.)</p>
-                    <p className="text-lg font-bold text-indigo-900">${project.potentialReturn}</p>
+                    <p className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase">Repaid from</p>
+                    <p className="text-lg font-bold text-indigo-900">Prize payout</p>
                   </div>
                 </div>
                 <div className="mb-3">
@@ -346,9 +308,11 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
                 </div>
                 <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                   <span className={`font-medium ${project.claimed ? "text-green-600 dark:text-green-400" : needsClaim ? "text-amber-600 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}`}>
-                    {project.claimed ? "✓ Claimed" : needsClaim ? "★ Return ready to claim" : "Pending"}
+                    {project.claimed ? "✓ Repaid" : needsClaim ? "★ Payout recorded — settle" : "Pending payout"}
                   </span>
-                  <span className="font-medium text-indigo-600 dark:text-indigo-400">{project.myMultiplier}x</span>
+                  {project.status ? (
+                    <span className="font-medium text-indigo-600 dark:text-indigo-400">{project.status}</span>
+                  ) : null}
                 </div>
               </div>
             </Card>

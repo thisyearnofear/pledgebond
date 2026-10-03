@@ -16,11 +16,3 @@ const usdFormatter = new Intl.NumberFormat('en-US', {
 });
 
 export const formatUSDC = (amount) => usdFormatter.format(amount);
-
-export const getFundingTier = (creditScore) => {
-  if (creditScore >= 800) return { tier: 'Excellent', color: 'green' };
-  if (creditScore >= 700) return { tier: 'Good', color: 'blue' };
-  if (creditScore >= 600) return { tier: 'Fair', color: 'yellow' };
-  if (creditScore >= 500) return { tier: 'Poor', color: 'orange' };
-  return { tier: 'Very Poor', color: 'red' };
-};

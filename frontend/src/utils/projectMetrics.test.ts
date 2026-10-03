@@ -6,7 +6,6 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateHealth,
   calculateConfidence,
-  deriveMultiplier,
   deriveLastCheckIn,
   enhanceProject,
 } from './projectMetrics';
@@ -107,51 +106,6 @@ describe('calculateConfidence', () => {
   });
 });
 
-describe('deriveMultiplier', () => {
-  it('returns explicit activeMultiplier if set', () => {
-    expect(deriveMultiplier({ activeMultiplier: 2.5 })).toBe(2.5);
-  });
-
-  it('converts backingMultiplier from basis points', () => {
-    expect(deriveMultiplier({ backingMultiplier: 200 })).toBe(2);
-  });
-
-  it('derives from completeness when no backers or explicit value', () => {
-    // Bare project → lowest tier (1.2)
-    const bare = deriveMultiplier({});
-    expect(bare).toBe(1.2);
-
-    // Complete project → higher tier
-    const complete = deriveMultiplier({
-      description: 'A'.repeat(200),
-      githubUrl: 'https://github.com/owner/repo',
-      owner: 'owner',
-      repo: 'repo',
-      ecosystem: 'solana',
-      category: 'defi',
-      socials: { website: 'https://example.com' },
-      founders: ['alice'],
-    });
-    expect(complete).toBeGreaterThanOrEqual(2.0);
-  });
-
-  it('returns 1.5x for 1-4 backers', () => {
-    expect(deriveMultiplier({ backerCount: 3 })).toBe(1.5);
-  });
-
-  it('returns 2.0x for 5-9 backers', () => {
-    expect(deriveMultiplier({ backerCount: 7 })).toBe(2.0);
-  });
-
-  it('returns 3.0x for 10+ backers', () => {
-    expect(deriveMultiplier({ backerCount: 12 })).toBe(3.0);
-  });
-
-  it('caps at 3.0x even for many backers', () => {
-    expect(deriveMultiplier({ backerCount: 100 })).toBe(3.0);
-  });
-});
-
 describe('deriveLastCheckIn', () => {
   it('returns 168 (stale) when no data', () => {
     expect(deriveLastCheckIn({})).toBe(168);
@@ -189,20 +143,11 @@ describe('enhanceProject', () => {
     expect(result.name).toBe('Test');
     expect(result.confidence).toBeGreaterThanOrEqual(5);
     expect(result.health).toBeGreaterThanOrEqual(30);
-    expect(result.activeMultiplier).toBeGreaterThanOrEqual(1.2);
-    expect(result.projectedROI).toBeGreaterThanOrEqual(0);
     expect(result.totalBacked).toBe(0);
     expect(result.targetFunding).toBe(10000);
-    expect(result.founderStaked).toBe(false);
     expect(result.category).toBe('defi');
     expect(result.submissionQuality).toBeGreaterThanOrEqual(0);
     expect(result.shortDescription).toBeTruthy();
-  });
-
-  it('detects founder staked', () => {
-    const result = enhanceProject({ founderStakedAmount: 500 });
-    expect(result.founderStaked).toBe(true);
-    expect(result.founderStakedAmount).toBe(500);
   });
 
   it('uses first sector as category', () => {
@@ -236,6 +181,6 @@ describe('enhanceProject', () => {
     const a = enhanceProject({ slug: 'project-alpha', description: 'Short desc', ecosystem: 'solana' });
     const b = enhanceProject({ slug: 'project-beta', description: 'Different project description that is much longer and more detailed', ecosystem: 'celo', githubUrl: 'https://github.com/x/y', category: 'defi' });
     // They should NOT all be identical
-    expect(a.health === b.health && a.confidence === b.confidence && a.activeMultiplier === b.activeMultiplier).toBe(false);
+    expect(a.health === b.health && a.confidence === b.confidence && a.submissionQuality === b.submissionQuality).toBe(false);
   });
 });

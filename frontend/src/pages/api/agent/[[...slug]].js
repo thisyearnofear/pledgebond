@@ -23,7 +23,13 @@ export default async function handler(req, res) {
     case "peek":
       return handlePeek(req, res);
     case "execute":
-      return handleExecute(req, res);
+      // Removed in Phase 0: this route let a 0.01 USDC toll authorize the
+      // agent wallet to stake platform capital at leveraged multipliers.
+      // The platform does not underwrite, so it does not back projects.
+      return res.status(410).json({
+        error: "Agent-backed project staking has been removed",
+        removed: "platform-agent-staking",
+      });
     case "copy":
       return handleCopy(req, res);
     default:
@@ -570,64 +576,6 @@ async function scoutHandler(req, res) {
   } catch (error) {
     console.error("Scout agent error:", error);
     return res.status(500).json({ error: "Scout agent failed", details: error.message, status: "error" });
-  }
-}
-
-async function handleExecute(req, res) {
-  const { withAgentAuth } = await import("@/lib/agentAuth");
-  return withAgentAuth(withNanopayment(executeHandler, 0.01))(req, res);
-}
-
-async function executeHandler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "POST only" });
-
-  const contractAddress = process.env.BUILDER_CREDIT_ARC_ADDRESS;
-  const agentWalletId = process.env.CIRCLE_AGENT_WALLET_ID;
-  const { realCircleService } = await import("../../../services/RealCircleService");
-  const { USDC_ADDRESSES, ARC_CHAIN_ID, ARC_NETWORK } = await import("../../../config/tokens");
-  const USDC_ADDRESS = (USDC_ADDRESSES || {})[ARC_CHAIN_ID] || "0x3600000000000000000000000000000000000000";
-
-  if (!contractAddress || !agentWalletId || !realCircleService.isClientConfigured()) {
-    return res.status(500).json({ error: "Agent not configured", missing: [!agentWalletId && "CIRCLE_AGENT_WALLET_ID", !contractAddress && "BUILDER_CREDIT_ARC_ADDRESS", !realCircleService.isClientConfigured() && "CIRCLE_API_KEY/CIRCLE_ENTITY_SECRET"].filter(Boolean) });
-  }
-
-  const { projects } = req.body || {};
-  if (!projects || !Array.isArray(projects) || projects.length === 0) return res.status(400).json({ error: "projects array required" });
-
-  try {
-    const { createHash } = await import("crypto");
-    const keccak256 = (str) => createHash("sha3-256").update(str).digest("hex");
-    const encodeUint256 = (value) => BigInt(value).toString(16).padStart(64, "0");
-    const encodeAddress = (addr) => addr.toLowerCase().replace("0x", "").padStart(64, "0");
-    const encodeBackCall = (projectId, multiplier, amount) => "0x" + keccak256("backProject(uint256,uint256,uint256)").slice(0, 8) + encodeUint256(projectId) + encodeUint256(multiplier) + encodeUint256(amount);
-    const encodeApproveCall = (spender) => "0x" + keccak256("approve(address,uint256)").slice(0, 8) + encodeAddress(spender) + "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-
-    const submitContractTx = async ({ walletId, destinationAddress, contractAddress, calldata, idempotencyKey }) => {
-      const result = await realCircleService.createTransaction({ walletId, destinationAddress, contractAddress, calldata, feeLevel: "MEDIUM", idempotencyKey });
-      return result.data?.transaction || result.data;
-    };
-
-    const approveCalldata = encodeApproveCall(contractAddress);
-    await submitContractTx({ walletId: agentWalletId, destinationAddress: USDC_ADDRESS, contractAddress: USDC_ADDRESS, calldata: approveCalldata, idempotencyKey: `agent-approve-${agentWalletId}-${contractAddress.toLowerCase()}` });
-
-    const results = [];
-    for (const project of projects) {
-      try {
-        const calldata = encodeBackCall(project.id, project.multiplier, project.amount);
-        const tx = await submitContractTx({ walletId: agentWalletId, destinationAddress: contractAddress, contractAddress, calldata, idempotencyKey: `agent-back-${agentWalletId}-${project.id}-${project.multiplier}-${project.amount}` });
-        results.push({ projectId: project.id, amount: project.amount, multiplier: project.multiplier, txHash: tx?.txHash || tx?.id, status: "success" });
-      } catch (err) { results.push({ projectId: project.id, amount: project.amount, multiplier: project.multiplier, error: err.message, status: "failed" }); }
-    }
-
-    const successful = results.filter((r) => r.status === "success");
-    const failed = results.filter((r) => r.status === "failed");
-    const runId = `exec_${Date.now()}`;
-
-    await db.collection("agent_runs").doc(runId).set({ type: "execution", timestamp: new Date().toISOString(), agentWalletId, chain: `arc-${ARC_NETWORK}`, totalBacked: successful.length, totalFailed: failed.length, totalStaked: successful.reduce((s, r) => s + r.amount, 0), transactions: results });
-
-    return res.status(200).json({ success: true, runId, agentWalletId, circleManaged: true, summary: { backed: successful.length, failed: failed.length, totalStaked: successful.reduce((s, r) => s + r.amount, 0).toFixed(2) + " USDC", txHashes: successful.map((r) => r.txHash).filter(Boolean) }, results });
-  } catch (error) {
-    return res.status(500).json({ error: "Execution failed", details: error.message });
   }
 }
 

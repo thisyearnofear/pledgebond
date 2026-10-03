@@ -95,6 +95,11 @@ export function cleanHackathons(hackathons) {
 
       // Optional hackathon date range for payout speed computation
       if (hackathon.hackathonEndDate) cleaned.hackathonEndDate = String(hackathon.hackathonEndDate).trim();
+      // winDeclaredAt is when the winner was first evidenced — the basis for
+      // payout latency. It is deliberately distinct from hackathonEndDate:
+      // the end date conflates "hackathon ran long" with "organizer paid late",
+      // which makes projected repayment dates wrong for a lender.
+      if (hackathon.winDeclaredAt) cleaned.winDeclaredAt = String(hackathon.winDeclaredAt).trim();
 
       const hasAnyEvidence = cleaned.name || cleaned.url || cleaned.outcome || cleaned.payoutAt || cleaned.notes || cleaned.track || cleaned.prizeAmount || cleaned.payoutWallet || cleaned.payoutTxHash || cleaned.announcementUrl || cleaned.submissionUrl || cleaned.evidenceUrl || cleaned.judgingNotes || cleaned.proofType || cleaned.repoUrl || cleaned.contractAddress;
       return hasAnyEvidence ? cleaned : null;
@@ -109,17 +114,47 @@ const HACKATHON_VERIFICATION_FIELDS = [
 ];
 
 export function mergeHackathonsWithVerification(hackathons, existing = []) {
-  return cleanHackathons(hackathons).map((hackathon) => {
-    const prior = existing.find((entry) => (
-      String(entry?.name || '').trim().toLowerCase() === hackathon.name.toLowerCase()
-      && String(entry?.url || '').trim().toLowerCase() === hackathon.url.toLowerCase()
-    )) || {};
+  // Correlate against the RAW incoming claims, not the cleaned ones: the
+  // cleaned form drops `claimId`, and a server-minted id is the strongest
+  // correlation key we have. Matching on the cleaned payload alone would
+  // silently drop back to name+url.
+  const raw = Array.isArray(hackathons) ? hackathons : [];
+
+  return cleanHackathons(hackathons).map((hackathon, index) => {
+    // Correlate on the strongest stable identifier available. Matching on
+    // name+url alone let a builder duplicate a verified claim's name and URL
+    // and inherit its `payout_verified` status and payout attestation.
+    const prior = findPriorClaim(raw[index], existing) || {};
     const verification = {};
     for (const field of HACKATHON_VERIFICATION_FIELDS) {
       if (Object.prototype.hasOwnProperty.call(prior, field)) verification[field] = prior[field];
     }
     return { ...hackathon, ...verification };
   });
+}
+
+function findPriorClaim(rawClaim, existing) {
+  // 1. Server-minted claim id — authoritative when present.
+  const claimId = String(rawClaim?.claimId || '').trim();
+  if (claimId) {
+    const byId = existing.find((e) => String(e?.claimId || '').trim() === claimId);
+    if (byId) return byId;
+  }
+
+  // 2. Payout tx hash — a genuine, hard-to-forge identifier of a real payout.
+  const tx = String(rawClaim?.payoutTxHash || '').trim().toLowerCase();
+  if (tx) {
+    const byTx = existing.find(
+      (e) => String(e?.payoutTxHash || '').trim().toLowerCase() === tx
+    );
+    if (byTx) return byTx;
+  }
+
+  // 3. No strong identifier at all. A builder can freely duplicate a
+  //    verified claim's name and URL, so name+url alone must never confer a
+  //    verified status. Without a claim id or payout tx hash there is nothing
+  //    tying this row to the verified one, so the status is not inherited.
+  return null;
 }
 
 export function normalizeProjectInput(input = {}) {

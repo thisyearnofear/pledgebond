@@ -57,15 +57,7 @@ export const ITEMS_PER_PAGE = 12;
 export const BACKER_SORT_OPTIONS = [
   { id: "health", label: "Health" },
   { id: "confidence", label: "Confidence" },
-  { id: "multiplier", label: "Multiplier" },
   { id: "newest", label: "Newest" },
-];
-
-export const BACKER_MULTIPLIER_OPTIONS = [
-  { id: "all", label: "Any multiplier" },
-  { id: "1.5", label: "1.5x+" },
-  { id: "2.0", label: "2.0x+" },
-  { id: "3.0", label: "3.0x" },
 ];
 
 /** Max projects shown on Back → Discover before linking to Explore */

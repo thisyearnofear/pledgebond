@@ -13,7 +13,6 @@ import { isValidSolanaAddress } from '@/utils/common';
 import useAgentPeek from '@/hooks/useAgentPeek';
 import { 
   CurrencyDollarIcon, 
-  ArrowTrendingUpIcon,
   UserGroupIcon,
   ShieldCheckIcon,
   HeartIcon,
@@ -162,25 +161,12 @@ export default function ProjectCard({ project, onBack, scoutScore }) {
               </div>
             )}
           </div>
-          <div className="text-right flex-shrink-0 ml-3">
-            <div className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Multiplier</div>
-            <div className="text-2xl font-black text-blue-700">{project.activeMultiplier}x</div>
-          </div>
         </div>
 
         {/* Description */}
         {project.shortDescription && (
           <p className="text-sm text-gray-600 line-clamp-2 mb-3 leading-relaxed">{project.shortDescription}</p>
         )}
-
-        {/* ROI Highlight */}
-        <div className="bg-green-50 rounded-lg p-2.5 mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ArrowTrendingUpIcon className="w-4 h-4 text-green-600" />
-            <span className="text-xs font-semibold text-green-800">Projected ROI</span>
-          </div>
-          <span className="text-base font-bold text-green-700">+{Math.round(project.projectedROI)}%</span>
-        </div>
 
         {/* Health & Confidence */}
         <div className="mb-4">

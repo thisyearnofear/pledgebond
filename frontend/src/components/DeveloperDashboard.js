@@ -12,7 +12,6 @@ import { Card } from './common/Card';
 import Button from './common/Button';
 import { LoadingSpinner } from './common/LoadingStates';
 import VelocityGauge from './github/VelocityGauge';
-import BackingPanel from './BackingPanel';
 import { getEvolutionTier } from './projects/ProjectCard';
 import AgentAuditLog from './dashboard/AgentAuditLog';
 import {
@@ -159,16 +158,9 @@ function VelocityCard({ githubStreak }) {
       <div className="flex justify-center py-6">
         <VelocityGauge value={githubStreak} />
       </div>
-      <div className="grid grid-cols-2 gap-5 mt-6">
-        <div className="bg-white/10 p-4 rounded-xl border border-white/15 backdrop-blur-sm">
-          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Uptime</div>
-          <div className="text-2xl font-black text-white">99.9%</div>
-        </div>
-        <div className="bg-white/10 p-4 rounded-xl border border-white/15 backdrop-blur-sm">
-          <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Latency</div>
-          <div className="text-2xl font-black text-white">24ms</div>
-        </div>
-      </div>
+      <p className="mt-6 text-xs text-slate-400">
+        Commit activity from your connected GitHub repositories.
+      </p>
     </Card>
   );
 }
@@ -273,14 +265,12 @@ function SystemLogsCard({ success, error }) {
         System Logs
       </h3>
       <div className="space-y-3 font-mono text-sm">
-        <div className="flex gap-3 text-slate-600 dark:text-slate-300">
-          <span className="text-blue-600 dark:text-blue-400 font-bold">[SYS]</span>
-          <span>Fleet initialized...</span>
-        </div>
-        <div className="flex gap-3 text-slate-600 dark:text-slate-300">
-          <span className="text-blue-600 dark:text-blue-400 font-bold">[SYS]</span>
-          <span>Telemetry link active</span>
-        </div>
+        {!success && !error && (
+          <div className="flex gap-3 text-slate-500 dark:text-slate-400">
+            <span className="text-slate-400 dark:text-slate-500 font-bold">[SYS]</span>
+            <span>No recent activity</span>
+          </div>
+        )}
         {success && (
           <div className="flex gap-3 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 p-2 rounded-lg">
             <span className="font-bold">[SUCCESS]</span>
@@ -323,8 +313,6 @@ export default function DeveloperDashboard() {
   const [success, setSuccess] = useState(null);
   const [repayAmount, setRepayAmount] = useState('');
   const [selectedProjectId, setSelectedProjectId] = useState(null);
-  const [showRepayModal, setShowRepayModal] = useState(false);
-  const [showStakeModal, setShowStakeModal] = useState(false);
   const [checkInText, setCheckInText] = useState('');
   const [prizeAmount, setPrizeAmount] = useState('1000');
   const [githubStreak, setGithubStreak] = useState(12); // Default mock value
@@ -387,7 +375,10 @@ export default function DeveloperDashboard() {
       setError('Heartbeat check-ins require an EVM wallet. Switch chains and try again.');
       return;
     }
-    setError('On-chain heartbeat check-ins are not yet wired. Use the off-chain log below for now.');
+    // Heartbeat check-ins are not wired to any contract yet; say so rather
+    // than failing with an error that blanks the whole dashboard.
+    setSuccess({ message: 'Activity logged locally. On-chain check-ins are not available yet.' });
+    return;
 
     try {
       setLoading(true);
@@ -545,39 +536,13 @@ export default function DeveloperDashboard() {
         </div>
 
         {creditProfile ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <Card className="p-6 border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <Card className="p-6 border border-slate-200 dark:border-slate-700">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Credit Score</div>
-                  <div className={`text-4xl font-black ${
-                    creditProfile.creditScore >= 700 ? 'text-emerald-600 dark:text-emerald-400' :
-                    creditProfile.creditScore >= 500 ? 'text-amber-600 dark:text-amber-400' :
-                    'text-rose-600 dark:text-rose-400'
-                  }`}>
-                    {creditProfile.creditScore}
-                  </div>
-                </div>
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                  creditProfile.creditScore >= 700 ? 'bg-emerald-100 dark:bg-emerald-900/40' :
-                  creditProfile.creditScore >= 500 ? 'bg-amber-100 dark:bg-amber-900/40' :
-                  'bg-rose-100 dark:bg-rose-900/40'
-                }`}>
-                  <StarIcon className={`w-8 h-8 ${
-                    creditProfile.creditScore >= 700 ? 'text-emerald-600 dark:text-emerald-300' :
-                    creditProfile.creditScore >= 500 ? 'text-amber-600 dark:text-amber-300' :
-                    'text-rose-600 dark:text-rose-300'
-                  }`} />
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6 border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Total Funded</div>
+                  <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Loan available</div>
                   <div className="text-4xl font-black text-blue-600 dark:text-blue-400">
-                    ${formatUSDC(creditProfile.totalFunded)}
+                    ${formatUSDC(creditProfile.availableToDraw ?? 0)}
                   </div>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
@@ -586,12 +551,12 @@ export default function DeveloperDashboard() {
               </div>
             </Card>
 
-            <Card className="p-6 border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <Card className="p-6 border border-slate-200 dark:border-slate-700">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Active Loan</div>
+                  <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Outstanding</div>
                   <div className="text-4xl font-black text-purple-600 dark:text-purple-400">
-                    ${formatUSDC(creditProfile.activeLoanAmount)}
+                    ${formatUSDC(creditProfile.activeLoanAmount ?? 0)}
                   </div>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center flex-shrink-0">
@@ -600,12 +565,14 @@ export default function DeveloperDashboard() {
               </div>
             </Card>
 
-            <Card className="p-6 border border-slate-200 dark:border-slate-700 hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+            <Card className="p-6 border border-slate-200 dark:border-slate-700">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
-                  <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Reputation</div>
+                  <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Repaid on time</div>
                   <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400">
-                    {creditProfile.reputation}
+                    {creditProfile.coverageRateBps != null
+                      ? `${Math.round(creditProfile.coverageRateBps / 100)}%`
+                      : "—"}
                   </div>
                 </div>
                 <div className="w-14 h-14 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
@@ -621,7 +588,7 @@ export default function DeveloperDashboard() {
                 <ShieldCheckIcon className="w-6 h-6 text-slate-400 dark:text-slate-300" />
               </div>
               <p className="text-slate-600 dark:text-slate-300 font-medium">
-                No credit profile found. Initialize engine by requesting funding.
+                No wins declared yet. Declare a hackathon win to unlock a bridge loan.
               </p>
             </div>
           </Card>
@@ -707,99 +674,6 @@ export default function DeveloperDashboard() {
         </>
       )}
 
-      {/* Repay Loan Modal */}
-      {showRepayModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold text-primary mb-4">Repay Loan</h3>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Amount to Repay (USDC)
-              </label>
-              <input
-                type="number"
-                value={repayAmount}
-                onChange={(e) => setRepayAmount(e.target.value)}
-                placeholder="Enter amount"
-                min="0"
-                max={creditProfile?.activeLoanAmount || 0}
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              
-              <div className="mt-2 text-sm text-gray-600">
-                <div className="flex justify-between">
-                  <span>Active Loan:</span>
-                  <span>${formatUSDC(creditProfile?.activeLoanAmount)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Your USDC Balance:</span>
-                  <span>${formatUSDC(usdcBalance)}</span>
-                </div>
-              </div>
-              
-              {error && (
-                <div className="mt-2 text-sm text-red-600">
-                  {error}
-                </div>
-              )}
-            </div>
-            
-            <div className="flex space-x-3">
-              <Button
-                onClick={handleRepayLoan}
-                disabled={loading || !repayAmount || parseFloat(repayAmount) <= 0}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
-              >
-                {loading ? (
-                  <>
-                    <LoadingSpinner size="sm" className="mr-2" />
-                    Processing...
-                  </>
-                ) : (
-                  'Confirm Repayment'
-                )}
-              </Button>
-              
-              <Button
-                onClick={() => {
-                  setShowRepayModal(false);
-                  setError(null);
-                }}
-                className="flex-1 bg-gray-200 text-gray-800"
-              >
-                Cancel
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* Stake/Boost Modal */}
-      {showStakeModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowStakeModal(false)}>
-          <div className="w-full max-w-lg animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-between items-center mb-2 px-2">
-              <h3 className="text-white font-bold flex items-center gap-2">
-                <ShieldCheckIcon className="w-5 h-5" />
-                Boost Project Reputation
-              </h3>
-              <button onClick={() => setShowStakeModal(false)} className="text-white/70 hover:text-white">
-                ✕
-              </button>
-            </div>
-            <BackingPanel
-              projectId={selectedProjectId}
-              projectName={projectDetails[selectedProjectId]?.name}
-              developerAddress={account}
-            />
-            <p className="mt-4 text-center text-xs text-white/60">
-              Self-staking increases your reputation score and boosts your credit limit 2x.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

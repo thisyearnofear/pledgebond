@@ -51,7 +51,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-default text-center">            <p className="text-sm text-tertiary">
-              © {new Date().getFullYear()} PledgeBond — The reputation layer for crypto builders.
+              © {new Date().getFullYear()} PledgeBond — The liquidity rail for hackathon winners.
             </p>
         </div>
       </div>

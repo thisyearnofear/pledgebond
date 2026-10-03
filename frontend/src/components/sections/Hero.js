@@ -54,7 +54,7 @@ export default function Hero({ onClaimWin, onSeePayouts }) {
           </div>
 
           <p className="mt-6 text-sm text-tertiary">
-            Verifier confirms payouts. Underwriter scores the win. Credit follows once the packet is real.
+            Verifier confirms payouts. The win anchors on-chain. Liquidity follows once it's real.
           </p>
         </div>
       </div>

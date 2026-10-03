@@ -158,6 +158,23 @@ class RealCircleService {
     return !!(this.client && this.apiKey && this.entitySecret);
   }
 
+  /**
+   * The only wallet IDs the server is ever permitted to spend from, derived
+   * exclusively from server-side env. Anything else must be signed by the
+   * user's own key — a caller-supplied walletId is never trusted.
+   */
+  getServerControlledWallets(): string[] {
+    return [
+      process.env.CIRCLE_PAYOUT_WALLET_ID,
+      process.env.CIRCLE_AGENT_WALLET_ID,
+    ].filter((id): id is string => !!id);
+  }
+
+  isServerControlledWallet(walletId: string): boolean {
+    if (!walletId) return false;
+    return this.getServerControlledWallets().includes(walletId);
+  }
+
   isWalletConfigured(): boolean {
     return this.isClientConfigured() && !!this.walletSetId;
   }
@@ -410,6 +427,99 @@ class RealCircleService {
     }
   }
 
+  /**
+   * Record every outbound platform disbursement in PayoutLogs so the
+   * platform can answer "how much USDC did we send, and did it settle?".
+   * Callers invoke this alongside createTransaction; the row starts as
+   * 'initiated' and is advanced to a terminal state by reconcilePayouts().
+   */
+  async recordDisbursement(entry: {
+    circleTxId?: string;
+    idempotencyKey?: string;
+    testerId?: string;
+    projectSlug?: string;
+    amount: string;
+    reason: string;
+    destinationAddress?: string;
+  }): Promise<string> {
+    const row: Record<string, any> = {
+      payoutId: entry.idempotencyKey || `pb_${Date.now()}`,
+      circleTxId: entry.circleTxId || null,
+      testerId: entry.testerId || null,
+      projectSlug: entry.projectSlug || null,
+      amount: entry.amount,
+      reason: entry.reason,
+      destinationAddress: entry.destinationAddress || null,
+      status: "initiated",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      await db.collection("PayoutLogs").doc(row.payoutId).set(row, { merge: true });
+    } catch (error: any) {
+      // Auditing must never silently swallow: surface the failure so a
+      // disbursement without a ledger entry is visible in logs.
+      console.error("[Circle] Failed to record disbursement:", error.message);
+    }
+    return row.payoutId;
+  }
+
+  /**
+   * Advance PayoutLogs rows stuck at 'initiated' to a terminal state using
+   * Circle's own transaction status. Safe to run repeatedly.
+   */
+  async reconcilePayouts(limit = 100): Promise<{
+    checked: number;
+    completed: number;
+    failed: number;
+  }> {
+    let checked = 0;
+    let completed = 0;
+    let failed = 0;
+
+    let snap;
+    try {
+      snap = await db
+        .collection("PayoutLogs")
+        .where("status", "==", "initiated")
+        .limit(limit)
+        .get();
+    } catch (error: any) {
+      console.error("[Circle] Failed to query PayoutLogs:", error.message);
+      return { checked, completed, failed };
+    }
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      const txId = data.circleTxId;
+      if (!txId) continue;
+      checked++;
+
+      try {
+        const res = await this.getTransactionStatus(txId);
+        const status = res.data?.transaction?.status || res.data?.status;
+        if (status === "complete" || status === "confirmed") {
+          await doc.ref.set(
+            { status: "complete", updatedAt: new Date().toISOString() },
+            { merge: true },
+          );
+          completed++;
+        } else if (status === "failed" || status === "rejected") {
+          await doc.ref.set(
+            { status: "failed", updatedAt: new Date().toISOString() },
+            { merge: true },
+          );
+          failed++;
+        }
+      } catch {
+        // Leave as 'initiated' and retry on the next run.
+      }
+    }
+
+    return { checked, completed, failed };
+  }
+
   getConfig(): { success: boolean; data: { walletSetId: string; environment: string; configured: boolean; clientConfigured: boolean } } {
     return {
       success: true,
@@ -446,14 +556,9 @@ class RealCircleService {
       throw new Error("Circle API not configured for wallet operations");
     }
 
-    const fundingAmount = this.calculateFundingAmount(creditScore);
-    if (fundingAmount <= 0) {
-      throw new Error("Not eligible for funding");
-    }
-
     const wallet = await this.createWallet({
       name: `Developer Wallet - ${metadata.githubUsername || "Unknown"}`,
-      description: `Funding wallet for developer ${developerAddress}`,
+      description: `Wallet for developer ${developerAddress}`,
       userId: developerAddress,
       metadata: { creditScore, developerAddress, ...metadata },
     });
@@ -461,14 +566,10 @@ class RealCircleService {
     return {
       success: true,
       walletId: wallet.data.wallets[0].id,
-      fundingAmount,
+      fundingAmount: 0,
       creditScore,
-      message: "Wallet created successfully. Funding will be processed separately.",
+      message: "Wallet created successfully. No platform funding is disbursed.",
     };
-  }
-
-  calculateFundingAmount(creditScore: number): number {
-    return sharedCalculateFundingAmount(creditScore);
   }
 }
 
