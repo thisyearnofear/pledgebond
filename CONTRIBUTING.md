@@ -14,7 +14,6 @@ Requirements: Node 22, pnpm 9.12.
 ```
 frontend/          — Next.js app (pages, components, contexts, services)
 blockchain/        — Hardhat workspace (Solidity contracts)
-blockchain-solana/ — Anchor workspace (Solana programs)
 snap-server/       — Farcaster Snap server
 docs/              — Architecture, changelog, vision
 scripts/           — Dev utilities (setup, env, cleanup)

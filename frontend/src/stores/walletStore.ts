@@ -42,10 +42,8 @@ import { formatEther } from "viem";
 import { collection, getDocs, query, where } from "firebase/firestore";
 
 import { db } from "@/lib/firebase/clientApp";
-import { getSolanaConnection } from "@/lib/chains/solanaConnection";
 import { walletService } from "@/services/walletService";
 import { liquidityRailService } from "@/services/liquidityRailService";
-import { solanaCreditService } from "@/services/SolanaCreditService";
 import { nanopaymentService } from "@/services/nanopaymentService";
 import { crossChainUSDCService } from "@/lib/lifiIntegration";
 import { createStore, useStore, type Store } from "./createStore";
@@ -198,27 +196,6 @@ async function getUSDCBalanceAsync(): Promise<string> {
   }
   walletStore.setState((s) => ({ rail: { ...s.rail, usdcBalance: balance } }));
   return balance;
-}
-
-async function loadCreditProfile() {
-  const { activeChainFamily, evm, solana } = walletStore.getState();
-  if (activeChainFamily === "solana" && solana.wallet) {
-    try {
-      const profile = await solanaCreditService.getDeveloperCreditLine(
-        getSolanaConnection({ commitment: "processed" }),
-        solana.wallet.publicKey,
-      );
-      walletStore.setState((s) => ({ rail: { ...s.rail, profile } }));
-    } catch {}
-  } else if (evm.account && evm.publicClient) {
-    try {
-      const projects = await solanaCreditService.getProjectBackingData(
-        getSolanaConnection({ commitment: "processed" }),
-        evm.account,
-      );
-      walletStore.setState((s) => ({ rail: { ...s.rail, profile: projects } }));
-    } catch {}
-  }
 }
 
 async function loadUserProjects(githubUsername: string, uid: string) {

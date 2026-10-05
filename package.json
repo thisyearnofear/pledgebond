@@ -23,8 +23,7 @@
     "snap:dev": "cd snap-server && npx ts-node src/index.ts",
     "lint:frontend": "pnpm --filter ./frontend lint",
     "lint:contracts": "pnpm --filter ./blockchain lint",
-    "lint": "npm run lint:frontend && npm run lint:contracts",
-    "demo:devnet": "cd blockchain-solana && npm run tx:devnet"
+    "lint": "npm run lint:frontend && npm run lint:contracts"
   },
   "keywords": [
     "ethereum",

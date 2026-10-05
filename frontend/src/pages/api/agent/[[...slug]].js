@@ -316,7 +316,7 @@ async function underwriteHandler(req, res) {
         const aisaFetch = getAisaFetch();
         const aisaRes = await aisaFetch(`${AISA_BASE_URL}/perplexity/sonar`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "sonar", messages: [{ role: "user", content: `Analyze this blockchain project for investment potential in 3 sentences. Project: ${project.name}. Ecosystem: ${project.ecosystem || 'unknown'}. Description: ${project.description || "N/A"}. GitHub stats: ${JSON.stringify(project.stats || {})}. Score: ${total}/100. Also provide a brief recommendation on whether they should launch a token on Solana via Bags or stick to Circle-backed credit lines based on their GitHub activity.` }] }),
+          body: JSON.stringify({ model: "sonar", messages: [{ role: "user", content: `Analyze this blockchain project for investment potential in 3 sentences. Project: ${project.name}. Ecosystem: ${project.ecosystem || 'unknown'}. Description: ${project.description || "N/A"}. GitHub stats: ${JSON.stringify(project.stats || {})}. Score: ${total}/100. Also provide a brief recommendation on whether they should launch a token on Solana via Bags or bridge their unpaid prize with the EVM liquidity rail, based on their GitHub activity.` }] }),
         });
 
         if (aisaRes.ok) {
@@ -409,30 +409,9 @@ async function verifyHandler(req, res) {
 
     let onChainContext = null;
     if (network === "solana" && projectPda) {
-      onChainContext = { projectPda, milestoneIndex: milestoneIndex || "0", network: "solana", note: "On-chain execution requires a separate authenticated request. This is only a preview of what would be verified." };
-
-      if (process.env.SOLANA_RPC_URL) {
-        try {
-          const { getSolanaConnection } = await import("@/lib/chains/solanaConnection");
-          const { Keypair, PublicKey } = await import("@solana/web3.js");
-          const anchor = await import("@coral-xyz/anchor");
-          const IDL = (await import("@/idl/blockchain_solana.json")).default;
-          const PROGRAM_ID = new PublicKey(process.env.SOLANA_PROGRAM_ID || process.env.NEXT_PUBLIC_SOLANA_PROGRAM_ID || IDL.address);
-
-          const connection = getSolanaConnection({ rpcUrl: process.env.SOLANA_RPC_URL, commitment: "confirmed" });
-          const projectPubkey = new PublicKey(projectPda);
-          const idlWithAddress = { ...IDL, address: PROGRAM_ID.toBase58() };
-          const dummyWallet = new anchor.Wallet(Keypair.generate());
-          const provider = new anchor.AnchorProvider(connection, dummyWallet, { preflightCommitment: "confirmed" });
-          const program = new anchor.Program(idlWithAddress, provider);
-          const projectAcct = await program.account.project.fetch(projectPubkey);
-
-          onChainContext = { ...onChainContext, developer: projectAcct.developer.toBase58(), milestonesCompleted: projectAcct.milestonesCompleted, milestonesCount: projectAcct.milestonesCount, isActive: projectAcct.isActive, onChainDataFetched: true };
-        } catch (fetchErr) {
-          console.warn("Could not fetch on-chain project state (non-fatal):", fetchErr.message);
-          onChainContext.onChainDataFetched = false;
-        }
-      }
+      // The legacy Solana credit-line program is retired; milestone
+      // settlement lives on the EVM LiquidityRail. Read-only preview only.
+      onChainContext = { projectPda, milestoneIndex: milestoneIndex || "0", network: "solana", note: "The legacy Solana credit-line program was retired with the liquidity-rail pivot. Milestone settlement now happens on the EVM rail. This is only a preview of what would be verified." };
     }
 
     let attestcoin = null;

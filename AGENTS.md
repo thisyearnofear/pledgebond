@@ -2,7 +2,7 @@
 
 > **Product direction:** PledgeBond is a **liquidity rail for hackathon winners** — paid in hours, not 90 days. A confirmed win is bridged with a USDC loan against the unpaid prize, plus a market on whether the organizer will actually pay. There are **no credit scores, no multipliers, and no admin-assigned reputation**. See [`docs/VISION.md`](docs/VISION.md).
 
-A pnpm monorepo (`pnpm-workspace.yaml`) with four packages: `frontend` (Next 16 App Router, React 19), `blockchain` (Hardhat/Solidity), `blockchain-solana` (Anchor), `snap-server`. Run everything from the root via `pnpm --filter ./frontend <script>`; package scripts are wrappers that delegate.
+A pnpm monorepo (`pnpm-workspace.yaml`) with three packages: `frontend` (Next 16 App Router, React 19), `blockchain` (Hardhat/Solidity), `snap-server`. Run everything from the root via `pnpm --filter ./frontend <script>`; package scripts are wrappers that delegate.
 
 ## Build, Test, and Development Commands
 
@@ -14,7 +14,6 @@ pnpm --filter ./frontend test               # vitest watch
 pnpm --filter ./frontend test:run           # vitest one-shot
 npx tsc -p frontend --noEmit                # type check
 pnpm blockchain:test                        # solidity
-cd blockchain-solana && anchor test         # solana
 ```
 
 A single vitest file: `cd frontend && npx vitest run src/path/to/file.test.ts`.

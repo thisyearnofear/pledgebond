@@ -2,7 +2,7 @@
  * Solana connection helpers.
  *
  * Single source of truth for Solana RPC endpoint resolution and Connection
- * construction. Previously duplicated in 4 files (SolanaCreditService.ts,
+ * construction. Previously duplicated in 4 files (SolanaBagsService.ts,
  * pages/api/bags/market.js, pages/api/agent/verify.js,
  * components/back/PortfolioTab.js). All of them now import from here.
  *

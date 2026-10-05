@@ -6,7 +6,7 @@ This document outlines the strategic integration of the **Bags SDK** into the Pl
 
 ## Core Principles
 
-- **ENHANCEMENT FIRST**: Enhance existing `SolanaCreditService` and `ServiceManager` rather than creating isolated silos.
+- **ENHANCEMENT FIRST**: Enhance existing `SolanaBagsService` and `ServiceManager` rather than creating isolated silos.
 - **CONSOLIDATION**: Use `ServiceManager` as the single registry for all agentic and financial services.
 - **PREVENT BLOAT**: Only integrate necessary Bags SDK modules (Token Launch & Fee Sharing).
 - **DRY**: Shared Solana connection and wallet logic between existing Anchor interactions and Bags SDK.
@@ -68,9 +68,9 @@ PledgeBond supports many ecosystems (Arc, Celo, Base, Linea, Arbitrum, Ethereum,
 
 ### Phase 1: Infrastructure Enhancement
 - [x] Install `@bagsfm/bags-sdk` (1.3.7 in `frontend/package.json`).
-- [x] Enhance `SolanaCreditService.ts` to include an optional `BagsClient` (constructor wires it when `NEXT_PUBLIC_BAGS_API_KEY` is set).
+- [x] Enhance `SolanaBagsService.ts` to include an optional `BagsClient` (constructor wires it when `NEXT_PUBLIC_BAGS_API_KEY` is set).
 - [x] Update `ServiceManager.js` to register the Solana service and surface cluster in health check.
-- [x] Scaffold `launchBagsToken()`, `getClaimableFees()`, `claimFees()` on `SolanaCreditService`.
+- [x] Scaffold `launchBagsToken()`, `getClaimableFees()`, `claimFees()` on `SolanaBagsService`.
 - [x] SNS Identity integration — `.sol` domain names for builders and agents via `SnsService.ts`
 - [x] Cloak Private Payments — shielded USDC transfers via `CloakPaymentService.ts`
 - [x] QVAC Local-First AI — on-device inference via `QvacService.ts` with cloud fallback

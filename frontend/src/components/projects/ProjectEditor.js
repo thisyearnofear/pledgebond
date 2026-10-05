@@ -66,7 +66,7 @@ const EMPTY_HACKATHON = () => ({
 export default function ProjectEditor({ projectSlug }) {
   const { currentUser } = useUser();
   const { isVerified, pendingClaim, loading: winnerLoading, error: winnerError, submitClaim } = useWinnerStatus();
-  const { requestFunding, connected, activeChainFamily } = useBuilderCredit();
+  const { connected, activeChainFamily } = useBuilderCredit();
 
   const githubUsername = currentUser?.reloadUserInfo?.screenName
     || currentUser?.providerData?.find((p) => p.providerId === "github.com")?.displayName?.toLowerCase().replace(/\s/g, '')
@@ -347,23 +347,16 @@ export default function ProjectEditor({ projectSlug }) {
         return;
       }
 
-      let onChainResult = null;
-      if (cleaned.ecosystem === "solana" && (form.lookingForFunding || form.launchOnBags)) {
+      let bagsLaunch = null;
+      if (cleaned.ecosystem === "solana" && form.launchOnBags) {
         if (!connected || activeChainFamily !== "solana") {
-          throw new Error("Please connect your Solana wallet to request funding or launch on Bags.");
+          throw new Error("Please connect your Solana wallet to launch a Bags token.");
         }
         try {
-          const onChainData = {
-            ...cleaned,
-            hackathonIds: [1],
-            milestoneDescriptions: cleaned.milestones,
-            milestoneAmounts: cleaned.milestones.map(() => 0),
-            launchOnBags: form.launchOnBags,
-            bagsTokenMetadata: form.bagsTokenMetadata,
-          };
-          onChainResult = await requestFunding(onChainData);
+          const { solanaBagsService } = await import("@/services/SolanaBagsService");
+          bagsLaunch = await solanaBagsService.launchBagsToken(form.bagsTokenMetadata);
         } catch (err) {
-          throw new Error(`Blockchain operation failed: ${err.message}`);
+          throw new Error(`Bags token launch failed: ${err.message}`);
         }
       }
 
@@ -375,10 +368,8 @@ export default function ProjectEditor({ projectSlug }) {
           ...projectInput,
           imageUrl: image.imageUrl || null,
           launchOnBags: form.launchOnBags,
-          bagsTokenAddress: onChainResult?.projectData?.bagsTokenAddress || null,
-          solanaProjectPda: onChainResult?.projectPda || null,
-          builderSnsDomain: onChainResult?.projectData?.builderSnsDomain || cleaned.builderSnsDomain || null,
-          builderSnsNameAccount: onChainResult?.projectData?.builderSnsNameAccount || null,
+          bagsTokenAddress: bagsLaunch?.mint || null,
+          builderSnsDomain: cleaned.builderSnsDomain || null,
         }),
       });
       const body = await res.json().catch(() => ({}));

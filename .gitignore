@@ -12,7 +12,6 @@ cache/
 typechain-types/
 deployments/
 deployed-contracts.json
-blockchain-solana/target/
 contract-addresses*.json
 gasReporterOutput.json
 gas-report*.txt

@@ -1,5 +1,4 @@
 packages:
   - 'frontend'
   - 'blockchain'
-  - 'blockchain-solana'
   - 'snap-server'

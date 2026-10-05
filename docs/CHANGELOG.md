@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-10-05 — Retired the legacy Solana credit-line program
+
+The Anchor program (`blockchain-solana/`), its IDL, and every frontend binding
+that implemented the previous credit model were deleted. This completes the
+liquidity-rail pivot: the EVM `LiquidityRail` + `HackathonRegistry` on Arc
+Testnet is now the only funding + credibility path.
+
+- **Removed** — `blockchain-solana/` (Anchor workspace), `frontend/src/idl/blockchain_solana.json`, the `demo:devnet` root script, the workspace entry, and `frontend/src/lib/chains/types.ts` (its only consumer is gone).
+- **`SolanaCreditService.ts` → `SolanaBagsService.ts`** — stripped to the Bags SDK surface that the coming-soon "bags" rail still uses (`launchBagsToken`, `getClaimableFees`, `claimFees`). All credit-line / multiplier / vault instructions deleted.
+- **Dead read paths deleted** — `walletStore.loadCreditProfile` (called `getDeveloperCreditLine` / `getProjectBackingData`) and the agent `verify` route's Solana project-account fetch.
+- **ProjectEditor** — Solana submissions now call `launchBagsToken` directly instead of the retired `requestFunding` (which was already returning `undefined` through the rail-wired hook).
+
 ## 2026-10-02 — Product pivot: liquidity rail for hackathon winners
 
 PledgeBond is now a **liquidity rail**, not a credit-line protocol. Hackathon

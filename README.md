@@ -25,7 +25,7 @@ Bettor capital must never fund a loan. A bettor must never absorb an organizer t
 - **Explore** — Browse projects across 7 ecosystems (Arc, Celo, Base, Linea, Arbitrum, Ethereum, Optimism) with search & filtering
 - **Public payout truth** — Who pays winners, and how fast. Verified against on-chain receipts across EVM and Solana, anchored by `HackathonRegistry.declareWinner` / `recordPayout`
 - **AI Agents** — Scout ($0.01) and Verifier ($0.001) analyze projects and payouts via x402 micropayments on Arc
-- **SNS Identity** — Builders and AI agents use .sol domain names via Solana Name Service; Solana project creation anchors a signed SNS ownership proof on-chain
+- **SNS Identity** — Builders and AI agents use .sol domain names via Solana Name Service
 - **Private positions** — Shield position amounts via Cloak (UTXO shielded pool on Solana)
 - **AI Chat Assistant** — Floating helper widget powered by Featherless AI (DeepSeek-V3) with AIsa fallback, collapsible/dismissable
 - **Local-First AI** — QVAC (Tether) on-device inference keeps project data private; falls back to cloud providers when unavailable
@@ -62,9 +62,6 @@ cd frontend && npx tsc --noEmit
 
 # Smart contract tests
 npm run blockchain:test
-
-# Solana program tests
-cd blockchain-solana && anchor test
 ```
 
 ### Firebase Emulator (local dev)
@@ -76,32 +73,23 @@ firebase emulators:start
 # Set FIRESTORE_EMULATOR_HOST=localhost:8080 and use demo-* project IDs
 ```
 
-## On-Chain (Solana Devnet)
+## On-Chain (Arc Testnet)
 
-**Program:** `14uLETygxjh89fHFwYUaRRhHE9E9XrYcSh6SsF8SEw1K` ([Explorer](https://explorer.solana.com/address/14uLETygxjh89fHFwYUaRRhHE9E9XrYcSh6SsF8SEw1K?cluster=devnet))
-**IDL:** `HGBAP7xUeuR3Nt99z8d2AhNDFGK5iN5sVdGd4W9jrdHr`
+The liquidity rail lives on **Arc Testnet** (chain `5042002`, USDC-native gas):
 
-7 confirmed transactions on devnet — treasury init, 2 projects created, 2 position opens, verification, loan repayment.
+| Contract | Address |
+|----------|---------|
+| LiquidityRail (UUPS proxy) | `0xa8CB00A09092203Dd3274EBc065845fe034a0d38` |
+| HackathonRegistry | `0x6C523bf8639515FaCCf6F9A577758C5C415DB89b` |
 
-> **Note:** the Solana program still implements the previous credit-line model
-> (credit lines, backing multipliers, milestone verification). It is being
-> reworked to match the EVM rail; until then, treat `blockchain-solana` as
-> legacy. See [`docs/VISION.md`](docs/VISION.md) for the target model.
+Declarations, loan opens, and settlements from the demo loop are on-chain and
+verifiable on the [Arc explorer](https://testnet.arcscope.net). Deploy with
+`pnpm --filter ./blockchain deploy:arctestnet` (see [`docs/README.md`](docs/README.md)).
 
-Latest local Solana flow:
-
-```bash
-cd blockchain-solana
-anchor build
-npm run idl:copy
-npm run treasury:init
-SNS_DOMAIN=your-name.sol npm run tx:devnet
-```
-
-The latest Anchor revision also stores:
-- `builder_sns_domain`
-- `builder_sns_name_account`
-- `builder_identity_signature`
+> The legacy Solana credit-line program (`blockchain-solana/`, Anchor) was
+> retired with the liquidity-rail pivot — see [`docs/VISION.md`](docs/VISION.md).
+> What remains on the Solana side is the Bags token launch + fee-share SDK
+> (`frontend/src/services/SolanaBagsService.ts`) for the coming-soon "bags" rail.
 
 ## Environment Variables
 
@@ -115,11 +103,9 @@ CIRCLE_GATEWAY_WALLET_ADDRESS=0x...
 PRIVATE_KEY=0x...
 NEXT_PUBLIC_DEMO_MODE=true                  # true for testing without real keys
 
-# Solana / SNS
-NEXT_PUBLIC_SOLANA_PROGRAM_ID=
+# Solana / SNS (payout verification + Bags rail)
 NEXT_PUBLIC_SOLANA_RPC_URL=
 SOLANA_USDC_MINT=                           # optional; defaults to devnet USDC in supported paths
-SNS_DOMAIN=your-name.sol                    # used by the devnet runner
 
 # Firebase
 NEXT_PUBLIC_FIREBASE_API_KEY=...

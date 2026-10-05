@@ -26,11 +26,10 @@ Credibility is **derived** from that payment history — coverage, speed, defaul
 │       ├── lib/          # Integrations (LiFi, Dune, GitHub analytics, Arc payment middleware, badges)
 │       │   └── badges/   # Client-side badge inference (computeBadges.js)
 │       ├── pages/        # Next.js pages + API routes
-│       ├── services/     # Business logic (Circle, Solana credit, Cloak privacy, SNS identity, QVAC local AI)
+│       ├── services/     # Business logic (Circle, Solana Bags, Cloak privacy, SNS identity, QVAC local AI)
 │       └── utils/        # Utilities
 │
 ├── blockchain/           # Hardhat workspace (UUPS upgradeable contracts)
-├── blockchain-solana/    # Anchor program (split vault architecture)
 ├── snap-server/          # Hono-based Farcaster Snap server
 └── docs/                 # Documentation
 ```
@@ -150,9 +149,7 @@ Activities written to the `activities` collection are polled by `useNotification
 
 ### Self-Verification
 
-A builder cannot declare their own win as credible evidence about themselves — the derived-credibility model depends on the win being independently evidenced. This is enforced in `HackathonRegistry.declareWinner` / `recordPayout` (host or admin only) and, in the Solana program, by `ErrorCode::SelfVerificationNotAllowed`.
-
-Note the Solana guard is currently **client-side only** in `SolanaCreditService`, so it is bypassable; treat it as a UX affordance, not a security boundary.
+A builder cannot declare their own win as credible evidence about themselves — the derived-credibility model depends on the win being independently evidenced. This is enforced in `HackathonRegistry.declareWinner` / `recordPayout` (host or admin only). The legacy `ErrorCode::SelfVerificationNotAllowed` guard lived in the retired Solana credit-line program; the EVM rail is the only enforcement path now.
 
 ### Activity Logging
 
@@ -186,7 +183,7 @@ Rendered on builder dashboard (`/build`), public portfolio (`/u/[username]`), pr
 | `/` | Everyone | Landing page with leaderboard strip |
 | `/explore` | Everyone | Project discovery |
 | `/back` | Backers | Backer workspace: portfolio, AI analysis, discover |
-| `/build` | Builders | Builder dashboard: project submission, credit, milestones, badges |
+| `/build` | Builders | Builder dashboard: project submission, bridge-loan positions, badges |
 | `/leaderboard` | Everyone | Builder / Backer / Hackathon rankings with shareable OG images |
 | `/analyze` | Everyone | Standalone AI project analysis |
 | `/profile` | Everyone | User profile with credentials and portfolio |
@@ -197,27 +194,15 @@ Rendered on builder dashboard (`/build`), public portfolio (`/u/[username]`), pr
 
 ## Smart Contract Architecture
 
-### Solana (Anchor): Split Vault Design
+### Solana (retired)
 
-Each project has **two separate vault ATAs** to prevent insolvency:
-
-```
-Project
- ├── milestone_vault_authority → milestone_vault
- │     Holds milestone funding only. verify_milestone pays from here.
- │     Backer funds cannot be drained by milestone payouts.
- │
- └── backer_vault_authority → backer_escrow_vault
-       Holds backer stakes only. claim_reward pays from here.
-       Multiplier premiums funded by protocol treasury via fund_backer_rewards.
-       Backers can always reclaim their principal.
-```
-
-> **Legacy:** the Solana program still implements the previous credit-line model
-> (credit lines, backing multipliers, milestone verification, a protocol treasury
-> funding multiplier premiums). It is being reworked to match the EVM rail and
-> should be treated as legacy until then. `fund_backer_rewards` and
-> `verify_milestone` are slated for removal.
+The legacy Anchor program (`blockchain-solana/`) implemented the previous
+credit-line model — credit lines, backing multipliers, milestone vaults, a
+protocol treasury. It was deleted with the liquidity-rail pivot; see
+[`docs/VISION.md`](VISION.md) for the target model and git history for the
+program. What remains on the Solana side is the Bags SDK integration
+(`frontend/src/services/SolanaBagsService.ts`) and the
+`PayoutVerifierService` Solana transfer scan.
 
 ### EVM (Solidity): UUPS Upgradeable
 
@@ -241,9 +226,8 @@ When upgrading, new implementations must preserve the existing storage layout �
 
 | Contract | Network | Address |
 |----------|---------|---------|
-| Solana Program | devnet | `DVzV16mVG9vHdrum9Fx9kGhzRv2GJa2mNnmTWUnKa6st` — **legacy**, still runs the retired credit model |
-| LiquidityRail (proxy) | Arc Testnet | _pending deploy_ |
-| HackathonRegistry | Arc Testnet | `0x6E303E2B8F386BfDEb201AeD5c2c011b98F2c6Bd` |
+| LiquidityRail (UUPS proxy) | Arc Testnet | `0xa8CB00A09092203Dd3274EBc065845fe034a0d38` |
+| HackathonRegistry | Arc Testnet | `0x6C523bf8639515FaCCf6F9A577758C5C415DB89b` |
 
 Addresses per network are written to `blockchain/deployments/<network>_deployment.json` by the deploy script.
 

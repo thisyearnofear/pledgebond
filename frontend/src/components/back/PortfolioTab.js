@@ -95,9 +95,9 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
     async function loadFees() {
       try {
         const { PublicKey } = await import('@solana/web3.js');
-        const { solanaCreditService } = await import('@/services/SolanaCreditService');
+        const { solanaBagsService } = await import('@/services/SolanaBagsService');
         const pubkey = new PublicKey(wallet.solanaAddress);
-        const positions = await solanaCreditService.getClaimableFees(pubkey);
+        const positions = await solanaBagsService.getClaimableFees(pubkey);
         if (!cancelled) {
           setClaimableFees(positions || []);
           const total = (positions || []).reduce((sum, p) => {
@@ -122,9 +122,9 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
     setClaimSuccess(null);
 
     try {
-      const { solanaCreditService } = await import('@/services/SolanaCreditService');
+      const { solanaBagsService } = await import('@/services/SolanaBagsService');
       const { getSolanaConnection } = await import('@/lib/chains/solanaConnection');
-      const txs = await solanaCreditService.claimFees(wallet.solanaWallet, claimableFees);
+      const txs = await solanaBagsService.claimFees(wallet.solanaWallet, claimableFees);
       // Send the signed transactions
       const connection = getSolanaConnection();
       for (const tx of txs) {
