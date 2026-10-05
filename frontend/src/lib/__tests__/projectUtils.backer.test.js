@@ -12,19 +12,13 @@ const sampleProjects = [
 ];
 
 describe("filterBackerProjects", () => {
-  it("filters by search, ecosystem, and multiplier", () => {
+  it("filters by search and ecosystem", () => {
     const result = filterBackerProjects(sampleProjects, {
       search: "solana",
       ecosystem: "all",
-      minMultiplier: "all",
     });
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("b");
-  });
-
-  it("filters by minimum multiplier", () => {
-    const result = filterBackerProjects(sampleProjects, { minMultiplier: "3.0" });
-    expect(result.map((p) => p.id)).toEqual(["c"]);
   });
 });
 

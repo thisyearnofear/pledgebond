@@ -12,7 +12,7 @@ import {
 
 describe("CAPITAL_RAILS", () => {
   it("defines three rails in progression order", () => {
-    expect(CAPITAL_RAILS.map((r) => r.id)).toEqual(["bags", "x402", "prize"]);
+    expect(CAPITAL_RAILS.map((r) => r.id)).toEqual(["bags", "loan", "market"]);
   });
 
   it("every rail has a display status label", () => {
@@ -24,22 +24,22 @@ describe("CAPITAL_RAILS", () => {
 
 describe("getRailById", () => {
   it("returns rail metadata", () => {
-    expect(getRailById("x402")?.title).toBe("x402 Credit Line");
+    expect(getRailById("loan")?.title).toBe("Bridge Loan");
   });
 });
 
 describe("getRailStatus", () => {
-  it("marks bags as coming soon and credit rails as live", () => {
+  it("marks bags as coming soon and the pivot rails as live", () => {
     expect(getRailStatus("bags")).toBe("coming_soon");
-    expect(getRailStatus("x402")).toBe("live");
-    expect(getRailStatus("prize")).toBe("live");
+    expect(getRailStatus("loan")).toBe("live");
+    expect(getRailStatus("market")).toBe("live");
   });
 });
 
 describe("isRailIntegrated", () => {
   it("returns false for coming soon rails", () => {
     expect(isRailIntegrated("bags")).toBe(false);
-    expect(isRailIntegrated("x402")).toBe(true);
+    expect(isRailIntegrated("loan")).toBe(true);
   });
 
   it("treats beta as available", () => {

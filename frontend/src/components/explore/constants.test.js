@@ -85,6 +85,6 @@ describe('ITEMS_PER_PAGE', () => {
 describe('BACKER_SORT_OPTIONS', () => {
   it('includes health as the default sort id', () => {
     expect(BACKER_SORT_OPTIONS[0].id).toBe('health');
-    expect(BACKER_SORT_OPTIONS).toHaveLength(4);
+    expect(BACKER_SORT_OPTIONS).toHaveLength(3);
   });
 });

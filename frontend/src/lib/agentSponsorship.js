@@ -70,7 +70,11 @@ export async function consumeSponsoredCall(caller) {
     const ref = db.collection("agentSponsorships").doc(status.key);
     const result = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
-      const current = snap.exists ? Number(snap.data().callsRemaining || 0) : DEFAULT_FREE_CALLS;
+      // A missing doc starts at whatever the status rule granted this caller
+      // (3 for a uid, 1 for an IP) — not blindly at DEFAULT_FREE_CALLS.
+      const current = snap.exists
+        ? Number(snap.data().callsRemaining || 0)
+        : status.callsRemaining;
       if (current <= 0) return null;
       const next = current - 1;
       tx.set(
