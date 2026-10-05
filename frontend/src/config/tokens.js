@@ -140,6 +140,14 @@ export const HACKATHON_REGISTRY_ADDRESSES = {
     : {}),
 };
 
+// Block the rail proxy landed in — the lower bound for WinDeclared scans.
+// Only chains with a deployment are listed (mirrors LIQUIDITY_RAIL_ADDRESSES).
+export const LIQUIDITY_RAIL_START_BLOCKS = {
+  5042002: Number(
+    process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_TESTNET_START_BLOCK || 65661510
+  ),
+};
+
 export const TESTNET_CHAIN_INFO = {
   11155111: {
     name: "Ethereum Sepolia",

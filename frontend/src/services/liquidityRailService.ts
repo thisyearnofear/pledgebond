@@ -13,7 +13,7 @@
  * because silently doing nothing on a loan would be worse than an error.
  */
 
-import { getContract, formatUnits, parseUnits, maxUint256 } from 'viem';
+import { getContract, formatUnits, parseUnits, maxUint256, parseAbiItem, parseAbi } from 'viem';
 import type { PublicClient, WalletClient } from 'viem';
 
 import {
@@ -23,14 +23,15 @@ import {
 } from '../constants/abis';
 import {
   LIQUIDITY_RAIL_ADDRESSES,
+  LIQUIDITY_RAIL_START_BLOCKS,
   USDC_ADDRESSES,
   HACKATHON_REGISTRY_ADDRESSES,
 } from '../config/tokens';
 
-// Human-readable ABI strings; viem's parseAbi can't express tuple syntax.
-const railAbi = LIQUIDITY_RAIL_ABI as unknown as readonly any[];
-const erc20Abi = ERC20_ABI as unknown as readonly any[];
-const registryAbi = HACKATHON_REGISTRY_ABI as unknown as readonly any[];
+// constants/abis.js stores human-readable signatures; getContract needs them parsed.
+const railAbi = parseAbi(LIQUIDITY_RAIL_ABI as unknown as string[]);
+const erc20Abi = parseAbi(ERC20_ABI as unknown as string[]);
+const registryAbi = parseAbi(HACKATHON_REGISTRY_ABI as unknown as string[]);
 
 const USDC_DECIMALS = 6;
 
@@ -110,6 +111,19 @@ const EMPTY_CREDIBILITY: RailCredibility = {
   averageDaysToPay: 0,
 };
 
+export interface DeclaredWin {
+  winId: number;
+  hackathonId: number;
+  builder: string;
+  projectName: string;
+  prizeAmount: string;
+  declaredAt: number;
+}
+
+const WIN_DECLARED_EVENT = parseAbiItem(
+  'event WinDeclared(uint256 indexed winId, uint256 indexed hackathonId, address indexed builder, string projectName, uint256 prizeAmount, uint256 declaredAt)'
+);
+
 class LiquidityRailService {
   getContracts(
     chainId: number | undefined,
@@ -173,14 +187,16 @@ class LiquidityRailService {
       const contracts = this.getContracts(chainId, publicClient);
       if (!contracts) return null;
       const win = await contracts.rail.read.wins([BigInt(winId)]);
-      if (!win || win.builder === '0x0000000000000000000000000000000000000000') {
+      // viem returns multi-output reads as positional arrays.
+      const [, builder, prizeAmount, declaredAt, , status] = win as any[];
+      if (!win || builder === '0x0000000000000000000000000000000000000000') {
         return null;
       }
       return {
-        builder: win.builder,
-        prizeAmount: formatUnits(win.prizeAmount, USDC_DECIMALS),
-        declaredAt: Number(win.declaredAt),
-        status: Number(win.status),
+        builder,
+        prizeAmount: formatUnits(prizeAmount, USDC_DECIMALS),
+        declaredAt: Number(declaredAt),
+        status: Number(status),
       };
     } catch {
       return null;
@@ -196,18 +212,31 @@ class LiquidityRailService {
       const contracts = this.getContracts(chainId, publicClient);
       if (!contracts) return null;
       const loan = await contracts.rail.read.loans([BigInt(winId)]);
-      if (!loan || Number(loan.status) === LOAN_STATUS.NONE) return null;
+      const [
+        loanWinId,
+        lender,
+        builder,
+        ,
+        principal,
+        collateral,
+        trancheSize,
+        originationFee,
+        dueAt,
+        mode,
+        status,
+      ] = loan as any[];
+      if (!loan || Number(status) === LOAN_STATUS.NONE) return null;
       return {
-        winId: Number(loan.winId),
-        lender: loan.lender,
-        builder: loan.builder,
-        principal: formatUnits(loan.principal, USDC_DECIMALS),
-        collateral: formatUnits(loan.collateral, USDC_DECIMALS),
-        trancheSize: formatUnits(loan.trancheSize, USDC_DECIMALS),
-        originationFee: formatUnits(loan.originationFee, USDC_DECIMALS),
-        dueAt: Number(loan.dueAt),
-        mode: Number(loan.mode),
-        status: Number(loan.status),
+        winId: Number(loanWinId),
+        lender,
+        builder,
+        principal: formatUnits(principal, USDC_DECIMALS),
+        collateral: formatUnits(collateral, USDC_DECIMALS),
+        trancheSize: formatUnits(trancheSize, USDC_DECIMALS),
+        originationFee: formatUnits(originationFee, USDC_DECIMALS),
+        dueAt: Number(dueAt),
+        mode: Number(mode),
+        status: Number(status),
       };
     } catch {
       return null;
@@ -227,11 +256,18 @@ class LiquidityRailService {
         contracts.rail.read.coverageRateBps([builder as `0x${string}`]),
         contracts.rail.read.averageDaysToPay([builder as `0x${string}`]),
       ]);
+      const [
+        winsDeclared,
+        loansTaken,
+        ,
+        winsSettledInFull,
+        winsDefaulted,
+      ] = history as any[];
       return {
-        winsDeclared: Number(history.winsDeclared),
-        loansTaken: Number(history.loansTaken),
-        winsSettledInFull: Number(history.winsSettledInFull),
-        winsDefaulted: Number(history.winsDefaulted),
+        winsDeclared: Number(winsDeclared),
+        loansTaken: Number(loansTaken),
+        winsSettledInFull: Number(winsSettledInFull),
+        winsDefaulted: Number(winsDefaulted),
         coverageRateBps: Number(coverageRateBps),
         averageDaysToPay: Number(averageDaysToPay),
       };
@@ -254,11 +290,71 @@ class LiquidityRailService {
         BigInt(hackathonId),
       ]);
       return (declarations as any[]).some(
-        (d) => d.winner?.toLowerCase() === winner.toLowerCase() && Number(d.paidAt) > 0
+        (d) => d[0]?.toLowerCase() === winner.toLowerCase() && Number(d[4]) > 0
       );
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Declared wins on-chain that no one has funded yet — the lender's order
+   * book. Sourced from WinDeclared events (the rail has no enumerable
+   * index), bounded by the deployment start block and the 50 most recent
+   * wins so a public RPC never sees an unbounded getLogs.
+   */
+  async listOpenWins(
+    chainId: number,
+    publicClient: PublicClient
+  ): Promise<DeclaredWin[]> {
+    const contracts = this.getContracts(chainId, publicClient);
+    const startBlock = (LIQUIDITY_RAIL_START_BLOCKS as Record<number, number>)[chainId];
+    if (!contracts || startBlock === undefined) return [];
+    let logs: any[];
+    try {
+      logs = await publicClient.getLogs({
+        address: contracts.railAddress,
+        event: WIN_DECLARED_EVENT as any,
+        fromBlock: BigInt(startBlock),
+        toBlock: 'latest',
+      }) as any[];
+    } catch {
+      return [];
+    }
+    const byId = new Map<number, (typeof logs)[number]>();
+    for (const log of logs) {
+      const winId = Number(log.args.winId);
+      if (!byId.has(winId)) byId.set(winId, log);
+    }
+    const ids = [...byId.keys()].sort((a, b) => b - a).slice(0, 50);
+    const wins = await Promise.all(
+      ids.map(async (winId) => {
+        const log = byId.get(winId)!;
+        try {
+          const [win, loan] = await Promise.all([
+            contracts.rail.read.wins([BigInt(winId)]),
+            contracts.rail.read.loans([BigInt(winId)]),
+          ]);
+          if (
+            Number((win as any[])[5]) !== WIN_STATUS.DECLARED ||
+            Number((loan as any[])[10]) !== LOAN_STATUS.NONE
+          ) {
+            return null;
+          }
+          return {
+            winId,
+            hackathonId: Number((log.args as any).hackathonId),
+            builder: (log.args as any).builder,
+            projectName: (log.args as any).projectName,
+            prizeAmount: formatUnits((log.args as any).prizeAmount, USDC_DECIMALS),
+            declaredAt: Number((log.args as any).declaredAt),
+          } as DeclaredWin;
+        } catch {
+          return null;
+        }
+      })
+    );
+    return wins.filter(Boolean) as DeclaredWin[];
   }
 
   // ── Writes ──────────────────────────────────────────────────────────────

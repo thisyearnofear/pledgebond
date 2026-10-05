@@ -13,7 +13,11 @@ import Button from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { useToastActions } from "@/components/common/Toast";
 import { liquidityRailService } from "@/services/liquidityRailService";
+import { walletActions } from "@/stores/walletStore";
 import { formatUSDC } from "@/lib/format";
+
+const DEFAULT_RATE_BPS = 500;
+const DEFAULT_TERM_DAYS = 30;
 
 const STRUCTURES = [
   {
@@ -37,12 +41,15 @@ const STRUCTURES = [
 export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess }) {
   const [structure, setStructure] = useState("overcollateralized");
   const [amount, setAmount] = useState("1000");
+  const [collateral, setCollateral] = useState("1100");
   const [submitting, setSubmitting] = useState(false);
   const toast = useToastActions();
 
   const principal = Number(amount) || 0;
+  const collateralAmount = Number(collateral) || 0;
   const prize = Number(opportunity?.prizeAmount) || 0;
   const maxRateBps = Number(opportunity?.maxRateBps ?? 0);
+  const winId = opportunity?.winId;
 
   async function handleFund() {
     if (principal <= 0) {
@@ -58,13 +65,31 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
 
     setSubmitting(true);
     try {
-      // openLoan's caller IS the lender — they sign the transfer that pays the
-      // builder. Listing declared wins with their rail winIds is the next
-      // build (the rail has no reader yet), so funding stays a hard failure.
+      if (!winId) {
+        throw new Error("This project has no declared on-chain win to lend against yet.");
+      }
       if (!liquidityRailService.isDeployed(wallet?.chainId)) {
         throw new Error("The liquidity rail is not deployed on this network yet.");
       }
-      throw new Error("Lender funding isn't wired to the rail yet — the win listing ships next.");
+      if (structure === "tranche") {
+        throw new Error(
+          "Tranche-backed loans need the first-loss provider to approve the rail from their own wallet — that flow isn't live yet. Fund overcollateralized instead."
+        );
+      }
+      if (collateralAmount < principal) {
+        throw new Error("Collateral must cover the principal in an overcollateralized loan.");
+      }
+      await walletActions.openLoan(winId, {
+        principal: amount,
+        collateral: collateral,
+        rateBps: maxRateBps > 0 ? maxRateBps : DEFAULT_RATE_BPS,
+        durationDays: DEFAULT_TERM_DAYS,
+      });
+      toast.success(
+        `Loan opened against win #${winId}. ${formatUSDC(principal)} went to the builder, net of fees.`
+      );
+      onSuccess?.();
+      onClose?.();
     } catch (error) {
       toast.error(`Could not open the loan: ${error.message}`);
     } finally {
@@ -77,7 +102,7 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
       isOpen
       onClose={onClose}
       title="Fund this loan"
-      description={`${opportunity?.name || "This project"} · declared prize ${formatUSDC(prize)}`}
+      description={`${opportunity?.name || opportunity?.projectName || "This project"} · declared prize ${formatUSDC(prize)}`}
       size="lg"
       footer={
         <div className="flex justify-end gap-3">
@@ -138,6 +163,17 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
           helperText={`Up to the declared prize of ${formatUSDC(prize)}.`}
           min="1"
         />
+
+        {structure === "overcollateralized" && (
+          <Input
+            label="Collateral you'll escrow (USDC)"
+            type="number"
+            value={collateral}
+            onChange={(e) => setCollateral(e.target.value)}
+            helperText="Held by the rail for the loan term. If the organizer pays, it is released to the builder; if the builder defaults, it is liquidated to you."
+            min="1"
+          />
+        )}
 
         <div className="bg-surface border border-default rounded-lg p-4 text-sm space-y-2">
           <div className="flex justify-between">
