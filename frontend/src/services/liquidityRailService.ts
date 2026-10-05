@@ -300,8 +300,11 @@ class LiquidityRailService {
   /**
    * Declared wins on-chain that no one has funded yet — the lender's order
    * book. Sourced from WinDeclared events (the rail has no enumerable
-   * index), bounded by the deployment start block and the 50 most recent
-   * wins so a public RPC never sees an unbounded getLogs.
+   * index). Arc's public RPC rate-limits bursts, so the scan is sequential:
+   * fixed-size chunks walking back from the head, capped at the deployment
+   * start block or 10 chunks (20k blocks), whichever comes first, and the 50
+   * most recent wins. Unfunded wins older than the cap are a cold-listing
+   * concern, not a correctness one — see /api/rail/open-wins for the cache.
    */
   async listOpenWins(
     chainId: number,
@@ -310,16 +313,30 @@ class LiquidityRailService {
     const contracts = this.getContracts(chainId, publicClient);
     const startBlock = (LIQUIDITY_RAIL_START_BLOCKS as Record<number, number>)[chainId];
     if (!contracts || startBlock === undefined) return [];
-    let logs: any[];
+    const CHUNK = 2000n;
+    const MAX_CHUNKS = 10;
+    const logs: any[] = [];
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     try {
-      logs = await publicClient.getLogs({
-        address: contracts.railAddress,
-        event: WIN_DECLARED_EVENT as any,
-        fromBlock: BigInt(startBlock),
-        toBlock: 'latest',
-      }) as any[];
+      const head = await publicClient.getBlockNumber();
+      const start = BigInt(startBlock);
+      let from = head;
+      for (let scanned = 0; scanned < MAX_CHUNKS && from >= start; scanned++) {
+        const chunkFrom = from - CHUNK + 1n < start ? start : from - CHUNK + 1n;
+        const chunk = await publicClient.getLogs({
+          address: contracts.railAddress,
+          event: WIN_DECLARED_EVENT as any,
+          fromBlock: chunkFrom,
+          toBlock: from,
+        });
+        logs.push(...(chunk as any[]));
+        if (chunkFrom === start) break;
+        from = chunkFrom - 1n;
+        await sleep(150);
+      }
     } catch {
-      return [];
+      if (logs.length === 0) return [];
+      // Partial scan still lists what was found; fresher wins dominate.
     }
     const byId = new Map<number, (typeof logs)[number]>();
     for (const log of logs) {
@@ -327,34 +344,39 @@ class LiquidityRailService {
       if (!byId.has(winId)) byId.set(winId, log);
     }
     const ids = [...byId.keys()].sort((a, b) => b - a).slice(0, 50);
-    const wins = await Promise.all(
-      ids.map(async (winId) => {
-        const log = byId.get(winId)!;
-        try {
-          const [win, loan] = await Promise.all([
-            contracts.rail.read.wins([BigInt(winId)]),
-            contracts.rail.read.loans([BigInt(winId)]),
-          ]);
-          if (
-            Number((win as any[])[5]) !== WIN_STATUS.DECLARED ||
-            Number((loan as any[])[10]) !== LOAN_STATUS.NONE
-          ) {
-            return null;
-          }
-          return {
-            winId,
-            hackathonId: Number((log.args as any).hackathonId),
-            builder: (log.args as any).builder,
-            projectName: (log.args as any).projectName,
-            prizeAmount: formatUnits((log.args as any).prizeAmount, USDC_DECIMALS),
-            declaredAt: Number((log.args as any).declaredAt),
-          } as DeclaredWin;
-        } catch {
+    const readOne = async (winId: number): Promise<DeclaredWin | null> => {
+      const log = byId.get(winId)!;
+      try {
+        const [win, loan] = await Promise.all([
+          contracts.rail.read.wins([BigInt(winId)]),
+          contracts.rail.read.loans([BigInt(winId)]),
+        ]);
+        if (
+          Number((win as any[])[5]) !== WIN_STATUS.DECLARED ||
+          Number((loan as any[])[10]) !== LOAN_STATUS.NONE
+        ) {
           return null;
         }
-      })
-    );
-    return wins.filter(Boolean) as DeclaredWin[];
+        return {
+          winId,
+          hackathonId: Number((log.args as any).hackathonId),
+          builder: (log.args as any).builder,
+          projectName: (log.args as any).projectName,
+          prizeAmount: formatUnits((log.args as any).prizeAmount, USDC_DECIMALS),
+          declaredAt: Number((log.args as any).declaredAt),
+        } as DeclaredWin;
+      } catch {
+        return null;
+      }
+    };
+    // Small sequential batches; the public RPC rate-limits parallel bursts.
+    const wins: DeclaredWin[] = [];
+    for (let i = 0; i < ids.length; i += 5) {
+      const batch = await Promise.all(ids.slice(i, i + 5).map(readOne));
+      wins.push(...batch.filter(Boolean) as DeclaredWin[]);
+      if (i + 5 < ids.length) await sleep(150);
+    }
+    return wins.sort((a, b) => b.winId - a.winId);
   }
 
   // ── Writes ──────────────────────────────────────────────────────────────

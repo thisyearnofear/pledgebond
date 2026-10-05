@@ -2,16 +2,14 @@
  * OpenWinsPanel — the lender's order book: declared on-chain wins with no
  * loan yet, read straight from the liquidity rail via WinDeclared events.
  *
- * Reads go through a public RPC client, so the listing works before the
+ * Reads go through /api/rail/open-wins (server-side + cached) because Arc's
+ * public RPC rate-limits browser bursts, so the listing works before the
  * visitor connects a wallet. Funding one requires the overcollateralized
  * path in LoanTermsModal (the caller signs as the lender).
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { createPublicClient, http } from "viem";
 import { useWallet } from "@/stores/walletStore";
-import { liquidityRailService } from "@/services/liquidityRailService";
-import { NETWORK_CONFIGS } from "@/lib/wallet/constants";
 import { formatUSDC } from "@/lib/format";
 import LoanTermsModal from "@/components/back/LoanTermsModal";
 import Button from "@/components/common/Button";
@@ -21,12 +19,6 @@ import { LoadingSpinner } from "@/components/common/LoadingStates";
 // The rail only exists on Arc today; mainnet joins the table when deployed.
 const RAIL_CHAIN_ID = Number(process.env.NEXT_PUBLIC_RAIL_CHAIN_ID || 5042002);
 
-function publicClientFor(chainId) {
-  const cfg = NETWORK_CONFIGS[chainId];
-  if (!cfg) return null;
-  return createPublicClient({ transport: http(cfg.rpcUrls[0]) });
-}
-
 export default function OpenWinsPanel() {
   const wallet = useWallet();
   const [wins, setWins] = useState([]);
@@ -35,16 +27,13 @@ export default function OpenWinsPanel() {
   const [funding, setFunding] = useState(null);
 
   const load = useCallback(async () => {
-    const client = publicClientFor(RAIL_CHAIN_ID);
-    if (!client) {
-      setError(`No RPC configured for chain ${RAIL_CHAIN_ID}.`);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setError(null);
     try {
-      setWins(await liquidityRailService.listOpenWins(RAIL_CHAIN_ID, client));
+      const res = await fetch(`/api/rail/open-wins?chainId=${RAIL_CHAIN_ID}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Rail read failed (${res.status}).`);
+      setWins(data.wins || []);
     } catch (err) {
       setError(err.message || "Could not read open wins from the rail.");
     } finally {

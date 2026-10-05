@@ -42,6 +42,7 @@ import liquidityRailService from "./liquidityRailService";
 const ARC_TESTNET = 5042002;
 
 const fakePublicClient = {
+  getBlockNumber: vi.fn(async () => 65669500n),
   getLogs: vi.fn(async () => [
     { args: { winId: 1n, hackathonId: 1n, builder: "0xBuilderOne", projectName: "Alpha", prizeAmount: 5_000_000n, declaredAt: 1700000000n } },
     { args: { winId: 2n, hackathonId: 1n, builder: "0xBuilderTwo", projectName: "Beta", prizeAmount: 8_000_000n, declaredAt: 1700000001n } },
@@ -55,6 +56,16 @@ describe("listOpenWins", () => {
     expect(wins.map((w) => w.winId)).toEqual([1]);
     expect(wins[0].projectName).toBe("Alpha");
     expect(wins[0].prizeAmount).toBe("5");
+  });
+
+  it("scans the deployment range in RPC-safe chunks", async () => {
+    fakePublicClient.getLogs.mockClear();
+    await liquidityRailService.listOpenWins(ARC_TESTNET, fakePublicClient as any);
+    const calls = fakePublicClient.getLogs.mock.calls as any[];
+    expect(calls.length).toBeGreaterThan(1);
+    for (const [params] of calls) {
+      expect(Number(params.toBlock - params.fromBlock)).toBeLessThanOrEqual(2000);
+    }
   });
 
   it("degrades to empty when getLogs fails", async () => {
