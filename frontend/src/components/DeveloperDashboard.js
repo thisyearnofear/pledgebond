@@ -338,7 +338,7 @@ export default function DeveloperDashboard() {
       return;
     }
     if (!coreContract) {
-      setError('Prize distribution is not configured on this deployment. Wire BUILDER_CREDIT_CORE_ADDRESS to enable.');
+      setError('Prize distribution was retired with the credit model — the rail records payouts via HackathonRegistry instead.');
       return;
     }
     if (!selectedProjectId) {

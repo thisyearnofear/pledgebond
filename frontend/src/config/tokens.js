@@ -109,95 +109,35 @@ export const USDC_ADDRESSES = {
 };
 
 // ╔══════════════════════════════════════════════════════════════════════╗
-// ║  ⚠️  PLACEHOLDER ADDRESSES — These need real deployed contracts.     ║
-// ║  BUILDER_CREDIT_CORE_ADDRESSES and HACKATHON_REGISTRY_ADDRESSES      ║
-// ║  are set to placeholder values (0x7890...5678) because the actual   ║
-// ║  contracts have not been deployed yet across all chains.             ║
-// ║                                                                      ║
-// ║  Before mainnet launch:                                              ║
-// ║    1. Deploy BuilderCreditCore and HackathonRegistry to each chain   ║
-// ║    2. Update addresses below with real deployed contract addresses   ║
-// ║    3. Remove this warning block                                      ║
+// ║  Deployed contracts. A chain is listed here ONLY once its contract   ║
+// ║  exists at a real address — never add placeholders. Unsupported      ║
+// ║  chains must be absent so isDeployed()/getContracts() fail honestly. ║
+// ║  Manifests: blockchain/deployments/<network>_deployment.json         ║
 // ╚══════════════════════════════════════════════════════════════════════╝
-export const BUILDER_CREDIT_CORE_ADDRESSES = {
-  // Ethereum Mainnet
-  1: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Ethereum Sepolia
-  11155111: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Arbitrum One
-  42161: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Arbitrum Sepolia
-  421614: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Base
-  8453: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Base Sepolia
-  84532: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Optimism
-  10: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // OP Sepolia
-  11155420: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Celo
-  42220: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Celo Alfajores
-  44787: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Linea
-  59144: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Linea Sepolia
-  59141: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  // Arc Testnet
-  5042002: "0xC93Cf6034Bb2193bDA8B942eE91B244aa7DC7942", // deployed — real address
-  // Arc Mainnet — deploy via `npx hardhat run scripts/deployTestnet.js --network arc`
-  5042: process.env.BUILDER_CREDIT_ARC_MAINNET_ADDRESS || "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-};
 
-
+// LiquidityRail proxy (Arc Testnet, deployed 2026-10-05 by scripts/deployTestnet.js)
 export const LIQUIDITY_RAIL_ADDRESSES = {
-  // Arc Testnet — TODO: replace after deploying LiquidityRail
-  5042002: process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_TESTNET_ADDRESS || "0x7890123456789012345678901234567890123456",
-  // Arc Mainnet — TODO: deploy & replace
-  5042: process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_ADDRESS || "0x7890123456789012345678901234567890123456",
-  1: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  11155111: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  42161: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  421614: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  8453: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  84532: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  10: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  11155420: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  42220: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  44787: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  59144: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-  59141: "0x7890123456789012345678901234567890123456", // TODO: deploy & replace
-};
-export const HACKATHON_REGISTRY_ADDRESSES = {
-  // Ethereum Mainnet
-  1: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Ethereum Sepolia
-  11155111: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Arbitrum One
-  42161: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Arbitrum Sepolia
-  421614: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Base
-  8453: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Base Sepolia
-  84532: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Optimism
-  10: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // OP Sepolia
-  11155420: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Celo
-  42220: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Celo Alfajores
-  44787: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Linea
-  59144: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
-  // Linea Sepolia
-  59141: "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
   // Arc Testnet
-  5042002: "0x78077d311e06A05720f50AeD6E42A0D5116D14c1", // deployed — real address
-  // Arc Mainnet — deploy via `npx hardhat run scripts/deployTestnet.js --network arc`
-  5042: process.env.HACKATHON_REGISTRY_ARC_MAINNET_ADDRESS || "0x9012345678901234567890123456789012345678", // TODO: deploy & replace
+  5042002:
+    process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_TESTNET_ADDRESS ||
+    "0xa8CB00A09092203Dd3274EBc065845fe034a0d38",
+  // Arc Mainnet — deploy first: npx hardhat run scripts/deployTestnet.js --network arc
+  ...(process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_ADDRESS
+    ? { 5042: process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_ADDRESS }
+    : {}),
+};
+
+// HackathonRegistry (deployed alongside the rail; the rail's initialize() is
+// wired to exactly this address)
+export const HACKATHON_REGISTRY_ADDRESSES = {
+  // Arc Testnet
+  5042002:
+    process.env.NEXT_PUBLIC_HACKATHON_REGISTRY_TESTNET_ADDRESS ||
+    "0x6C523bf8639515FaCCf6F9A577758C5C415DB89b",
+  // Arc Mainnet — deploy first
+  ...(process.env.NEXT_PUBLIC_HACKATHON_REGISTRY_ADDRESS
+    ? { 5042: process.env.NEXT_PUBLIC_HACKATHON_REGISTRY_ADDRESS }
+    : {}),
 };
 
 export const TESTNET_CHAIN_INFO = {

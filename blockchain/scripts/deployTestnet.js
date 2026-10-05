@@ -149,10 +149,15 @@ async function main() {
   console.log(`👤 Deployer: ${deployer.address}`);
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-  if (chainId === 5042002 || chainId === 5042) {
-    const suffix = chainId === 5042 ? "_MAINNET" : "";
-    console.log(`\n📝 BUILDER_CREDIT_ARC${suffix}_ADDRESS=${proxy.address}`);
-    console.log(`HACKATHON_REGISTRY_ARC${suffix}_ADDRESS=${hackathonRegistry.address}`);
+  if (chainId === 5042002) {
+    console.log("\n📝 Frontend env (tokens.js carries this as the testnet fallback):");
+    console.log(`NEXT_PUBLIC_LIQUIDITY_RAIL_TESTNET_ADDRESS=${proxy.address}`);
+    console.log(`NEXT_PUBLIC_HACKATHON_REGISTRY_TESTNET_ADDRESS=${hackathonRegistry.address}`);
+  } else if (chainId === 5042) {
+    console.log("\n📝 Set these env vars to point the app at this deployment:");
+    console.log(`NEXT_PUBLIC_LIQUIDITY_RAIL_ADDRESS=${proxy.address}`);
+    console.log(`NEXT_PUBLIC_HACKATHON_REGISTRY_ADDRESS=${hackathonRegistry.address}`);
+    console.log(`LIQUIDITY_RAIL_ADDRESS=${proxy.address}  # server allowlist (RealCircleService)`);
   }
 
   return { hackathonRegistry: hackathonRegistry.address, liquidityRail: proxy.address, usdcAddress };

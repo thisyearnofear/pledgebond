@@ -140,12 +140,10 @@ class LiquidityRailService {
     };
   }
 
-  /** True when this chain has a real (non-placeholder) rail deployment. */
+  /** True when this chain has a real deployment (tokens.js lists none otherwise). */
   isDeployed(chainId: number | undefined): boolean {
     if (!chainId) return false;
-    const address = (LIQUIDITY_RAIL_ADDRESSES as Record<number, string>)[chainId];
-    if (!address) return false;
-    return !/^0x0{39}[0-9a-f]*$/i.test(address) && !address.startsWith('0x7890');
+    return Boolean((LIQUIDITY_RAIL_ADDRESSES as Record<number, string>)[chainId]);
   }
 
   async getBounds(

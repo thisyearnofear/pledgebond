@@ -12,6 +12,7 @@ import Modal from "@/components/common/Modal";
 import Button from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { useToastActions } from "@/components/common/Toast";
+import { liquidityRailService } from "@/services/liquidityRailService";
 import { formatUSDC } from "@/lib/format";
 
 const STRUCTURES = [
@@ -57,10 +58,13 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
 
     setSubmitting(true);
     try {
-      // Wired to LiquidityRail.openLoan in WS2/WS3. Until the rail is deployed
-      // on this network the call is not available, so fail loudly rather than
-      // pretending a loan was opened.
-      throw new Error("The liquidity rail is not deployed on this network yet.");
+      // openLoan's caller IS the lender — they sign the transfer that pays the
+      // builder. Listing declared wins with their rail winIds is the next
+      // build (the rail has no reader yet), so funding stays a hard failure.
+      if (!liquidityRailService.isDeployed(wallet?.chainId)) {
+        throw new Error("The liquidity rail is not deployed on this network yet.");
+      }
+      throw new Error("Lender funding isn't wired to the rail yet — the win listing ships next.");
     } catch (error) {
       toast.error(`Could not open the loan: ${error.message}`);
     } finally {

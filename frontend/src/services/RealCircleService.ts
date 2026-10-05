@@ -15,16 +15,15 @@ import {
   USDC_ADDRESSES,
   ARC_CHAIN_ID,
   ARC_CIRCLE_BLOCKCHAIN,
-  BUILDER_CREDIT_CORE_ADDRESSES,
+  LIQUIDITY_RAIL_ADDRESSES,
+  HACKATHON_REGISTRY_ADDRESSES,
 } from "../config/tokens";
 import { calculateFundingAmount as sharedCalculateFundingAmount } from "../lib/funding/calculateFundingAmount";
 
-const PLACEHOLDER_CONTRACT = "0x7890123456789012345678901234567890123456";
-
 /**
  * Build the contract allowlist from runtime sources:
- *   - BUILDER_CREDIT_ARC_ADDRESS / BUILDER_CREDIT_CONTRACT_ADDRESS env vars
- *   - Real (non-placeholder) entries in BUILDER_CREDIT_CORE_ADDRESSES
+ *   - LIQUIDITY_RAIL_ADDRESS env override
+ *   - All deployed entries in LIQUIDITY_RAIL_ADDRESSES / HACKATHON_REGISTRY_ADDRESSES
  *   - All known USDC token contracts (needed for approve() calls)
  *   - Optional comma-separated CIRCLE_ALLOWED_CONTRACTS env override
  *
@@ -34,8 +33,7 @@ function buildAllowedContractAddresses(): Set<string> {
   const allowed = new Set<string>();
 
   const envContracts = [
-    process.env.BUILDER_CREDIT_ARC_ADDRESS,
-    process.env.BUILDER_CREDIT_CONTRACT_ADDRESS,
+    process.env.LIQUIDITY_RAIL_ADDRESS,
     ...(process.env.CIRCLE_ALLOWED_CONTRACTS || "")
       .split(",")
       .map((s) => s.trim())
@@ -48,8 +46,11 @@ function buildAllowedContractAddresses(): Set<string> {
     }
   }
 
-  for (const addr of Object.values(BUILDER_CREDIT_CORE_ADDRESSES) as string[]) {
-    if (addr && addr.toLowerCase() !== PLACEHOLDER_CONTRACT.toLowerCase()) {
+  for (const addr of [
+    ...Object.values(LIQUIDITY_RAIL_ADDRESSES),
+    ...Object.values(HACKATHON_REGISTRY_ADDRESSES),
+  ] as string[]) {
+    if (addr && /^0x[a-fA-F0-9]{40}$/.test(addr)) {
       allowed.add(addr.toLowerCase());
     }
   }

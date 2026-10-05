@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/common/Input";
 import { useToastActions } from "@/components/common/Toast";
 import { useWallet } from "@/stores/walletStore";
 import { useBuilderCredit } from "@/stores/walletStore";
+import { liquidityRailService } from "@/services/liquidityRailService";
 import useWinnerStatus from "@/hooks/useWinnerStatus";
 import { formatUSDC } from "@/lib/format";
 
@@ -70,10 +71,15 @@ export default function BridgeLoanCard() {
   const fee = Math.round(principal * (Number(rateBps) / 10000) * 1e6) / 1e6;
   const netToBuilder = principal - fee;
   const walletReady = Boolean(wallet.account);
+  const railLive = liquidityRailService.isDeployed(wallet.chainId);
 
   function handleReview() {
     if (!walletReady) {
       toast.error("Connect an EVM wallet to draw a loan.");
+      return;
+    }
+    if (!railLive) {
+      toast.error("The liquidity rail is not live on this network — switch to Arc.");
       return;
     }
     if (principal <= 0) {
@@ -155,6 +161,12 @@ export default function BridgeLoanCard() {
           Win declared
         </span>
       </div>
+
+      {!railLive && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+          The liquidity rail is not live on this network. Switch to Arc to draw against this win.
+        </div>
+      )}
 
       {stage === "form" ? (
         <div className="space-y-5">
