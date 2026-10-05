@@ -29,10 +29,12 @@ describe("getRailById", () => {
 });
 
 describe("getRailStatus", () => {
-  it("marks bags as coming soon and the pivot rails as live", () => {
+  it("marks the wired loan rail live and the rest coming soon", () => {
     expect(getRailStatus("bags")).toBe("coming_soon");
     expect(getRailStatus("loan")).toBe("live");
-    expect(getRailStatus("market")).toBe("live");
+    // The rail has placeBet on-chain but no bettor UI wires it yet, so
+    // calling the market "live" would overclaim a fundable instrument.
+    expect(getRailStatus("market")).toBe("coming_soon");
   });
 });
 
@@ -40,6 +42,7 @@ describe("isRailIntegrated", () => {
   it("returns false for coming soon rails", () => {
     expect(isRailIntegrated("bags")).toBe(false);
     expect(isRailIntegrated("loan")).toBe(true);
+    expect(isRailIntegrated("market")).toBe(false);
   });
 
   it("treats beta as available", () => {

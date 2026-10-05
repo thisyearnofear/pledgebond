@@ -13,8 +13,8 @@ describe("CapitalStack", () => {
   it("renders a status pill for every rail", () => {
     render(<CapitalStack />);
 
-    expect(screen.getByText("Coming soon")).toBeInTheDocument();
-    expect(screen.getAllByText("Live")).toHaveLength(2);
+    expect(screen.getAllByText("Coming soon")).toHaveLength(2);
+    expect(screen.getAllByText("Live")).toHaveLength(1);
     for (const rail of CAPITAL_RAILS) {
       expect(screen.getByText(rail.title)).toBeInTheDocument();
     }

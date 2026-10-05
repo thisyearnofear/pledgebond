@@ -95,7 +95,7 @@ export const CAPITAL_RAILS = [
   },
   {
     id: "market",
-    status: "live",
+    status: "coming_soon",
     tone: "green",
     eyebrow: "The market",
     tag: "Speculation",

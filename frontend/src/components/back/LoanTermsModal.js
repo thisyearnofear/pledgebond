@@ -113,7 +113,7 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
             variant="primary"
             onClick={handleFund}
             loading={submitting}
-            disabled={principal <= 0}
+            disabled={principal <= 0 || !winId}
           >
             Fund {principal > 0 ? formatUSDC(principal) : "loan"}
           </Button>
@@ -121,6 +121,15 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
       }
     >
       <div className="space-y-6">
+        {!winId && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+            <p className="font-medium">This shortlisted project has no declared on-chain win to lend against yet.</p>
+            <p className="mt-1 text-xs">
+              A bridge loan is only fundable once the organizer declares the win on the rail. Open those in{" "}
+              <span className="font-semibold">Open bridge loans</span> at the top of this page.
+            </p>
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-primary mb-2">
             Risk structure

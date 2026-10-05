@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useWallet, useNanopayment } from "@/stores/walletStore";
+import { useToastActions } from "@/components/common/Toast";
 import { useProjectData } from "@/hooks/useProjectData";
 import useProjectFilters from "@/hooks/useProjectFilters";
 import ProjectCard from "@/components/backer/ProjectCard";
@@ -33,6 +34,7 @@ export default function DiscoverTab() {
   const wallet = useWallet();
   const { connected } = wallet;
   const { payForScout, loading: nanopaymentLoading, nanopaymentDemoMode } = useNanopayment();
+  const toast = useToastActions();
 
   const [backingProject, setBackingProject] = useState(null);
   const [scoutData, setScoutData] = useState(null);
@@ -103,6 +105,19 @@ export default function DiscoverTab() {
 
   const handleBackProject = (project) => {
     if (!connected) return;
+    // A bridge loan is only fundable against a win the organizer has
+    // declared on the rail. Shortlisted Firestore projects carry no winId,
+    // so route the backer to the Open bridge loans panel instead of opening
+    // a funding modal that can't be completed.
+    if (!project?.winId) {
+      toast.info(
+        "Fund a loan against a declared on-chain win — see Open bridge loans above."
+      );
+      document
+        .getElementById("open-bridge-loans")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     setBackingProject(project);
   };
 

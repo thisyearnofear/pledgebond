@@ -46,7 +46,7 @@ export default function OpenWinsPanel() {
   }, [load]);
 
   return (
-    <Card className="p-5 mb-6">
+    <Card id="open-bridge-loans" className="p-5 mb-6">
       <div className="flex items-center justify-between gap-3 mb-1">
         <div>
           <h3 className="font-semibold text-primary">Open bridge loans</h3>
