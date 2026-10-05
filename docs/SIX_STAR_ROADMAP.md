@@ -58,7 +58,7 @@ This document tracks the full initiative to elevate PledgeBond from a functional
 | # | Item | Description |
 |---|---|---|
 | R1 | Create `pledgebond` Firebase / GCP project | `.env.local`, `.firebaserc`, and Firebase fallback values are set to `pledgebond`; the project must exist before deploys work. Use Blaze plan so Storage works; see Firebase strategy below. |
-| R2 | Rebuild and redeploy Solana program | The SNS identity message namespace changed to `pledgebond:sns-identity:v1`; the on-chain program and IDL must be rebuilt and redeployed to match. |
+| R2 | ~~Rebuild and redeploy Solana program~~ | **Closed 2026-10-05:** the Anchor program was retired with the credit model — see `docs/CHANGELOG.md`. No Solana program to rebuild; the Bags rail uses the Bags SDK only. |
 | R3 | Register `.sol` agent domains | `pledgebond-scout.sol`, `pledgebond-underwriter.sol`, `pledgebond-verifier.sol`, `pledgebond-rebalance.sol` need Solana Name Service registration. |
 | R4 | Regenerate Farcaster signature | `public/.well-known/farcaster.json` frame values are updated, but the `accountAssociation` signature is still for the old domain and must be regenerated. |
 | R5 | GitHub / Vercel / DNS migration | Rename the GitHub repo to `thisyearnofear/pledgebond`, point Vercel project to `pledgebond.vercel.app`, and configure `pledgebond.com` DNS. |
@@ -143,9 +143,9 @@ Activities written to the `activities` collection are polled by `useNotification
 | `payout_processed` | 💰 Payout secured! | Builder/Backer | Funding processed |
 | `follow` | 👥 New follower | Builder | Follow event |
 
-### On-Chain Self-Verification Guard
+### Self-Verification Guard
 
-The Anchor program (`blockchain-solana/programs/.../lib.rs`) enforces `require!(verifier != developer.key(), ErrorCode::SelfVerificationNotAllowed)` in `request_funding`. The client-side `SolanaCreditService.requestFunding` adds a parallel guard. Developers cannot set themselves as their own milestone verifier at either layer.
+The retired Solana Anchor program once enforced `ErrorCode::SelfVerificationNotAllowed` client- and on-side. Today the guard is structural: `HackathonRegistry.declareWinner` / `recordPayout` are host-or-admin only, and credibility is derived from that public payment history — a builder cannot vouch for themselves because the registry records who declared and who paid, not what a score says.
 
 ### Trust Gate (Leaderboard)
 

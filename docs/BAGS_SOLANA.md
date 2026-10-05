@@ -104,10 +104,10 @@ graph TD
     B -->|AI Analysis| C[AI Underwriter]
     C -->|Recommendation| D{Bags Boost?}
     D -->|Yes| E[Bags SDK: Token Launch]
-    D -->|No| F[Standard Credit Line]
+    D -->|No| F[Bridge Loan - EVM LiquidityRail]
     E -->|Trading Volume| G[Bags Fee Share]
     G -->|Yield| H[Project Backers]
-    F -->|Repayments| H
+    F -->|Loan repayments| I[Lender]
 ```
 
 ## Environment Variables Required

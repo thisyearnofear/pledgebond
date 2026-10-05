@@ -19,7 +19,7 @@ The value is the reasoning trace, not just the trade.
 ## What We Built
 
 ### 1. AI Scout — Autonomous Portfolio Manager
-- **What it does:** Continuously evaluates all builder projects across Solana, Arc, Celo, Base, Linea, Arbitrum, Ethereum, and Optimism. Scores each project on GitHub velocity, completeness, and community signals. Recommends micro-backings with specific multipliers.
+- **What it does:** Continuously evaluates all builder projects across Solana, Arc, Celo, Base, Linea, Arbitrum, Ethereum, and Optimism. Scores each project on GitHub velocity, completeness, and community signals. Flags bridge-loan candidates with specific funding notes.
 - **Why it wins:** Not just scores — it produces **structured reasoning traces** explaining WHY each project was selected. These traces are persisted on-chain and shareable at `/scout/trace/{runId}`.
 - **Monetization:** `0.01 USDC` per scout run via Circle nanopayments on Arc.
 - **On-chain execution:** Removed. Agent-wallet staking was deleted in Phase 0 — a 0.01 USDC toll could authorize leveraged platform capital. `/api/agent/execute` returns 410.
