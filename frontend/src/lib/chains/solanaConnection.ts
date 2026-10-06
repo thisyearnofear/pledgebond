@@ -4,7 +4,8 @@
  * Single source of truth for Solana RPC endpoint resolution and Connection
  * construction. Previously duplicated in 4 files (SolanaBagsService.ts,
  * pages/api/bags/market.js, pages/api/agent/verify.js,
- * components/back/PortfolioTab.js). All of them now import from here.
+ * components/back/PortfolioTab.js); the Bags files are gone and the rest
+ * import from here (directly or via lib/wallet/constants.ts).
  *
  * The historical location `lib/wallet/constants.ts` re-exports these
  * symbols for backward compatibility — no need to migrate existing wallet

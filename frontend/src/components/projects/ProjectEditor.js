@@ -107,8 +107,6 @@ export default function ProjectEditor({ projectSlug }) {
     fundingAmount: draft?.fundingAmount || "",
     milestones: draft?.milestones || [""],
     hackathons: draft?.hackathons || [],
-    launchOnBags: draft?.launchOnBags || false,
-    bagsTokenMetadata: draft?.bagsTokenMetadata || { name: "", symbol: "", description: "" },
     liveUrl: draft?.liveUrl || "",
     otherCategoryDetail: draft?.otherCategoryDetail || "",
     accentColor: draft?.accentColor || null,
@@ -347,19 +345,6 @@ export default function ProjectEditor({ projectSlug }) {
         return;
       }
 
-      let bagsLaunch = null;
-      if (cleaned.ecosystem === "solana" && form.launchOnBags) {
-        if (!connected || activeChainFamily !== "solana") {
-          throw new Error("Please connect your Solana wallet to launch a Bags token.");
-        }
-        try {
-          const { solanaBagsService } = await import("@/services/SolanaBagsService");
-          bagsLaunch = await solanaBagsService.launchBagsToken(form.bagsTokenMetadata);
-        } catch (err) {
-          throw new Error(`Bags token launch failed: ${err.message}`);
-        }
-      }
-
       const token = await currentUser.getIdToken();
       const res = await fetch("/api/projects", {
         method: "POST",
@@ -367,8 +352,6 @@ export default function ProjectEditor({ projectSlug }) {
         body: JSON.stringify({
           ...projectInput,
           imageUrl: image.imageUrl || null,
-          launchOnBags: form.launchOnBags,
-          bagsTokenAddress: bagsLaunch?.mint || null,
           builderSnsDomain: cleaned.builderSnsDomain || null,
         }),
       });

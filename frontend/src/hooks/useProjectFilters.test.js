@@ -6,9 +6,9 @@ import { renderHook, act } from "@testing-library/react";
 import useProjectFilters from "@/hooks/useProjectFilters";
 
 const projects = [
-  { id: "1", name: "One", ecosystem: "base", health: 90, confidence: 50, activeMultiplier: 2 },
-  { id: "2", name: "Two", ecosystem: "solana", health: 70, confidence: 80, activeMultiplier: 1.5 },
-  { id: "3", name: "Three", ecosystem: "base", health: 60, confidence: 40, activeMultiplier: 3 },
+  { id: "1", name: "One", ecosystem: "base", health: 90, confidence: 50 },
+  { id: "2", name: "Two", ecosystem: "solana", health: 70, confidence: 80 },
+  { id: "3", name: "Three", ecosystem: "base", health: 60, confidence: 40 },
 ];
 
 describe("useProjectFilters", () => {

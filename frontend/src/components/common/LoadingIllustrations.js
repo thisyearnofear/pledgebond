@@ -223,73 +223,6 @@ export const GitHubLoadingIllustration = ({
   );
 };
 
-// Credit Score Loading
-export const CreditScoreLoadingIllustration = ({ 
-  size = 'md',
-  className = '',
-  ...props 
-}) => {
-  return (
-    <div className={loadingVariants({ size, className })} {...props}>
-      <div className="mb-6 relative">
-        {/* Animated Credit Score Circle */}
-        <svg className="h-24 w-24 mx-auto" viewBox="0 0 100 100">
-          <circle
-            cx="50"
-            cy="50"
-            r="40"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="8"
-            className="text-background-secondary"
-          />
-          <circle
-            cx="50"
-            cy="50"
-            r="40"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="8"
-            strokeLinecap="round"
-            className="text-primary-500 animate-pulse"
-            strokeDasharray="251.2"
-            strokeDashoffset="125.6"
-            transform="rotate(-90 50 50)"
-          />
-        </svg>
-        
-        {/* Animated Score Text */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center animate-pulse">
-            <div className="h-6 w-12 bg-background-secondary rounded mx-auto mb-1" />
-            <div className="h-3 w-8 bg-background-secondary rounded mx-auto" />
-          </div>
-        </div>
-      </div>
-      
-      <h3 className="text-lg font-medium text-primary mb-2">Calculating Credit Score</h3>
-      <p className="text-secondary max-w-sm">
-        Analyzing your developer reputation across platforms...
-      </p>
-      
-      <div className="mt-4 flex justify-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <div className="h-2 w-2 bg-primary-500 rounded-full animate-pulse" />
-          <span className="text-xs text-secondary">GitHub</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="h-2 w-2 bg-secondary-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-          <span className="text-xs text-secondary">Social</span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <div className="h-2 w-2 bg-success-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
-          <span className="text-xs text-secondary">On-chain</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 // MetaMask Connection Loading
 export const MetaMaskLoadingIllustration = ({ 
   size = 'md',
@@ -338,7 +271,6 @@ export const LoadingState = ({
   const loadingComponents = {
     default: DataLoadingIllustration,
     github: GitHubLoadingIllustration,
-    credit: CreditScoreLoadingIllustration,
     metamask: MetaMaskLoadingIllustration
   };
 

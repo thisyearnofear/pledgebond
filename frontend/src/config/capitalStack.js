@@ -1,5 +1,5 @@
 /**
- * Capital stack rails — single source of truth for the three funding instruments.
+ * Capital stack rails — single source of truth for the two funding instruments.
  */
 
 /** @typedef {'live' | 'beta' | 'coming_soon'} RailStatus */
@@ -55,25 +55,6 @@ export const RAIL_TONES = {
 
 /** @type {CapitalRail[]} */
 export const CAPITAL_RAILS = [
-  {
-    id: "bags",
-    status: "coming_soon",
-    tone: "purple",
-    eyebrow: "Rail 1",
-    tag: "Pre-prize",
-    title: "Bags Token",
-    shortTitle: "Bags",
-    emoji: "🎒",
-    description:
-      "No prize pipeline yet? Launch a project token on Solana. Community buys in, you earn fee-share yield.",
-    bullets: [
-      "Community capital from token buyers",
-      "Fee-share yield from trading volume",
-      "No verification required",
-    ],
-    footerLeft: "Backer yield: Fee-share %",
-    footerRight: "Risk: Market-driven",
-  },
   {
     id: "loan",
     status: "live",

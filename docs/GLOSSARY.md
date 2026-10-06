@@ -30,8 +30,6 @@ Defines every domain-specific term used across the codebase and docs.
 
 | Term | Category | Definition |
 |------|----------|------------|
-| **Bags** | Service | Solana token-launch mechanism. Optional and off the critical path — not collateral for a loan, not a backer reward. |
-| **Cloak** | Service | Privacy layer for shielded USDC transfers on Solana. Keeps positions and payment amounts hidden. |
 | **Compass Score** | Metric | Lender portfolio health score — measures diversification and risk concentration. |
 | **Entity Secret** | Config | Circle API credential used to sign requests to the W3S SDK. Server-side only — must never reach the frontend. Set via `CIRCLE_ENTITY_SECRET`. |
 | **HackathonRegistry** | Contract | Source of truth for hackathons and winner declarations. `declareWinner` / `recordPayout` anchor the `declaredAt` / `paidAt` pair that makes a win underwritable and a builder's payment history public. |

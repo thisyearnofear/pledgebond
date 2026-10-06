@@ -23,7 +23,6 @@ export {
   CardSkeleton,
   DataLoadingIllustration,
   GitHubLoadingIllustration,
-  CreditScoreLoadingIllustration,
   MetaMaskLoadingIllustration,
   LoadingState
 } from '../LoadingIllustrations';
@@ -48,7 +47,6 @@ export {
   APIErrorState,
   GitHubErrorState,
   MetaMaskErrorState,
-  CreditScoreErrorState,
   PermissionErrorState,
   NotFoundErrorState,
   ErrorBoundaryFallback
@@ -92,7 +90,6 @@ export const IconCollections = {
 // Custom Icon Registry
 export const CustomIconRegistry = {
   // Credit & Finance
-  'credit-score': 'CreditScore',
   'funding': 'Funding',
   'usdc': 'USDC',
   
@@ -121,7 +118,6 @@ export const IllustrationUtils = {
   getLoadingState: (context) => {
     const loadingStates = {
       github: 'GitHubLoadingIllustration',
-      credit: 'CreditScoreLoadingIllustration',
       metamask: 'MetaMaskLoadingIllustration',
       default: 'DataLoadingIllustration'
     };
@@ -152,7 +148,6 @@ export const IllustrationUtils = {
       api: 'APIErrorState',
       github: 'GitHubErrorState',
       metamask: 'MetaMaskErrorState',
-      credit: 'CreditScoreErrorState',
       permission: 'PermissionErrorState',
       notfound: 'NotFoundErrorState',
       boundary: 'ErrorBoundaryFallback',

@@ -11,8 +11,8 @@ import {
 } from "@/config/capitalStack";
 
 describe("CAPITAL_RAILS", () => {
-  it("defines three rails in progression order", () => {
-    expect(CAPITAL_RAILS.map((r) => r.id)).toEqual(["bags", "loan", "market"]);
+  it("defines two rails in progression order", () => {
+    expect(CAPITAL_RAILS.map((r) => r.id)).toEqual(["loan", "market"]);
   });
 
   it("every rail has a display status label", () => {
@@ -29,8 +29,7 @@ describe("getRailById", () => {
 });
 
 describe("getRailStatus", () => {
-  it("marks the wired loan rail live and the rest coming soon", () => {
-    expect(getRailStatus("bags")).toBe("coming_soon");
+  it("marks the wired loan rail live and the market coming soon", () => {
     expect(getRailStatus("loan")).toBe("live");
     // The rail has placeBet on-chain but no bettor UI wires it yet, so
     // calling the market "live" would overclaim a fundable instrument.
@@ -40,7 +39,6 @@ describe("getRailStatus", () => {
 
 describe("isRailIntegrated", () => {
   it("returns false for coming soon rails", () => {
-    expect(isRailIntegrated("bags")).toBe(false);
     expect(isRailIntegrated("loan")).toBe(true);
     expect(isRailIntegrated("market")).toBe(false);
   });

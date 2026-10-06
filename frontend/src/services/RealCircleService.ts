@@ -18,8 +18,6 @@ import {
   LIQUIDITY_RAIL_ADDRESSES,
   HACKATHON_REGISTRY_ADDRESSES,
 } from "../config/tokens";
-import { calculateFundingAmount as sharedCalculateFundingAmount } from "../lib/funding/calculateFundingAmount";
-
 /**
  * Build the contract allowlist from runtime sources:
  *   - LIQUIDITY_RAIL_ADDRESS env override
@@ -102,14 +100,6 @@ interface TransactionConfig {
   contractAddress?: string;
   calldata?: string;
   idempotencyKey?: string;
-}
-
-interface FundingResult {
-  success: boolean;
-  walletId: string;
-  fundingAmount: number;
-  creditScore: number;
-  message: string;
 }
 
 interface CircleResponse<T = any> {
@@ -547,34 +537,7 @@ class RealCircleService {
       throw new Error(`Ping failed: ${error.message}`);
     }
   }
-
-  async processDeveloperFunding(
-    developerAddress: string,
-    creditScore: number,
-    metadata: Record<string, any> = {}
-  ): Promise<FundingResult> {
-    if (!this.isWalletConfigured()) {
-      throw new Error("Circle API not configured for wallet operations");
-    }
-
-    const wallet = await this.createWallet({
-      name: `Developer Wallet - ${metadata.githubUsername || "Unknown"}`,
-      description: `Wallet for developer ${developerAddress}`,
-      userId: developerAddress,
-      metadata: { creditScore, developerAddress, ...metadata },
-    });
-
-    return {
-      success: true,
-      walletId: wallet.data.wallets[0].id,
-      fundingAmount: 0,
-      creditScore,
-      message: "Wallet created successfully. No platform funding is disbursed.",
-    };
-  }
 }
-
-export { calculateFundingAmount } from "../lib/funding/calculateFundingAmount";
 
 // Export singleton instance
 export const realCircleService = new RealCircleService();

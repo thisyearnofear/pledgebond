@@ -22,7 +22,7 @@ src/components/
 ├── funding/            # Cross-chain funding UI
 ├── github/             # GitHub import/data
 ├── hackathons/         # Hackathon-specific components
-├── onboarding/         # UnifiedOnboarding, PrivacyOnboarding tours
+├── onboarding/         # UnifiedOnboarding tour
 ├── projects/           # Project cards, details, editor
 ├── sections/           # Landing page sections (Hero, Features, etc.)
 └── showcase/           # Demo/showcase components

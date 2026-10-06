@@ -1,13 +1,12 @@
 /**
- * Score Preview API — Public, lightweight credit score estimate
- * Returns an estimated score from public GitHub data (profile + repos only).
+ * Score Preview API — Public builder track-record preview
+ * Returns GitHub signals (profile + repos only) for the track-record card.
  * No auth required. Skips expensive calls (commits, PRs, issues, orgs).
  *
  * Usage: GET /api/score/preview?username=octocat
  */
 
-import { withApiMiddleware } from '@/utils/apiMiddleware';
-import { calculatePreviewScore, getCreditTier } from '@/lib/scoring';
+import { withApiMiddleware } from "@/utils/apiMiddleware";
 
 const GITHUB_API = 'https://api.github.com';
 const USERNAME_REGEX = /^[a-zA-Z0-9-]{1,39}$/;
@@ -68,9 +67,6 @@ async function handler(req, res) {
       reposRes.json(),
     ]);
 
-    const preview = calculatePreviewScore(profile, repos);
-    const estimatedScore = preview.estimatedCreditRange;
-
     const publicRepos = repos.filter((r) => !r.private).length;
     const totalStars = repos.reduce((sum, r) => sum + r.stargazers_count, 0);
     const accountAgeDays = Math.floor(
@@ -81,12 +77,6 @@ async function handler(req, res) {
       success: true,
       data: {
         username: profile.login,
-        estimatedScore,
-        tier: getCreditTier(estimatedScore),
-        breakdown: {
-          profile: preview.profile,
-          repositories: preview.repositories,
-        },
         stats: {
           publicRepos,
           totalStars,

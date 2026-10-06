@@ -150,9 +150,6 @@ export function calculateConfidence(project: ProjectData): number {
 }
 
 /**
- * Derive active multiplier from backing data.
- * Uses different tiers based on project maturity signals when no explicit data.
-/**
  * Derive hours since last check-in from available data.
  */
 export function deriveLastCheckIn(project: ProjectData, now: number = Date.now()): number {

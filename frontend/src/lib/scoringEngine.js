@@ -13,8 +13,6 @@ export {
   calculateRepositoryScore,
   calculateConsistencyScore,
   calculateFullGitHubScore,
-  calculatePreviewScore,
-  getCreditTier,
 } from './scoring';
 
 // Scoring weights for project scoring
@@ -85,93 +83,6 @@ export function computeScore(project) {
     total: Math.min(total, 100), 
     breakdown: { github: Math.round(g), completeness: Math.round(c), community: Math.round(s) } 
   };
-}
-
-/**
- * Strategic Advisor Logic (Phase 8: Bags Hackathon)
- * Generates comparative ecosystem insights and Bags launch recommendations.
- */
-export function computeStrategicAdvice(project) {
-  const { stats, ecosystem, description = "" } = project;
-  const score = computeScore(project).total;
-  
-  const advice = {
-    ecosystemFit: [],
-    bagsRecommendation: null,
-    tradeOffMatrix: {
-      solanaBags: {
-        pros: [],
-        cons: [],
-        suitability: 0
-      },
-      circleArc: {
-        pros: [],
-        cons: [],
-        suitability: 0
-      }
-    }
-  };
-
-  // 1. Analyze for Solana/Bags
-  let solanaSuitability = 50;
-  if (stats?.stars > 50 || stats?.forks > 10) {
-    advice.tradeOffMatrix.solanaBags.pros.push("High community viral potential");
-    solanaSuitability += 20;
-  }
-  if (description.toLowerCase().includes("game") || description.toLowerCase().includes("social") || description.toLowerCase().includes("consumer")) {
-    advice.tradeOffMatrix.solanaBags.pros.push("Perfect fit for high-throughput consumer apps");
-    solanaSuitability += 20;
-  }
-  if (score > 80) {
-    advice.tradeOffMatrix.solanaBags.pros.push("Strong health score signals high token confidence");
-    solanaSuitability += 10;
-  }
-  advice.tradeOffMatrix.solanaBags.cons.push("Higher market volatility for new tokens");
-  advice.tradeOffMatrix.solanaBags.suitability = Math.min(solanaSuitability, 100);
-
-  // 2. Analyze for Circle/Arc
-  let circleSuitability = 50;
-  if (description.toLowerCase().includes("infra") || description.toLowerCase().includes("sdk") || description.toLowerCase().includes("b2b")) {
-    advice.tradeOffMatrix.circleArc.pros.push("Stable environment for high-utility B2B apps");
-    circleSuitability += 30;
-  }
-  if (stats?.commits > 200) {
-    advice.tradeOffMatrix.circleArc.pros.push("Deep dev history favors milestone-based credit");
-    circleSuitability += 15;
-  }
-  advice.tradeOffMatrix.circleArc.cons.push("Lower immediate retail community exposure");
-  advice.tradeOffMatrix.circleArc.suitability = Math.min(circleSuitability, 100);
-
-  // 3. Generate Bags Launch Recommendation
-  if (solanaSuitability >= 70) {
-    const teamSize = project.teamMembers?.length || 1;
-    advice.bagsRecommendation = {
-      recommended: true,
-      reason: "High social/consumer signals suggest a community-led liquidity launch would be highly effective.",
-      parameters: {
-        feeSplit: teamSize > 2 ? "30/70" : "10/90",
-        initialPurchase: score > 85 ? "500 USDC" : "100 USDC",
-        launchStrategy: "Community-Led Liquidity"
-      }
-    };
-  } else {
-    advice.bagsRecommendation = {
-      recommended: false,
-      reason: "Project favors stable utility over viral growth. A bridge loan on Arc against a declared win fits better than a token launch.",
-      parameters: null
-    };
-  }
-
-  // 4. General Ecosystem Fit
-  if (solanaSuitability > circleSuitability + 15) {
-    advice.ecosystemFit = ["Best for Viral Growth", "Bags Boost Recommended"];
-  } else if (circleSuitability > solanaSuitability + 15) {
-    advice.ecosystemFit = ["Best for Stable Utility", "Arc Rails Recommended"];
-  } else {
-    advice.ecosystemFit = ["Hybrid Suitable", "User Discretion Recommended"];
-  }
-
-  return advice;
 }
 
 export function getRecommendation(score) {

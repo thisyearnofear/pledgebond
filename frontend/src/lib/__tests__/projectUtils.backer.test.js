@@ -6,9 +6,9 @@ import {
 } from "@/utils/projectUtils";
 
 const sampleProjects = [
-  { id: "a", name: "Alpha", ecosystem: "base", health: 80, confidence: 70, activeMultiplier: 2, createdAt: "2024-01-01" },
-  { id: "b", name: "Beta Solana", ecosystem: "solana", health: 90, confidence: 60, activeMultiplier: 1.5, createdAt: "2024-06-01" },
-  { id: "c", name: "Gamma", ecosystem: "base", health: 50, confidence: 90, activeMultiplier: 3, createdAt: "2023-01-01" },
+  { id: "a", name: "Alpha", ecosystem: "base", health: 80, confidence: 70, createdAt: "2024-01-01" },
+  { id: "b", name: "Beta Solana", ecosystem: "solana", health: 90, confidence: 60, createdAt: "2024-06-01" },
+  { id: "c", name: "Gamma", ecosystem: "base", health: 50, confidence: 90, createdAt: "2023-01-01" },
 ];
 
 describe("filterBackerProjects", () => {

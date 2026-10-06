@@ -28,7 +28,7 @@ describe('LeaderboardRow', () => {
     const entry = { name: 'bob', address: '0xabc', totalBacked: 1234, projectsBacked: 7, score: 88 };
     render(<LeaderboardRow entry={entry} rank={2} type="backers" />);
     expect(screen.getByText('bob')).toBeInTheDocument();
-    expect(screen.getByText('$1,234 staked · 7 projects')).toBeInTheDocument();
+    expect(screen.getByText('$1,234 funded · 7 projects')).toBeInTheDocument();
     expect(screen.getByText('backing score')).toBeInTheDocument();
     expect(screen.getByText('88')).toBeInTheDocument();
   });

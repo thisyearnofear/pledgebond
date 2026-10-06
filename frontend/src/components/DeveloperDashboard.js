@@ -42,7 +42,6 @@ function FleetOperationsSection({
   projectDetails,
   selectedProjectId,
   setSelectedProjectId,
-  setShowStakeModal,
   handleProjectSelect,
   handleMilestoneComplete,
 }) {
@@ -64,7 +63,7 @@ function FleetOperationsSection({
             {developerProjects.map((projectId) => {
               const project = projectDetails[projectId];
               if (!project) return null;
-              const tier = getEvolutionTier(project.creditScore || 0);
+              const tier = getEvolutionTier(project.stats?.healthScore || 0);
 
               return (
                 <Card
@@ -83,16 +82,6 @@ function FleetOperationsSection({
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-sm font-bold text-blue-600 dark:text-blue-400">${formatUSDC(project.fundingAmount)}</span>
                         <div className="flex gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedProjectId(projectId);
-                              setShowStakeModal(true);
-                            }}
-                            className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 hover:bg-emerald-200 dark:hover:bg-emerald-900/60 px-3 py-1 rounded-full transition-colors"
-                          >
-                            BOOST
-                          </button>
                           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-full">{tier.name}</span>
                         </div>
                       </div>
@@ -609,7 +598,6 @@ export default function DeveloperDashboard() {
               projectDetails={projectDetails}
               selectedProjectId={selectedProjectId}
               setSelectedProjectId={setSelectedProjectId}
-              setShowStakeModal={setShowStakeModal}
               handleProjectSelect={handleProjectSelect}
               handleMilestoneComplete={handleMilestoneComplete}
             />
@@ -643,7 +631,6 @@ export default function DeveloperDashboard() {
             projectDetails={projectDetails}
             selectedProjectId={selectedProjectId}
             setSelectedProjectId={setSelectedProjectId}
-            setShowStakeModal={setShowStakeModal}
             handleProjectSelect={handleProjectSelect}
             handleMilestoneComplete={handleMilestoneComplete}
             formatUSDC={formatUSDC}

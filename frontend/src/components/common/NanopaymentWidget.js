@@ -16,7 +16,6 @@ import {
   CurrencyDollarIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  ArrowTrendingUpIcon,
   RocketLaunchIcon,
   CogIcon,
   ChevronDownIcon,
@@ -246,12 +245,6 @@ export default function NanopaymentWidget({ compact = false, onPaymentComplete }
                 ))}
               </div>
 
-              {lastResult?.strategicAdvice && (
-                <StrategicAdvisorPanel 
-                  advice={lastResult.strategicAdvice} 
-                  onDismiss={() => setLastResult(null)}
-                />
-              )}
             </div>
           )}
 
@@ -339,59 +332,6 @@ function TabButton({ active, onClick, children }) {
     >
       {children}
     </button>
-  );
-}
-
-function StrategicAdvisorPanel({ advice, onDismiss }) {
-  if (!advice) return null;
-
-  return (
-    <div className="mt-4 p-4 bg-indigo-50 rounded-xl border border-indigo-100 animate-fade-in">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <RocketLaunchIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-          <h4 className="font-bold text-indigo-900">Strategic advice</h4>
-        </div>
-        <button onClick={onDismiss} className="text-indigo-400 hover:text-indigo-600 dark:text-indigo-400">
-          <ChevronUpIcon className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-4">
-        {advice.ecosystemFit.map((fit, i) => (
-          <span key={i} className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">
-            {fit}
-          </span>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-white p-3 rounded-lg border border-indigo-50">
-          <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Solana / Bags</p>
-          <div className="flex items-end justify-between">
-            <span className="text-lg font-black text-indigo-700">{advice.tradeOffMatrix.solanaBags.suitability}%</span>
-            <span className="text-[10px] text-indigo-500 dark:text-indigo-400">Fit score</span>
-          </div>
-        </div>
-        <div className="bg-white p-3 rounded-lg border border-indigo-50">
-          <p className="text-[10px] font-bold text-indigo-400 uppercase mb-1">Circle / x402</p>
-          <div className="flex items-end justify-between">
-            <span className="text-lg font-black text-indigo-700">{advice.tradeOffMatrix.circleArc.suitability}%</span>
-            <span className="text-[10px] text-indigo-500 dark:text-indigo-400">Fit score</span>
-          </div>
-        </div>
-      </div>
-
-      {advice.bagsRecommendation && (
-        <div className="bg-white p-3 rounded-lg border-l-4 border-emerald-500 shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowTrendingUpIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-xs font-bold text-emerald-900 dark:text-emerald-200">Suggested direction</span>
-          </div>
-          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">{advice.bagsRecommendation.reason}</p>
-        </div>
-      )}
-    </div>
   );
 }
 

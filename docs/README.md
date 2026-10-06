@@ -26,7 +26,7 @@ Credibility is **derived** from that payment history — coverage, speed, defaul
 │       ├── lib/          # Integrations (LiFi, Dune, GitHub analytics, Arc payment middleware, badges)
 │       │   └── badges/   # Client-side badge inference (computeBadges.js)
 │       ├── pages/        # Next.js pages + API routes
-│       ├── services/     # Business logic (Circle, Solana Bags, Cloak privacy, SNS identity, QVAC local AI)
+│       ├── services/     # Business logic (Circle, SNS identity, QVAC local AI)
 │       └── utils/        # Utilities
 │
 ├── blockchain/           # Hardhat workspace (UUPS upgradeable contracts)
@@ -200,8 +200,7 @@ The legacy Anchor program (`blockchain-solana/`) implemented the previous
 credit-line model — credit lines, backing multipliers, milestone vaults, a
 protocol treasury. It was deleted with the liquidity-rail pivot; see
 [`docs/VISION.md`](VISION.md) for the target model and git history for the
-program. What remains on the Solana side is the Bags SDK integration
-(`frontend/src/services/SolanaBagsService.ts`) and the
+program. What remains on the Solana side is the
 `PayoutVerifierService` Solana transfer scan.
 
 ### EVM (Solidity): UUPS Upgradeable
@@ -243,7 +242,6 @@ Addresses per network are written to `blockchain/deployments/<network>_deploymen
 - **Circle W3S (Developer-Controlled Wallets)** — USDC settlement, wallet management, and smart contract execution on Arc. Single service (`RealCircleService`) handles all Circle API calls. Webhook endpoint at `/api/circle/webhook` for push-based transaction settlement. Contract calls validated against an allowlist of server-controlled deployments. Outbound transfers may only source from wallets in `RealCircleService.getServerControlledWallets()` — callers may not name the source wallet.
 - **MetaMask SDK** — wallet connection
 - **Solana Name Service (SNS)** — .sol identity
-- **Cloak** — private USDC transfers
 - **QVAC** — local-first on-device AI inference
 - **Firebase** — auth + Firestore
 - **GitHub API** — repo analytics and identity verification

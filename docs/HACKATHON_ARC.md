@@ -100,7 +100,7 @@ These traces are:
 | Wallets | Circle Developer-Controlled Wallets |
 | Agent LLM | Perplexity/sonar via AIsa x402 |
 | Frontend | Next.js, Tailwind, Firestore real-time |
-| Agents | Scout, Underwriter, Verifier, Executor |
+| Agents | Scout, Underwriter, Verifier (Executor removed — see §4) |
 | Payments | x402 nanopayments (0.01–0.05 USDC) |
 
 ---
@@ -148,7 +148,7 @@ These traces are:
 ## Future Work (Post-Hackathon)
 
 - **Prediction markets:** Use the verifier as an oracle for "Will [project] ship by [date]?" markets.
-- **Multi-agent coordination:** Scout finds projects → Underwriter scores → Verifier checks claims → Executor backs. Full pipeline.
+- **Multi-agent coordination:** Scout finds projects → Underwriter scores → Verifier checks claims. Lenders run the pipeline read-only; no agent moves user capital.
 - **Mainnet migration:** Move from Arc testnet to mainnet with real user funds.
 - **MiniPay integration:** Package the Scout as a Celo MiniApp for mobile users.
 

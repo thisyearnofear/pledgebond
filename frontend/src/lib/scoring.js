@@ -121,36 +121,3 @@ export function calculateFullGitHubScore(userData, commits, pullRequests, issues
     breakdown: scores,
   };
 }
-
-/**
- * Lightweight preview score — profile + repos only (no expensive API calls)
- * Used by /api/score/preview
- */
-export function calculatePreviewScore(profile, repos) {
-  const stats = {
-    recentRepos: repos.filter(
-      (repo) => new Date(repo.updated_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    ).length,
-  };
-
-  const profileScore = calculateProfileScore(profile);
-  const repoScore = calculateRepositoryScore(repos, stats);
-
-  const rawWeighted = profileScore * 0.15 + repoScore * 0.2;
-  const internalScore = Math.min(Math.round(rawWeighted / 0.35), 100);
-
-  return {
-    profile: Math.round(profileScore),
-    repositories: Math.round(repoScore),
-    internalScore,
-    estimatedCreditRange: Math.round(400 + (internalScore / 100) * 450),
-  };
-}
-
-export function getCreditTier(score) {
-  if (score >= 800) return 'Elite Voyager';
-  if (score >= 700) return 'Proven Captain';
-  if (score >= 550) return 'Rising Builder';
-  if (score >= 400) return 'New Sailor';
-  return 'Unscored';
-}

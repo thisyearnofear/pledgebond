@@ -11,8 +11,8 @@ const ALLOWED_INPUT_FIELDS = new Set([
   'name', 'description', 'githubUrl', 'ecosystem', 'category', 'otherCategoryDetail',
   'contractAddress', 'deploymentTxHash', 'liveUrl', 'website', 'twitter', 'discord',
   'imageUrl', 'teamMembers', 'tags', 'isOpenSource', 'lookingForFunding', 'fundingAmount',
-  'milestones', 'hackathons', 'launchOnBags', 'bagsTokenMetadata', 'bagsTokenAddress',
-  'solanaProjectPda', 'builderSnsDomain', 'builderSnsNameAccount', 'accentColor', 'archived', 'media',
+  'milestones', 'hackathons',
+  'builderSnsDomain', 'builderSnsNameAccount', 'accentColor', 'archived', 'media',
 ]);
 
 function repositoryId(owner, repo) {

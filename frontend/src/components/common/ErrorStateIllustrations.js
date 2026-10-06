@@ -323,66 +323,6 @@ export const MetaMaskErrorState = ({
   );
 };
 
-// Credit Score Calculation Error
-export const CreditScoreErrorState = ({ 
-  size = 'md',
-  error,
-  onRetry,
-  onContactSupport,
-  className = '',
-  ...props 
-}) => {
-  const icon = (
-    <div className="relative">
-      <svg
-        className="h-24 w-24 text-error-400 mx-auto"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1}
-          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-        />
-      </svg>
-      <div className="absolute -top-1 -right-1 h-6 w-6 bg-error-500 rounded-full flex items-center justify-center">
-        <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </div>
-    </div>
-  );
-
-  return (
-    <ErrorState
-      size={size}
-      icon={icon}
-      title="Credit Score Calculation Failed"
-      description="We encountered an error while calculating your credit score. This might be due to insufficient data or a temporary service issue."
-      error={error}
-      showDetails={true}
-      primaryAction={
-        onRetry && (
-          <Button onClick={onRetry} variant="primary">
-            Recalculate Score
-          </Button>
-        )
-      }
-      secondaryAction={
-        onContactSupport && (
-          <Button onClick={onContactSupport} variant="ghost">
-            Contact Support
-          </Button>
-        )
-      }
-      className={className}
-      {...props}
-    />
-  );
-};
-
 // Permission Denied Error
 export const PermissionErrorState = ({ 
   size = 'md',

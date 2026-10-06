@@ -9,13 +9,10 @@ import { useUser } from "@/stores/authStore";
 import { normalizeBackTab } from "@/config/navigation";
 import TabBar from "@/components/common/TabBar";
 import PageHeader from "@/components/common/PageHeader";
-import Modal from "@/components/common/Modal";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import DiscoverTab from "@/components/back/DiscoverTab";
 import PortfolioTab from "@/components/back/PortfolioTab";
 import AgentsTab from "@/components/back/AgentsTab";
-import { PrivacyOnboarding, PrivacyBadge } from "@/components/common/PrivacyShield";
-import { isPrivacyDismissed, markPrivacyDismissed, isBannerDismissed } from "@/lib/onboarding/storage";
 import { useApp } from "@/stores/profileStore";
 import { useOnboardingCoordinator } from "@/components/onboarding/OnboardingCoordinator";
 
@@ -24,18 +21,8 @@ export default function BackPage() {
   const { userRole, onboardingComplete } = useUser();
   const { surfacesBlocked } = useOnboardingCoordinator();
   const [tab, setTabState] = useState("discover");
-  const [showPrivacy, setShowPrivacy] = useState(false);
   const [positionCount, setPositionCount] = useState(null);
   const [claimableCount, setClaimableCount] = useState(0);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (surfacesBlocked) return;
-    if (userRole !== "backer") return;
-    if (isPrivacyDismissed()) return;
-    if (onboardingComplete && !isBannerDismissed()) return;
-    setShowPrivacy(true);
-  }, [userRole, surfacesBlocked, onboardingComplete]);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -79,11 +66,6 @@ export default function BackPage() {
     router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
   };
 
-  const dismissPrivacy = () => {
-    setShowPrivacy(false);
-    markPrivacyDismissed();
-  };
-
   const tabs = [
     { id: "discover", label: "Discover" },
     {
@@ -114,20 +96,9 @@ export default function BackPage() {
       <Head><title>Back | PledgeBond</title></Head>
       <div className="min-h-screen bg-surface-secondary">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Modal
-            isOpen={showPrivacy}
-            onClose={dismissPrivacy}
-            showCloseButton={false}
-            size="md"
-            className="p-0 overflow-hidden"
-          >
-            <PrivacyOnboarding onDismiss={dismissPrivacy} />
-          </Modal>
-
           <PageHeader
             title="Back Builders"
             subtitle="Discover projects to back, track your positions, and run AI agents."
-            actions={<PrivacyBadge />}
           />
 
           <TabBar

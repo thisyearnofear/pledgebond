@@ -14,7 +14,6 @@
     "test:coverage": "vitest --coverage"
   },
   "dependencies": {
-    "@bagsfm/bags-sdk": "1.3.7",
     "@bonfida/spl-name-service": "3.0.21",
     "@circle-fin/circle-sdk": "^1.3.0",
     "@circle-fin/developer-controlled-wallets": "10.3.1",

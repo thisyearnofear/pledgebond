@@ -123,8 +123,6 @@ const validateApiService = (serviceName) => {
       return !!process.env.NEXT_PUBLIC_LIFI_API_KEY;
     case "metamask":
       return !!process.env.NEXT_PUBLIC_METAMASK_PROJECT_ID;
-    case "bags":
-      return !!process.env.NEXT_PUBLIC_BAGS_API_KEY;
     // Server-side services: always report true client-side; actual validation
     // happens in @/config/serverConfig (server-only).
     case "circle":

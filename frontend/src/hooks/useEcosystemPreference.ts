@@ -56,8 +56,6 @@ interface EcosystemPreferenceResult {
   hasExplicitPrimary: boolean;
   /** True iff the user has completed/dismissed the ecosystem onboarding step. */
   onboardingComplete: boolean;
-  /** True iff a Bags-relevant surface should be featured (Solana primary). */
-  bagsFeatured: boolean;
   /** True iff x402/Arc-relevant surfaces should be featured. */
   arcFeatured: boolean;
   /** Set the user's pinned primary ecosystem (also marks onboarding complete). */
@@ -141,7 +139,6 @@ export function useEcosystemPreference(): EcosystemPreferenceResult {
       primary,
       hasExplicitPrimary: !!explicit,
       onboardingComplete: !!preferences.ecosystemOnboardingComplete,
-      bagsFeatured: primary === 'solana',
       arcFeatured: primary === 'arc',
       setPrimaryEcosystem,
       dismissOnboarding,

@@ -24,7 +24,7 @@ export const TAB_EXPLAINERS = {
   "proof-builders": "Builders ranked by verified wins, evidence coverage, and proof-backed project claims — the most credible in the ecosystem.",
   projects: "Projects ranked by onchain evidence, verified hackathon claims, and overall credibility score.",
   builders: "Top builders by shipping velocity, project submissions, and milestone completions.",
-  backers: "Top backers by staking volume, projects backed, and portfolio performance.",
+  backers: "Top backers by funded volume, projects backed, and portfolio performance.",
 };
 
 export function truncateAddress(addr) {

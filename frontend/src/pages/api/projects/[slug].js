@@ -10,8 +10,8 @@ const ALLOWED = new Set([
   'name', 'description', 'githubUrl', 'ecosystem', 'category', 'contractAddress',
   'deploymentTxHash', 'website', 'twitter', 'discord', 'teamMembers', 'tags',
   'isOpenSource', 'lookingForFunding', 'fundingAmount', 'milestones', 'hackathons',
-  'testerTasks', 'imageUrl', 'liveUrl', 'otherCategoryDetail', 'media', 'launchOnBags',
-  'bagsTokenAddress', 'bagsTokenMetadata', 'solanaProjectPda', 'builderSnsDomain',
+  'testerTasks', 'imageUrl', 'liveUrl', 'otherCategoryDetail', 'media',
+  'builderSnsDomain',
   'builderSnsNameAccount', 'accentColor', 'archived',
 ]);
 

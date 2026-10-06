@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useWallet } from "@/stores/walletStore";
 import { useBuilderCredit } from "@/stores/walletStore";
 import { Card } from "@/components/common/Card";
@@ -11,7 +11,6 @@ import {
   RocketLaunchIcon,
   ShieldCheckIcon,
   TrophyIcon,
-  ReceiptPercentIcon,
 } from "@heroicons/react/24/outline";
 
 /** Share of settled loans that were repaid, as a whole percent. */
@@ -40,13 +39,6 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
   const [backedDetails, setBackedDetails] = useState([]);
   const [repaymentRate, setRepaymentRate] = useState(null);
   const [medianDaysToRepay, setMedianDaysToRepay] = useState(null);
-
-  // Bags fee claiming state
-  const [claimableFees, setClaimableFees] = useState([]);
-  const [claimableTotal, setClaimableTotal] = useState(0);
-  const [claimingFees, setClaimingFees] = useState(false);
-  const [claimError, setClaimError] = useState(null);
-  const [claimSuccess, setClaimSuccess] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,65 +73,6 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
     load();
     return () => { cancelled = true; };
   }, [wallet.account, signer, chainId, onPositions]);
-
-  // Fetch claimable Bags fees for Solana wallets
-  useEffect(() => {
-    if (!wallet.solanaAddress || !wallet.solanaConnected) {
-      setClaimableFees([]);
-      setClaimableTotal(0);
-      return;
-    }
-
-    let cancelled = false;
-
-    async function loadFees() {
-      try {
-        const { PublicKey } = await import('@solana/web3.js');
-        const { solanaBagsService } = await import('@/services/SolanaBagsService');
-        const pubkey = new PublicKey(wallet.solanaAddress);
-        const positions = await solanaBagsService.getClaimableFees(pubkey);
-        if (!cancelled) {
-          setClaimableFees(positions || []);
-          const total = (positions || []).reduce((sum, p) => {
-            return sum + (parseFloat(p.claimableAmount || p.amount || 0));
-          }, 0);
-          setClaimableTotal(total);
-        }
-      } catch (err) {
-        console.warn('Failed to load claimable Bags fees:', err);
-        if (!cancelled) setClaimableTotal(0);
-      }
-    }
-
-    loadFees();
-    return () => { cancelled = true; };
-  }, [wallet.solanaAddress, wallet.solanaConnected]);
-
-  const handleClaimFees = useCallback(async () => {
-    if (!wallet.solanaWallet || claimableFees.length === 0) return;
-    setClaimingFees(true);
-    setClaimError(null);
-    setClaimSuccess(null);
-
-    try {
-      const { solanaBagsService } = await import('@/services/SolanaBagsService');
-      const { getSolanaConnection } = await import('@/lib/chains/solanaConnection');
-      const txs = await solanaBagsService.claimFees(wallet.solanaWallet, claimableFees);
-      // Send the signed transactions
-      const connection = getSolanaConnection();
-      for (const tx of txs) {
-        await connection.sendRawTransaction(tx.serialize());
-      }
-      setClaimSuccess(`Claimed fees from ${claimableFees.length} position(s)`);
-      setClaimableFees([]);
-      setClaimableTotal(0);
-    } catch (err) {
-      setClaimError(err.message || 'Failed to claim fees');
-    } finally {
-      setClaimingFees(false);
-    }
-  }, [wallet.solanaWallet, claimableFees]);
-
 
   // Attention state: milestones done but return not claimed = money on the
   // table. Drives the badge deep-link + per-card highlight.
@@ -221,32 +154,6 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
           <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Open positions</p>
           <p className="text-xl font-bold">{backedDetails.length}</p>
         </Card>
-
-        {/* Bags fee yield — only visible for Solana wallets */}
-        {wallet.solanaConnected && (
-          <Card className={`p-5 ${claimableTotal > 0 ? 'bg-amber-50 border-amber-200' : ''}`}>
-            <div className="flex items-center justify-between mb-1">
-              <ReceiptPercentIcon className={`w-5 h-5 ${claimableTotal > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400 dark:text-gray-500'}`} />
-              {claimingFees && <LoadingSpinner size="sm" />}
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase">Claimable Fees</p>
-            <p className={`text-xl font-bold ${claimableTotal > 0 ? 'text-amber-700' : 'text-gray-400 dark:text-gray-500'}`}>
-              {claimableTotal > 0 ? `${claimableTotal.toFixed(4)} SOL` : '—'}
-            </p>
-            {claimableTotal > 0 && (
-              <Button
-                onClick={handleClaimFees}
-                disabled={claimingFees}
-                size="sm"
-                className="mt-2 w-full bg-amber-600 hover:bg-amber-700 text-white text-xs"
-              >
-                {claimingFees ? 'Claiming...' : 'Claim All'}
-              </Button>
-            )}
-            {claimError && <p className="text-xs text-red-600 dark:text-red-400 mt-1">{claimError}</p>}
-            {claimSuccess && <p className="text-xs text-green-600 dark:text-green-400 mt-1">{claimSuccess}</p>}
-          </Card>
-        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

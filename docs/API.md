@@ -81,11 +81,10 @@ that assigns a score — credibility is computed on-chain from settled outcomes.
 > `/reputation/score`) were **removed**. They served an admin-assigned 0–850 score
 > that no longer exists as a product concept.
 
-## Bags / Torque
+## Torque
 
 | Route | Method | Purpose |
 |-------|--------|---------|
-| `/bags/market` | GET | Bags token market data |
 | `/torque/leaderboard` | GET | Torque leaderboard |
 | `/torque/incentives` | GET | Torque incentive data |
 | `/torque/events` | GET | Torque event log |
@@ -123,7 +122,6 @@ writes a `PayoutLogs` row via `recordDisbursement`.
 | `/nebula` | GET | Nebula API proxy |
 | `/og/*` | GET | Open Graph images (project, celebration, scout) |
 | `/lifi/chains` | GET | LI.FI supported chains |
-| `/cloak/status` | GET | Cloak privacy status |
 | `/admin/winner-claims` | GET | Admin: winner claims |
 | `/feedback/submit` | POST | Submit feedback |
 | `/feedback/lookup` | GET | Lookup feedback by ID |

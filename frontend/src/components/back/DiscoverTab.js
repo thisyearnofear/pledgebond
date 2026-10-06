@@ -15,7 +15,6 @@ import LoanTermsModal from "@/components/back/LoanTermsModal";
 import { Card } from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
-import { PrivacyBadge } from "@/components/common/PrivacyShield";
 import { exploreHref } from "@/config/navigation";
 import {
   ECOSYSTEM_FILTER_OPTIONS,
@@ -48,7 +47,6 @@ export default function DiscoverTab() {
     setSearchQuery,
     filterEcosystem,
     setFilterEcosystem,
-    setFilterMultiplier,
     sortBy,
     setSortBy,
     hasActiveFilters,
@@ -248,7 +246,6 @@ export default function DiscoverTab() {
             <ArrowRightIcon className="w-3.5 h-3.5" />
           </Link>
         </div>
-        <PrivacyBadge />
       </div>
 
       {filteredProjects.length === 0 ? (

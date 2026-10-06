@@ -45,8 +45,6 @@ export default function ProjectEditorProof({
 }) {
   const [showOptional, setShowOptional] = useState(false);
   const totalShare = form.teamMembers.reduce((sum, m) => sum + (parseInt(m.share) || 0), 0);
-  const tokenLaunchMetWins = form.hackathons.filter((h) => h.outcome === "winner").length;
-
   return (
     <>
       <button
@@ -141,79 +139,6 @@ export default function ProjectEditorProof({
                 onChange={(e) => setField("lookingForFunding", e.target.checked)}
               />
 
-              {form.ecosystem === "solana" && (
-                <div className="md:col-span-2">
-                  <div className="bg-gradient-to-br from-emerald-50 to-amber-50 border border-emerald-200 p-4 rounded-xl">
-                    <div className="flex items-start gap-3 mb-3">
-                      <span className="text-xl mt-0.5">🚀</span>
-                      <div>
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100">Token Launch Readiness</h4>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Launch a project token on Bags once you&apos;ve proven traction. Tokens launched after reaching milestones tend to perform better with backers.
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                      <ReadinessCard
-                        label="Hackathon Wins"
-                        value={tokenLaunchMetWins}
-                        target={2}
-                        met={tokenLaunchMetWins >= 2}
-                        hint={tokenLaunchMetWins >= 2 ? "✓ Met" : "Wins needed"}
-                      />
-                      <ReadinessCard label="Backers" value="0" target="5" met={false} hint="After launch" />
-                      <ReadinessCard
-                        label="Description"
-                        value={form.description.trim().length >= 50 ? "✓" : `${Math.min(Math.round(form.description.trim().length / 50 * 100), 99)}%`}
-                        target=""
-                        met={form.description.trim().length >= 50}
-                        hint={form.description.trim().length >= 50 ? "Complete" : "Min 50 chars"}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/70 border border-emerald-100">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Launch token on Bags</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {form.launchOnBags ? "Token will be created when you submit." : "Enable to configure your token."}
-                        </p>
-                      </div>
-                      <Checkbox
-                        label=""
-                        checked={form.launchOnBags}
-                        onChange={(e) => setField("launchOnBags", e.target.checked)}
-                      />
-                    </div>
-
-                    {form.launchOnBags && (
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-lg bg-white/70 border border-emerald-100">
-                        <Input
-                          label="Token Name"
-                          placeholder="e.g. PledgeBond Token"
-                          value={form.bagsTokenMetadata.name}
-                          onChange={(e) => setField("bagsTokenMetadata", { ...form.bagsTokenMetadata, name: e.target.value })}
-                        />
-                        <Input
-                          label="Token Symbol"
-                          placeholder="e.g. SHIP"
-                          value={form.bagsTokenMetadata.symbol}
-                          onChange={(e) => setField("bagsTokenMetadata", { ...form.bagsTokenMetadata, symbol: e.target.value.toUpperCase() })}
-                        />
-                        <div className="sm:col-span-2">
-                          <Textarea
-                            label="Token Description"
-                            placeholder="Describe the utility or vision for your project token..."
-                            value={form.bagsTokenMetadata.description}
-                            onChange={(e) => setField("bagsTokenMetadata", { ...form.bagsTokenMetadata, description: e.target.value })}
-                            rows={2}
-                          />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             {form.lookingForFunding && (
@@ -250,19 +175,6 @@ export default function ProjectEditorProof({
         </>
       )}
     </>
-  );
-}
-
-function ReadinessCard({ label, value, target, met, hint }) {
-  return (
-    <div className="p-3 rounded-lg bg-white/70 border border-emerald-100 text-center">
-      <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-1">{label}</p>
-      <p className="text-lg font-bold">
-        <span className={met ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}>{value}</span>
-        {target !== "" && <span className="text-gray-300 dark:text-gray-500 text-sm">/{target}</span>}
-      </p>
-      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{hint}</p>
-    </div>
   );
 }
 

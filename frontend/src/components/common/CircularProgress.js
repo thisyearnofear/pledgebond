@@ -20,24 +20,6 @@ const progressVariants = cva(
   }
 );
 
-// Get color based on score
-const getScoreColor = (score) => {
-  if (score >= 800) return { primary: '#22c55e', secondary: '#dcfce7' }; // Excellent - Green
-  if (score >= 700) return { primary: '#3b82f6', secondary: '#dbeafe' }; // Good - Blue
-  if (score >= 600) return { primary: '#f59e0b', secondary: '#fef3c7' }; // Fair - Amber
-  if (score >= 500) return { primary: '#f97316', secondary: '#fed7aa' }; // Poor - Orange
-  return { primary: '#ef4444', secondary: '#fee2e2' }; // Very Poor - Red
-};
-
-// Get credit tier info
-const getCreditTier = (score) => {
-  if (score >= 800) return { tier: 'Excellent', description: 'Outstanding credit' };
-  if (score >= 700) return { tier: 'Good', description: 'Good credit standing' };
-  if (score >= 600) return { tier: 'Fair', description: 'Average credit' };
-  if (score >= 500) return { tier: 'Poor', description: 'Below average credit' };
-  return { tier: 'Very Poor', description: 'Poor credit standing' };
-};
-
 export const CircularProgress = ({
   value = 0,
   maxValue = 100,
@@ -162,82 +144,6 @@ export const CircularProgress = ({
           </>
         )}
       </div>
-    </div>
-  );
-};
-
-// Credit Score specific circular progress
-export const CreditScoreCircular = ({
-  score = 0,
-  maxScore = 850,
-  size = 'xl',
-  animated = true,
-  showTier = true,
-  showImprovement = false,
-  previousScore = null,
-  className = '',
-  ...props
-}) => {
-  const colors = getScoreColor(score);
-  const tierInfo = getCreditTier(score);
-  const improvement = previousScore ? score - previousScore : 0;
-
-  return (
-    <div className={`text-center ${className}`}>
-      <div className="relative">
-        <CircularProgress
-          value={score}
-          maxValue={maxScore}
-          size={size}
-          animated={animated}
-          className="drop-shadow-sm"
-          style={{
-            '--tw-text-primary-500': colors.primary
-          }}
-          {...props}
-        >
-          <div className="text-center">
-            <div 
-              className="text-3xl font-bold mb-1"
-              style={{ color: colors.primary }}
-            >
-              {Math.round(score)}
-            </div>
-            <div className="text-xs text-secondary">
-              out of {maxScore}
-            </div>
-          </div>
-        </CircularProgress>
-        
-        {/* Improvement indicator */}
-        {showImprovement && improvement !== 0 && (
-          <div className="absolute -top-2 -right-2">
-            <div className={`
-              inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-              ${improvement > 0 
-                ? 'bg-success-100 text-success-700' 
-                : 'bg-error-100 text-error-700'
-              }
-            `}>
-              {improvement > 0 ? '+' : ''}{improvement}
-            </div>
-          </div>
-        )}
-      </div>
-      
-      {showTier && (
-        <div className="mt-4">
-          <div 
-            className="text-lg font-semibold mb-1"
-            style={{ color: colors.primary }}
-          >
-            {tierInfo.tier}
-          </div>
-          <div className="text-sm text-secondary">
-            {tierInfo.description}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

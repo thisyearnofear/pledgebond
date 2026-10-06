@@ -16,7 +16,6 @@
 import { walletService } from "./walletService";
 import { realGitHubService } from "./RealGitHubService";
 import { realLiFiService } from "./RealLiFiService";
-import { solanaBagsService } from "./SolanaBagsService";
 import { validateApiService } from "../config/publicConfig";
 
 class ServiceRegistry {
@@ -32,7 +31,6 @@ class ServiceRegistry {
     this.services.set("circle", walletService);
     this.services.set("github", realGitHubService);
     this.services.set("lifi", realLiFiService);
-    this.services.set("solana", solanaBagsService);
   }
 
   /**
@@ -108,13 +106,6 @@ class ServiceRegistry {
    */
   getLiFiService() {
     return this.getService("lifi");
-  }
-
-  /**
-   * Get Solana service
-   */
-  getSolanaService() {
-    return this.getService("solana");
   }
 
   /**

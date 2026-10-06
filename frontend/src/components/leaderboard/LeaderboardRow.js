@@ -53,7 +53,7 @@ export default function LeaderboardRow({ entry, rank, type }) {
         <p className="text-xs text-text-tertiary mt-0.5">
           {type === "builders"
             ? `${entry.projectCount || 0} projects · ${entry.milestoneCount || 0} milestones`
-            : `$${Number(entry.totalBacked || 0).toLocaleString()} staked · ${entry.projectsBacked || 0} projects`}
+            : `$${Number(entry.totalBacked || 0).toLocaleString()} funded · ${entry.projectsBacked || 0} projects`}
         </p>
         {entryBadges.length > 0 && (
           <ProofBadgeGroup badges={entryBadges} size="sm" max={2} className="mt-1" />

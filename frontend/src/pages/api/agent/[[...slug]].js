@@ -237,7 +237,7 @@ function getContextualReply(message) {
   if (lower.match(/x402|nanopay|payment|usdc|cost|price/)) return "x402 nanopayments let you pay small USDC amounts for AI analysis. Set up your payment wallet on the **Back** page to unlock agent flows.";
   if (lower.match(/explore|browse|find|search|project/)) return "Head to the **Explore** page to browse projects across 7 ecosystems. Use the search bar to filter by name or category. Click any project for details and AI analysis!";
   if (lower.match(/arc|circle|ecosystem/)) return "Arc is Circle's USDC-native EVM network for fast stablecoin settlement. We use it so small AI analysis payments can settle cleanly in USDC.";
-  if (lower.match(/back|fund|invest|support/)) return "The **Back** page lets you discover and support projects. Use AI agents to analyze projects before backing them. Your payment balance is shown there when you set it up.";
+  if (lower.match(/back|fund|invest|support/)) return "The **Back** page lets lenders discover confirmed wins and bridge builders' unpaid prizes with USDC. Run the AI agents first to read the reasoning traces. Your payment balance is shown there when you set it up.";
   if (lower.match(/how|work|explain|what is/)) return "PledgeBond helps you explore projects, run AI analysis, and decide what to back. The core flow is: pick a project → run analysis → review the result → back with confidence.";
   return "I can help you explore projects, use AI agents, submit your own project, or understand AI analysis payments. What would you like to do next?";
 }
@@ -310,8 +310,6 @@ async function underwriteHandler(req, res) {
 
     const { total, breakdown } = computeScore(project);
     const recommendation = getRecommendation(total);
-    const { computeStrategicAdvice } = await import("@/lib/scoringEngine");
-    const strategicAdvice = computeStrategicAdvice(project);
 
     let aiAnalysis = null;
     let aisaPayment = null;
@@ -322,7 +320,7 @@ async function underwriteHandler(req, res) {
         const aisaFetch = getAisaFetch();
         const aisaRes = await aisaFetch(`${AISA_BASE_URL}/perplexity/sonar`, {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "sonar", messages: [{ role: "user", content: `Analyze this blockchain project for investment potential in 3 sentences. Project: ${project.name}. Ecosystem: ${project.ecosystem || 'unknown'}. Description: ${project.description || "N/A"}. GitHub stats: ${JSON.stringify(project.stats || {})}. Score: ${total}/100. Also provide a brief recommendation on whether they should launch a token on Solana via Bags or bridge their unpaid prize with the EVM liquidity rail, based on their GitHub activity.` }] }),
+          body: JSON.stringify({ model: "sonar", messages: [{ role: "user", content: `Analyze this blockchain project for investment potential in 3 sentences. Project: ${project.name}. Ecosystem: ${project.ecosystem || 'unknown'}. Description: ${project.description || "N/A"}. GitHub stats: ${JSON.stringify(project.stats || {})}. Score: ${total}/100. Also note whether this project looks like a bridge-loan candidate once a win is declared on-chain.` }] }),
         });
 
         if (aisaRes.ok) {
@@ -334,15 +332,15 @@ async function underwriteHandler(req, res) {
       } catch (aisaErr) { console.error("AIsa enrichment error:", aisaErr.message); }
     }
 
-    const result = { ...agentIdentityResponse('underwrite'), success: true, status: "ok", resultSource, nextAction: "Review the health score — a bridge loan still requires a declared win before it can be funded.", agentInfo: { name: identity.domain, humanName: identity.displayName, feePaid: req.nanopayment.amount, txHash: req.nanopayment.txHash, network: "arc", paymentStatus: req.nanopayment.testMode ? "test_mode" : (req.nanopayment.verificationStatus || "unverified"), aisaPayment }, project: { id: project.id, name: project.name }, healthScore: total, breakdown, recommendation, strategicAdvice, aiAnalysis, attestcoin, timestamp: new Date().toISOString() };
+    const result = { ...agentIdentityResponse('underwrite'), success: true, status: "ok", resultSource, nextAction: "Review the health score — a bridge loan still requires a declared win before it can be funded.", agentInfo: { name: identity.domain, humanName: identity.displayName, feePaid: req.nanopayment.amount, txHash: req.nanopayment.txHash, network: "arc", paymentStatus: req.nanopayment.testMode ? "test_mode" : (req.nanopayment.verificationStatus || "unverified"), aisaPayment }, project: { id: project.id, name: project.name }, healthScore: total, breakdown, recommendation, aiAnalysis, attestcoin, timestamp: new Date().toISOString() };
 
     try {
       await db.collection("agent_runs").doc(`underwrite_${Date.now()}`).set({
         type: "underwrite", timestamp: result.timestamp, projectId: project.id,
         project: { id: project.id, name: project.name, ecosystem: project.ecosystem },
         healthScore: total, breakdown, recommendation: recommendation || null, resultSource,
-        reasoningTrace: aiAnalysis ? [{ project: project.name, trace: aiAnalysis }] : [{ project: project.name, trace: `Rule-based score: ${total}/100. ${strategicAdvice?.[0] || "Analyzed project health."}` }],
-        strategicAdvice: strategicAdvice || null, ecosystemAnalysis: aiAnalysis || null,
+        reasoningTrace: aiAnalysis ? [{ project: project.name, trace: aiAnalysis }] : [{ project: project.name, trace: `Rule-based score: ${total}/100. ${recommendation ? `Bridge-loan candidate — ${recommendation.label}.` : "Below candidate threshold."}` }],
+        ecosystemAnalysis: aiAnalysis || null,
       });
     } catch (logErr) { console.warn("Failed to log underwrite run:", logErr.message); }
 

@@ -1,6 +1,6 @@
 /**
  * Scoring Engine Tests
- * Validates project scoring, recommendation tiers, and strategic advice.
+ * Validates project scoring and recommendation tiers.
  */
 import { describe, it, expect } from 'vitest';
 import {
@@ -9,7 +9,6 @@ import {
   scoreGithub,
   scoreCompleteness,
   scoreCommunity,
-  computeStrategicAdvice,
   MIN_SCORE_TO_BACK,
 } from '../scoringEngine';
 
@@ -134,31 +133,5 @@ describe('getRecommendation', () => {
   it('boundary: exactly MIN_SCORE_TO_BACK', () => {
     const rec = getRecommendation(MIN_SCORE_TO_BACK);
     expect(rec).not.toBeNull();
-  });
-});
-
-describe('computeStrategicAdvice', () => {
-  it('returns advice object with ecosystemFit', () => {
-    const advice = computeStrategicAdvice({ stats: {} });
-    expect(advice).toHaveProperty('ecosystemFit');
-    expect(advice).toHaveProperty('tradeOffMatrix');
-    expect(advice.tradeOffMatrix.solanaBags).toHaveProperty('suitability');
-    expect(advice.tradeOffMatrix.circleArc).toHaveProperty('suitability');
-  });
-
-  it('recommends Bags for high-star consumer projects', () => {
-    const advice = computeStrategicAdvice({
-      stats: { stars: 100 },
-      description: 'A social game on Solana',
-    });
-    expect(advice.bagsRecommendation?.recommended).toBe(true);
-  });
-
-  it('recommends Circle for infra projects', () => {
-    const advice = computeStrategicAdvice({
-      stats: { commits: 300 },
-      description: 'B2B SDK infrastructure toolkit',
-    });
-    expect(advice.tradeOffMatrix.circleArc.suitability).toBeGreaterThan(50);
   });
 });

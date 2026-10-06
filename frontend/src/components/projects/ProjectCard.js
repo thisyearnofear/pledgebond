@@ -32,7 +32,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 /**
- * Evolution tier helper based on reputation or health score
+ * Evolution tier helper based on project health score
  */
 export const getEvolutionTier = (score = 0) => {
   if (score >= 90) return { 

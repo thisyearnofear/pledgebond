@@ -36,7 +36,6 @@ vi.mock('@/lib/nanopayment', () => ({
 vi.mock('@/lib/scoringEngine', () => ({
   computeScore: vi.fn(() => ({ total: 75, breakdown: { github: 40, completeness: 20, community: 15 } })),
   getRecommendation: vi.fn(() => ({ priority: 'C', label: 'priority C', note: 'test note' })),
-  computeStrategicAdvice: vi.fn(() => ({ ecosystemFit: 'high', tradeOffMatrix: {} })),
   MIN_SCORE_TO_BACK: 60,
 }));
 

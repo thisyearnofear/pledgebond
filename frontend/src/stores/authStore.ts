@@ -60,8 +60,6 @@ interface AuthState {
   onboardingComplete: boolean;
   // Wallet Linking
   linkedWallets: LinkedWallet[];
-  // Lazily-loaded helper for decentralized profile persistence
-  decentralizedAuth: any | null;
 }
 
 const initialState: AuthState = {
@@ -72,7 +70,6 @@ const initialState: AuthState = {
   creditData: null,
   onboardingComplete: false,
   linkedWallets: [],
-  decentralizedAuth: null,
 };
 
 export const authStore: Store<AuthState> = createStore<AuthState>(initialState);
@@ -80,15 +77,6 @@ export const authStore: Store<AuthState> = createStore<AuthState>(initialState);
 // ============================================================================
 // Actions (live on the store's getState())
 // ============================================================================
-
-async function loadDecentralizedAuth() {
-  try {
-    const mod = await import("@/lib/auth/DecentralizedAuth");
-    authStore.setState({ decentralizedAuth: mod.decentralizedAuth });
-  } catch (err) {
-    console.warn("DecentralizedAuth not available:", err);
-  }
-}
 
 async function loadUserProfile(user: User) {
   const userDocRef = doc(db, "users", user.uid);
@@ -247,10 +235,6 @@ async function completeOnboarding(profile: UserProfile, creditData: any) {
   const user = auth.currentUser;
   if (!user) throw new Error("No authenticated user");
   authStore.setState({ userProfile: profile, creditData, onboardingComplete: true });
-  const { decentralizedAuth } = authStore.getState();
-  if (decentralizedAuth?.saveProfileLocally) {
-    await decentralizedAuth.saveProfileLocally(profile, creditData);
-  }
   await setDoc(doc(db, "users", user.uid), {
     profile,
     creditData,
@@ -331,7 +315,6 @@ let initialized = false;
 export function initAuthStore() {
   if (initialized) return;
   initialized = true;
-  loadDecentralizedAuth();
   attachAuthListener();
 }
 
@@ -373,7 +356,6 @@ export function useUser() {
   const creditData = useStore(authStore, (s) => s.creditData);
   const onboardingComplete = useStore(authStore, (s) => s.onboardingComplete);
   const linkedWallets = useStore(authStore, (s) => s.linkedWallets);
-  const decentralizedAuth = useStore(authStore, (s) => s.decentralizedAuth);
 
   return {
     currentUser,
@@ -383,7 +365,6 @@ export function useUser() {
     creditData,
     onboardingComplete,
     linkedWallets,
-    decentralizedAuth,
     isAuthReady: !loading,
     signInWithGithub,
     signInWithWallet,
@@ -394,10 +375,10 @@ export function useUser() {
     updateProfile,
     refreshProfile,
     clearProfile,
-    isAuthenticated: () => isAuthenticated({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
-    completionPercentage: () => completionPercentage({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
-    isProfileComplete: () => isProfileComplete({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
-    hasMinimumProfile: () => hasMinimumProfile({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
-    getRecommendations: () => getRecommendations({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
+    isAuthenticated: () => isAuthenticated({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets } as any),
+    completionPercentage: () => completionPercentage({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets } as any),
+    isProfileComplete: () => isProfileComplete({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets } as any),
+    hasMinimumProfile: () => hasMinimumProfile({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets } as any),
+    getRecommendations: () => getRecommendations({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets } as any),
   };
 }

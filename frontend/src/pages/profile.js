@@ -159,8 +159,8 @@ export default function ProfilePage() {
                 <Link href="/back?tab=discover" className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-teal-300 dark:hover:border-teal-700 hover:bg-teal-50/50 dark:hover:bg-teal-900/10 transition-colors">
                   <BanknotesIcon className="w-5 h-5 text-teal-600 dark:text-teal-400 mt-0.5 flex-shrink-0" />
                   <div>
-                    <p className="text-xs font-semibold text-primary">Stake & Earn</p>
-                    <p className="text-xs text-secondary mt-0.5">Back builders with USDC</p>
+                    <p className="text-xs font-semibold text-primary">Bridge Loans</p>
+                    <p className="text-xs text-secondary mt-0.5">Fund builders' unpaid prizes with USDC</p>
                   </div>
                 </Link>
               </div>

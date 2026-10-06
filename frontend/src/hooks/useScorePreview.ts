@@ -1,8 +1,7 @@
 import { useState, useCallback } from 'react';
 
 interface ScorePreviewResult {
-  estimatedScore: number;
-  tier: string;
+  username: string;
   stats: {
     publicRepos: number;
     totalStars: number;
@@ -40,7 +39,7 @@ export function useScorePreview(): UseScorePreviewReturn {
       const res = await fetch(`/api/score/preview?username=${encodeURIComponent(trimmed)}`);
       const data = await res.json();
       if (!data.success) {
-        setError(data.error || 'Could not fetch score');
+        setError(data.error || 'Could not fetch this builder’s track record');
         return;
       }
       setResult(data.data);

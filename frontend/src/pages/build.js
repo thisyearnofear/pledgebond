@@ -32,8 +32,6 @@ import LinkWalletPrompt from "@/components/common/LinkWalletPrompt";
 import useWinnerStatus from "@/hooks/useWinnerStatus";
 import {
   CAPITAL_RAILS,
-  getRailById,
-  isRailIntegrated,
   RAIL_STATUS_LABELS,
   RAIL_STATUS_STYLES,
 } from "@/config/capitalStack";
@@ -96,9 +94,6 @@ export default function BuildPage() {
 
   // Rail detection — which capital rail is this builder on?
   const doesHaveProjects = Array.isArray(developerProjects) && developerProjects.length > 0;
-  const bagsRail = getRailById("bags");
-  const hasBagsToken = false; // user-level: Bags SDK not wired yet
-  const bagsIntegrated = isRailIntegrated("bags");
   // useWinnerStatus().isVerified is the source of truth. Scanning
   // developerProjects[].hackathons[] here missed verified wins whose project
   // shape didn't match, which hid the win desk entirely.
@@ -269,7 +264,6 @@ export default function BuildPage() {
                   )}
                   <span
                     className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full ${
-                      (rail.id === "bags" && hasBagsToken) ||
                       (rail.id === "loan" && hasHackathonWins)
                         ? "bg-blue-200 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300"
                         : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
@@ -334,41 +328,6 @@ export default function BuildPage() {
               <div className={`border-t border-slate-200 ${compactMode ? "pt-5" : "pt-8"}`}>
                 <DeveloperDashboard />
               </div>
-              {/* Bags — Rail 1: launch a project token on Solana */}
-              {bagsRail && (
-              <div className="border-t border-slate-200 pt-8">
-                <Card className="p-6 border-t-4 border-t-purple-500 bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/10 dark:to-surface">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="text-xs font-bold uppercase tracking-wider text-purple-600 dark:text-purple-400">{bagsRail.eyebrow}</span>
-                        <span className="px-2 py-0.5 text-[10px] font-semibold bg-purple-100 text-purple-700 dark:text-purple-300 rounded-full">{bagsRail.tag}</span>
-                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${RAIL_STATUS_STYLES[bagsRail.status]}`}>
-                          {RAIL_STATUS_LABELS[bagsRail.status]}
-                        </span>
-                      </div>
-                      <h3 className="text-lg font-bold text-primary">Launch a Bags Token</h3>
-                      <p className="text-sm text-secondary mt-1 max-w-xl">
-                        {bagsIntegrated
-                          ? "Don't have a prize pipeline yet? Launch a project token on Solana via Bags. Community buys in, you earn fee-share yield from trading volume."
-                          : "Bags token launch is coming soon. For now, declare a hackathon win to draw a bridge loan."}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      disabled={!bagsIntegrated}
-                      className="flex-shrink-0 border-purple-300 text-purple-700 dark:text-purple-300 hover:bg-purple-600 hover:text-white disabled:opacity-50"
-                      onClick={() => bagsIntegrated && window.open('https://bags.gg', '_blank')}
-                    >
-                      <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                      </svg>
-                      {bagsIntegrated ? "Launch on Bags" : "Coming soon"}
-                    </Button>
-                  </div>
-                </Card>
-              </div>
-              )}
             </div>
           </ErrorBoundary>
         )}

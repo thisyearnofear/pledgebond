@@ -58,7 +58,7 @@ This document tracks the full initiative to elevate PledgeBond from a functional
 | # | Item | Description |
 |---|---|---|
 | R1 | Create `pledgebond` Firebase / GCP project | `.env.local`, `.firebaserc`, and Firebase fallback values are set to `pledgebond`; the project must exist before deploys work. Use Blaze plan so Storage works; see Firebase strategy below. |
-| R2 | ~~Rebuild and redeploy Solana program~~ | **Closed 2026-10-05:** the Anchor program was retired with the credit model — see `docs/CHANGELOG.md`. No Solana program to rebuild; the Bags rail uses the Bags SDK only. |
+| R2 | ~~Rebuild and redeploy Solana program~~ | **Closed 2026-10-05:** the Anchor program was retired with the credit model — see `docs/CHANGELOG.md`. No Solana program to rebuild; the Bags integration was later removed entirely, leaving only the `PayoutVerifierService` Solana transfer scan. |
 | R3 | Register `.sol` agent domains | `pledgebond-scout.sol`, `pledgebond-underwriter.sol`, `pledgebond-verifier.sol`, `pledgebond-rebalance.sol` need Solana Name Service registration. |
 | R4 | Regenerate Farcaster signature | `public/.well-known/farcaster.json` frame values are updated, but the `accountAssociation` signature is still for the old domain and must be regenerated. |
 | R5 | GitHub / Vercel / DNS migration | Rename the GitHub repo to `thisyearnofear/pledgebond`, point Vercel project to `pledgebond.vercel.app`, and configure `pledgebond.com` DNS. |

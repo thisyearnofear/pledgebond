@@ -57,7 +57,6 @@ export {
 // Progress Components
 export {
   CircularProgress,
-  CreditScoreCircular,
   MultiSegmentCircular
 } from './CircularProgress';
 
@@ -89,7 +88,6 @@ export {
   CardSkeleton,
   DataLoadingIllustration,
   GitHubLoadingIllustration,
-  CreditScoreLoadingIllustration,
   MetaMaskLoadingIllustration,
   LoadingState,
   
@@ -110,7 +108,6 @@ export {
   APIErrorState,
   GitHubErrorState,
   MetaMaskErrorState,
-  CreditScoreErrorState,
   PermissionErrorState,
   NotFoundErrorState,
   ErrorBoundaryFallback,
@@ -267,19 +264,6 @@ export const componentUtils = {
     }
   },
 
-  // Credit score utilities
-  getCreditTier: (score) => {
-    if (score >= 800) return { tier: 'Excellent', color: '#22c55e' };
-    if (score >= 700) return { tier: 'Good', color: '#3b82f6' };
-    if (score >= 600) return { tier: 'Fair', color: '#f59e0b' };
-    if (score >= 500) return { tier: 'Poor', color: '#f97316' };
-    return { tier: 'Very Poor', color: '#ef4444' };
-  },
-
-  // Format credit score
-  formatCreditScore: (score, maxScore = 850) => {
-    return `${Math.round(score)}/${maxScore}`;
-  }
 };
 
 // Component composition helpers - all with explicit displayName to fix react/display-name lint errors

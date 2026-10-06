@@ -26,7 +26,6 @@ import BuilderIdentityPanel from "@/components/projects/BuilderIdentityPanel";
 import ProjectLinksPanel from "@/components/projects/ProjectLinksPanel";
 import ProjectBackerSummary from "@/components/projects/ProjectBackerSummary";
 import EnhancedDetailsSection from "@/components/projects/EnhancedDetailsSection";
-import BagsMarketCard from "@/components/common/BagsMarketCard";
 
 import GenlayerVerdictCard from "@/components/genlayer/GenlayerVerdictCard";
 import {
@@ -417,9 +416,6 @@ export default function ProjectDetailPage() {
 
               <ProjectLinksPanel project={project} />
 
-              {project?.bagsTokenAddress && (
-                <BagsMarketCard mint={project.bagsTokenAddress} />
-              )}
 
               <BuilderIdentityPanel
                 project={project}
