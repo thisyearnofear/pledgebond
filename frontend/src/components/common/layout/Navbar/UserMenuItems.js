@@ -21,7 +21,6 @@ import {
   CreditCardIcon,
   GlobeAltIcon,
   ShieldCheckIcon,
-  CalculatorIcon,
 } from "@heroicons/react/24/outline";
 import { classNames } from "@/utils/common";
 
@@ -97,19 +96,6 @@ export default function UserMenuItems(/** @type {UserMenuItemsProps} */ {
                   )}
                 >
                   <ShieldCheckIcon className="mr-3 h-4 w-4" /> Verification Dashboard
-                </Link>
-              )}
-            </Menu.Item>
-            <Menu.Item>
-              {({ active }) => (
-                <Link
-                  href="/admin/payout-simulation"
-                  className={classNames(
-                    active ? "bg-blue-50 dark:bg-blue-900/20" : "",
-                    `flex items-center px-4 ${py} text-sm text-blue-700 dark:text-blue-400 font-medium`,
-                  )}
-                >
-                  <CalculatorIcon className="mr-3 h-4 w-4" /> Payout Simulator
                 </Link>
               )}
             </Menu.Item>

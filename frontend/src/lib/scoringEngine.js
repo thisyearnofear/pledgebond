@@ -22,11 +22,13 @@ const W = { github: 0.4, completeness: 0.3, community: 0.3 };
 
 // Thresholds
 export const MIN_SCORE_TO_BACK = 60;
-const STAKE_TIERS = [
-  { min: 90, amount: 5.0, multiplier: 150 },
-  { min: 80, amount: 3.0, multiplier: 150 },
-  { min: 70, amount: 1.5, multiplier: 200 },
-  { min: 60, amount: 0.5, multiplier: 300 },
+// Scout priority tiers. The scout flags bridge-loan candidates for lenders to
+// read — it never sizes or stakes capital itself.
+const CANDIDATE_TIERS = [
+  { min: 90, priority: "A", note: "strong candidate — worth a lender's attention once a win is declared" },
+  { min: 80, priority: "B", note: "solid candidate — review alongside its payout history" },
+  { min: 70, priority: "C", note: "promising candidate — watch for a first declared win" },
+  { min: 60, priority: "D", note: "borderline candidate — fund only against a declared win" },
 ];
 
 /**
@@ -173,7 +175,7 @@ export function computeStrategicAdvice(project) {
 }
 
 export function getRecommendation(score) {
-  const tier = STAKE_TIERS.find((t) => score >= t.min);
+  const tier = CANDIDATE_TIERS.find((t) => score >= t.min);
   if (!tier) return null;
-  return { amount: tier.amount, multiplier: tier.multiplier, label: `${tier.multiplier / 100}x` };
+  return { priority: tier.priority, label: `priority ${tier.priority}`, note: tier.note };
 }

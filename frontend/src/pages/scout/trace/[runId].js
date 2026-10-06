@@ -8,7 +8,7 @@
  * - Agent identity and run metadata
  * - Reasoning traces for each recommended project
  * - Ecosystem summary
- * - On-chain execution results (if any)
+ * - Flagged bridge-loan candidates
  * - Share to X with OG image
  */
 
@@ -22,14 +22,12 @@ import { doc, getDoc } from "firebase/firestore";
 import { Card } from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
-import { ARC_EXPLORER } from "@/config/tokens";
 import { trackEvent } from "@/lib/analytics";
 import {
   CpuChipIcon,
   LightBulbIcon,
   ArrowLeftIcon,
   ShareIcon,
-  ArrowTopRightOnSquareIcon,
   ClockIcon,
   CheckCircleIcon,
   BanknotesIcon,
@@ -122,7 +120,8 @@ export default function ScoutTracePage() {
       ? [{ project: "Analysis", trace: typeof run.reasoningTrace === "string" ? run.reasoningTrace : JSON.stringify(run.reasoningTrace, null, 2) }]
       : [];
 
-  const hasExecution = run.type === "execution" || run.executed;
+  const results = Array.isArray(run.results) ? run.results : [];
+  const priorityA = results.filter((r) => r.priority === "A").length;
 
   return (
     <>
@@ -173,12 +172,6 @@ export default function ScoutTracePage() {
                     <GlobeAltIcon className="w-3 h-3" />
                     {run.resultSource || "rule_based"}
                   </span>
-                  {run.totalStakeRecommended > 0 && (
-                    <span className="flex items-center gap-1 text-cyan-400 dark:text-cyan-500">
-                      <BanknotesIcon className="w-3 h-3" />
-                      {run.totalStakeRecommended.toFixed(2)} USDC
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
@@ -202,12 +195,12 @@ export default function ScoutTracePage() {
                 <div className="text-sm font-bold text-white">{run.projectsEvaluated || 0}</div>
               </Card>
               <Card className="bg-slate-900 border-slate-800 p-3">
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Backed</div>
-                <div className="text-sm font-bold text-emerald-400">{run.projectsBacked || 0}</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Flagged</div>
+                <div className="text-sm font-bold text-emerald-400">{run.projectsFlagged ?? run.projectsBacked ?? 0}</div>
               </Card>
               <Card className="bg-slate-900 border-slate-800 p-3">
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Executed</div>
-                <div className="text-sm font-bold text-white">{run.executed ? "Yes" : "No"}</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-wider">Priority A</div>
+                <div className="text-sm font-bold text-white">{priorityA}</div>
               </Card>
             </div>
           </section>
@@ -238,32 +231,25 @@ export default function ScoutTracePage() {
             </section>
           )}
 
-          {/* Execution Results */}
-          {hasExecution && run.results && (
+          {/* Flagged Bridge-Loan Candidates */}
+          {results.length > 0 && (
             <section>
               <h2 className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <BanknotesIcon className="w-4 h-4 text-emerald-400" />
-                On-Chain Execution
+                Flagged Bridge-Loan Candidates
               </h2>
               <div className="space-y-2">
-                {run.results.map((r, idx) => (
+                {results.map((r, idx) => (
                   <Card key={idx} className="bg-slate-900 border-slate-800 p-3 flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium text-slate-200">{r.name || r.projectId || r.id || "Unknown"}</div>
                       <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                        {r.amount && `${r.amount} USDC`} {r.multiplier && `· ${r.multiplier}x`}
+                        Score {r.score ?? "?"}/100{r.priority ? ` · priority ${r.priority}` : ""}
                       </div>
                     </div>
-                    {r.txHash && (
-                      <a
-                        href={`${ARC_EXPLORER}/tx/${r.txHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[10px] text-cyan-400 dark:text-cyan-500 hover:underline flex items-center gap-1"
-                      >
-                        View <ArrowTopRightOnSquareIcon className="w-3 h-3" />
-                      </a>
-                    )}
+                    <a href={agentsHref("analyze", r.id)} className="text-[10px] text-cyan-400 dark:text-cyan-500 hover:underline">
+                      Analyze project
+                    </a>
                   </Card>
                 ))}
               </div>

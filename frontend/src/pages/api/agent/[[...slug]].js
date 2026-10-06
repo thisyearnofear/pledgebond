@@ -58,7 +58,7 @@ async function handlePeek(req, res) {
     if (!cached) return res.status(204).end();
 
     const d = cached.data || {};
-    // getRecommendation returns {amount, multiplier, label} or null (below MIN_SCORE_TO_BACK).
+    // getRecommendation returns {priority, label, note} or null (below MIN_SCORE_TO_BACK).
     const rec = d.recommendation || null;
     return res.status(200).json({
       success: true,
@@ -69,8 +69,8 @@ async function handlePeek(req, res) {
       summary: {
         healthScore: d.healthScore ?? null,
         // Derive the tier verdict from the score the same way the card badge does.
-        recommendation: rec ? `stake ${rec.amount} USDC @ ${rec.label}` : d.healthScore != null && d.healthScore < MIN_SCORE_TO_BACK ? "below back threshold" : null,
-        healthVerdict: rec ? "back" : "watch",
+        recommendation: rec ? `bridge-loan candidate — ${rec.label}` : d.healthScore != null && d.healthScore < MIN_SCORE_TO_BACK ? "below candidate threshold" : null,
+        healthVerdict: rec ? "fundable" : "watch",
         aiAnalysis: typeof d.aiAnalysis === "string" ? d.aiAnalysis.slice(0, 280) : null,
       },
     });
@@ -328,13 +328,13 @@ async function underwriteHandler(req, res) {
       } catch (aisaErr) { console.error("AIsa enrichment error:", aisaErr.message); }
     }
 
-    const result = { ...agentIdentityResponse('underwrite'), success: true, status: "ok", resultSource, nextAction: "Review the health score and decide whether to back this project.", agentInfo: { name: identity.domain, humanName: identity.displayName, feePaid: req.nanopayment.amount, txHash: req.nanopayment.txHash, network: "arc", paymentStatus: req.nanopayment.testMode ? "test_mode" : (req.nanopayment.verificationStatus || "unverified"), aisaPayment }, project: { id: project.id, name: project.name }, healthScore: total, breakdown, recommendation, strategicAdvice, aiAnalysis, attestcoin, timestamp: new Date().toISOString() };
+    const result = { ...agentIdentityResponse('underwrite'), success: true, status: "ok", resultSource, nextAction: "Review the health score — a bridge loan still requires a declared win before it can be funded.", agentInfo: { name: identity.domain, humanName: identity.displayName, feePaid: req.nanopayment.amount, txHash: req.nanopayment.txHash, network: "arc", paymentStatus: req.nanopayment.testMode ? "test_mode" : (req.nanopayment.verificationStatus || "unverified"), aisaPayment }, project: { id: project.id, name: project.name }, healthScore: total, breakdown, recommendation, strategicAdvice, aiAnalysis, attestcoin, timestamp: new Date().toISOString() };
 
     try {
       await db.collection("agent_runs").doc(`underwrite_${Date.now()}`).set({
         type: "underwrite", timestamp: result.timestamp, projectId: project.id,
         project: { id: project.id, name: project.name, ecosystem: project.ecosystem },
-        healthScore: total, breakdown, recommendation: recommendation?.recommendation || "analyze", resultSource,
+        healthScore: total, breakdown, recommendation: recommendation || null, resultSource,
         reasoningTrace: aiAnalysis ? [{ project: project.name, trace: aiAnalysis }] : [{ project: project.name, trace: `Rule-based score: ${total}/100. ${strategicAdvice?.[0] || "Analyzed project health."}` }],
         strategicAdvice: strategicAdvice || null, ecosystemAnalysis: aiAnalysis || null,
       });
@@ -463,10 +463,10 @@ async function scoutHandler(req, res) {
           const snapshot = await db.collection("projects").limit(SCOUT_PAGE_LIMIT).get();
           projects = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         } catch (fallbackErr) {
-          return res.status(500).json({ ...agentIdentityResponse('scout'), success: false, status: 'error', error: 'Failed to fetch projects', details: fallbackErr.message, projects: [], summary: { evaluated: 0, recommended: 0, totalStake: '$0.00' } });
+          return res.status(500).json({ ...agentIdentityResponse('scout'), success: false, status: 'error', error: 'Failed to fetch projects', details: fallbackErr.message, projects: [], summary: { evaluated: 0, recommended: 0 } });
         }
       } else {
-        return res.status(500).json({ ...agentIdentityResponse('scout'), success: false, status: 'error', error: 'Failed to fetch projects', details: err.message, projects: [], summary: { evaluated: 0, recommended: 0, totalStake: '$0.00' } });
+        return res.status(500).json({ ...agentIdentityResponse('scout'), success: false, status: 'error', error: 'Failed to fetch projects', details: err.message, projects: [], summary: { evaluated: 0, recommended: 0 } });
       }
     }
 
@@ -476,15 +476,14 @@ async function scoutHandler(req, res) {
         try {
           const { total, breakdown } = computeScore(project);
           const recommendation = getRecommendation(total);
-          return { id: project.id, name: project.name || project.slug || "Unnamed Project", ecosystem: project.ecosystem, slug: project.slug, score: total, breakdown, recommendation, backed: total >= MIN_SCORE_TO_BACK };
+          return { id: project.id, name: project.name || project.slug || "Unnamed Project", ecosystem: project.ecosystem, slug: project.slug, score: total, breakdown, recommendation, flagged: total >= MIN_SCORE_TO_BACK };
         } catch (projectErr) { return null; }
       }).filter(Boolean).sort((a, b) => b.score - a.score);
     } catch (scoringErr) {
       return res.status(500).json({ ...agentIdentityResponse('scout'), success: false, status: 'error', error: 'Scoring engine failed', details: scoringErr.message });
     }
 
-    const toBack = scored.filter((p) => p.backed);
-    const totalStake = toBack.reduce((sum, p) => sum + (p.recommendation?.amount || 0), 0);
+    const candidates = scored.filter((p) => p.flagged);
 
     let ecosystemAnalysis = null;
     let reasoningTrace = null;
@@ -495,30 +494,16 @@ async function scoutHandler(req, res) {
     try {
       runId = `scout_${Date.now()}`;
       await db.collection("agent_runs").doc(runId).set({
-        type: "scout", timestamp: new Date().toISOString(), projectsEvaluated: scored.length, projectsBacked: toBack.length, totalStakeRecommended: totalStake, executed: req.method === "POST" && req.query.execute === "1", reasoningTrace, ecosystemAnalysis, resultSource, results: toBack.map((p) => ({ id: p.id, name: p.name, score: p.score, amount: p.recommendation?.amount, multiplier: p.recommendation?.multiplier })),
+        type: "scout", timestamp: new Date().toISOString(), projectsEvaluated: scored.length, projectsFlagged: candidates.length, reasoningTrace, ecosystemAnalysis, resultSource, results: candidates.map((p) => ({ id: p.id, name: p.name, score: p.score, priority: p.recommendation?.priority || null })),
       });
     } catch (logErr) { console.warn("Failed to log scout run to Firestore:", logErr.message); }
-
-    let executionResult = null;
-    const shouldExecute = req.method === "POST" && req.query.execute === "1";
-
-    if (shouldExecute && toBack.length > 0) {
-      try {
-        const baseUrl = req.headers.host?.includes("localhost") ? `http://${req.headers.host}` : `https://${req.headers.host}`;
-        const execRes = await fetch(`${baseUrl}/api/agent/execute`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projects: toBack.map((p) => ({ id: p.id, amount: p.recommendation.amount, multiplier: p.recommendation.multiplier })) }),
-        });
-        executionResult = await execRes.json();
-      } catch (err) { executionResult = { error: err.message }; }
-    }
 
     if (isAisaConfigured()) {
       try {
         const avgScore = scored.length > 0 ? Math.round(scored.reduce((s, p) => s + p.score, 0) / scored.length) : 0;
-        const topNames = toBack.slice(0, 3).map((p) => `${p.name} (${p.ecosystem || 'unknown'})`).join(", ");
+        const topNames = candidates.slice(0, 3).map((p) => `${p.name} (${p.ecosystem || 'unknown'})`).join(", ");
 
-        const prompt = `You are an investment analyst for a blockchain project scouting platform. SCOUTED PROJECTS: ${scored.length} TOP RECOMMENDATIONS: ${topNames} AVERAGE ECOSYSTEM SCORE: ${avgScore}/100. For EACH of the top 3 recommended projects, provide a 2-3 sentence reasoning trace explaining WHY the scout should back it. Break down by: GitHub velocity, project completeness, and community signals. Be specific — mention actual project names and what makes them stand out. Then summarize the overall investment landscape in 1 sentence. Respond in this exact JSON format: { "reasoningTraces": [{"project": "Name", "trace": "Detailed reasoning..."}], "ecosystemSummary": "One sentence landscape summary." }`;
+        const prompt = `You are an analyst for a blockchain scouting platform. SCOUTED PROJECTS: ${scored.length} TOP FLAGGED CANDIDATES: ${topNames} AVERAGE ECOSYSTEM SCORE: ${avgScore}/100. For EACH of the top 3 flagged candidates, provide a 2-3 sentence reasoning trace explaining WHY the scout flagged it as a bridge-loan candidate for lenders. Break down by: GitHub velocity, project completeness, and community signals. Be specific — mention actual project names and what makes them stand out. Then summarize the overall funding landscape in 1 sentence. Respond in this exact JSON format: { "reasoningTraces": [{"project": "Name", "trace": "Detailed reasoning..."}], "ecosystemSummary": "One sentence landscape summary." }`;
 
         const aisaFetch = getAisaFetch();
         const aisaRes = await aisaFetch(`${AISA_BASE_URL}/perplexity/sonar`, {
@@ -544,11 +529,11 @@ async function scoutHandler(req, res) {
       } catch (err) { console.warn("AIsa ecosystem analysis failed (non-fatal):", err.message); }
     }
 
-    if (!reasoningTrace && toBack.length > 0) {
-      reasoningTrace = toBack.slice(0, 3).map((p) => ({ project: p.name, trace: `Scored ${p.score}/100. GitHub velocity: ${p.breakdown?.velocity || '?'}%, completeness: ${p.breakdown?.completeness || '?'}%, community: ${p.breakdown?.community || '?'}%. Recommendation: ${p.recommendation?.recommendation || 'analyze'} with ${p.recommendation?.multiplier || '?'}x multiplier.` }));
+    if (!reasoningTrace && candidates.length > 0) {
+      reasoningTrace = candidates.slice(0, 3).map((p) => ({ project: p.name, trace: `Scored ${p.score}/100. GitHub velocity: ${p.breakdown?.velocity || '?'}%, completeness: ${p.breakdown?.completeness || '?'}%, community: ${p.breakdown?.community || '?'}%. Flagged as ${p.recommendation?.label || 'watch'} — ${p.recommendation?.note || 'fund only against a declared win'}.` }));
     }
 
-    const result = { ...agentIdentityResponse('scout'), success: true, status: "ok", resultSource, nextAction: shouldExecute ? "Review the execution results and confirm which backings succeeded." : "Review the recommended projects and run deeper analysis on the best candidates.", agentInfo: { name: identity.domain, humanName: identity.displayName, feePaid: req.nanopayment?.amount || 0, txHash: req.nanopayment?.txHash, network: "arc", paymentStatus: req.nanopayment?.testMode ? "test_mode" : (req.nanopayment?.verificationStatus || "unverified"), ...(aisaPayment && { aisaPayment }) }, runId, summary: { evaluated: scored.length, recommended: toBack.length, totalStake: `$${totalStake.toFixed(2)} USDC`, executed: shouldExecute }, reasoningTrace, ecosystemAnalysis, execution: executionResult, projects: scored };
+    const result = { ...agentIdentityResponse('scout'), success: true, status: "ok", resultSource, nextAction: "Review the flagged candidates and run deeper analysis on the best ones — funding still requires a declared on-chain win.", agentInfo: { name: identity.domain, humanName: identity.displayName, feePaid: req.nanopayment?.amount || 0, txHash: req.nanopayment?.txHash, network: "arc", paymentStatus: req.nanopayment?.testMode ? "test_mode" : (req.nanopayment?.verificationStatus || "unverified"), ...(aisaPayment && { aisaPayment }) }, runId, summary: { evaluated: scored.length, recommended: candidates.length }, reasoningTrace, ecosystemAnalysis, projects: scored };
 
     if (req.method === "GET") await setCachedResult("scout", { ecosystem: req.query.ecosystem || "all" }, result);
     return res.status(200).json(result);

@@ -35,7 +35,7 @@ vi.mock('@/lib/nanopayment', () => ({
 // Mock scoring engine
 vi.mock('@/lib/scoringEngine', () => ({
   computeScore: vi.fn(() => ({ total: 75, breakdown: { github: 40, completeness: 20, community: 15 } })),
-  getRecommendation: vi.fn(() => ({ amount: 1.5, multiplier: 200, label: '2x' })),
+  getRecommendation: vi.fn(() => ({ priority: 'C', label: 'priority C', note: 'test note' })),
   computeStrategicAdvice: vi.fn(() => ({ ecosystemFit: 'high', tradeOffMatrix: {} })),
   MIN_SCORE_TO_BACK: 60,
 }));
@@ -160,7 +160,7 @@ describe('Agent API Response Contracts', () => {
       getCachedResult.mockResolvedValueOnce({
         data: {
           healthScore: 82,
-          recommendation: { amount: 3.0, multiplier: 150, label: '1.5x' },
+          recommendation: { priority: 'B', label: 'priority B', note: 'solid candidate' },
           aiAnalysis: 'A'.repeat(500),
         },
         cachedAt: '2026-09-14T00:00:00Z',
@@ -179,8 +179,8 @@ describe('Agent API Response Contracts', () => {
       expect(body.cached).toBe(true);
       expect(body.projectId).toBe('proj-1');
       expect(body.summary.healthScore).toBe(82);
-      expect(body.summary.healthVerdict).toBe('back');
-      expect(body.summary.recommendation).toBe('stake 3 USDC @ 1.5x');
+      expect(body.summary.healthVerdict).toBe('fundable');
+      expect(body.summary.recommendation).toBe('bridge-loan candidate — priority B');
       // aiAnalysis is truncated for the card surface
       expect(body.summary.aiAnalysis.length).toBeLessThanOrEqual(280);
     });
@@ -200,7 +200,7 @@ describe('Agent API Response Contracts', () => {
       await handler(req, res);
       const body = res.json.mock.calls[0][0];
       expect(body.summary.healthVerdict).toBe('watch');
-      expect(body.summary.recommendation).toBe('below back threshold');
+      expect(body.summary.recommendation).toBe('below candidate threshold');
     });
   });
 

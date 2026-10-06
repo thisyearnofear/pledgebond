@@ -1,24 +1,24 @@
 /**
- * PortfolioStats — 4-card stat grid for the /scout page.
+ * PortfolioStats — 4-card stat grid for the scout panel.
  *
  * Pure presentational; expects a stats object with: totalEvaluated,
- * totalBacked, totalStaked, winRate.
+ * totalFlagged, priorityA, runCount.
  */
 import { Card } from "@/components/common/Card";
 
 const TONES = {
   evaluated: { value: "text-white" },
-  backed:    { value: "text-emerald-400" },
-  staked:    { value: "text-cyan-400 dark:text-cyan-500" },
-  winRate:   { value: "text-amber-400" },
+  flagged:   { value: "text-emerald-400" },
+  priorityA: { value: "text-cyan-400 dark:text-cyan-500" },
+  runs:      { value: "text-amber-400" },
 };
 
 export default function PortfolioStats({ stats }) {
   const cards = [
-    { label: "Projects Evaluated",  value: stats.totalEvaluated,            tone: TONES.evaluated },
-    { label: "Backings Executed",   value: stats.totalBacked,               tone: TONES.backed },
-    { label: "Total Staked",        value: `$${stats.totalStaked.toFixed(2)}`, tone: TONES.staked },
-    { label: "Success Rate",        value: `${stats.winRate}%`,              tone: TONES.winRate },
+    { label: "Projects Evaluated",      value: stats.totalEvaluated,        tone: TONES.evaluated },
+    { label: "Candidates Flagged",      value: stats.totalFlagged,          tone: TONES.flagged },
+    { label: "Priority A Picks",        value: stats.priorityA,             tone: TONES.priorityA },
+    { label: "Agent Runs Logged",       value: stats.runCount,              tone: TONES.runs },
   ];
 
   return (

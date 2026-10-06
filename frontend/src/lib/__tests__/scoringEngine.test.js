@@ -113,18 +113,22 @@ describe('getRecommendation', () => {
     expect(getRecommendation(59)).toBeNull();
   });
 
-  it('returns recommendation for qualifying scores', () => {
+  it('returns a priority tier for qualifying scores', () => {
     const rec = getRecommendation(75);
     expect(rec).not.toBeNull();
-    expect(rec.amount).toBe(1.5);
-    expect(rec.multiplier).toBe(200);
-    expect(rec.label).toBe('2x');
+    expect(rec.priority).toBe('C');
+    expect(rec.label).toBe('priority C');
+    expect(typeof rec.note).toBe('string');
   });
 
-  it('returns highest tier for top scores', () => {
+  it('returns the top tier for top scores', () => {
     const rec = getRecommendation(95);
-    expect(rec.amount).toBe(5.0);
-    expect(rec.multiplier).toBe(150);
+    expect(rec.priority).toBe('A');
+  });
+
+  it('carries no stake amount or multiplier', () => {
+    expect(getRecommendation(95)).not.toHaveProperty('amount');
+    expect(getRecommendation(95)).not.toHaveProperty('multiplier');
   });
 
   it('boundary: exactly MIN_SCORE_TO_BACK', () => {

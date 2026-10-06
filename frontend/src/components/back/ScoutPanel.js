@@ -12,18 +12,17 @@ import {
   ScoutHeader,
   PortfolioStats,
   ReasoningTraces,
-  RecentSettlements,
   PredictionMarketPreview,
   ActivityFeed,
   CopyScoutModal,
 } from "@/components/scout";
 
 const SHARE_TEXT = (stats) =>
-  `Proof Scout has evaluated ${stats.totalEvaluated} projects and executed ${stats.totalBacked} backings. Copy the agent:`;
+  `Proof Scout has evaluated ${stats.totalEvaluated} projects and flagged ${stats.totalFlagged} bridge-loan candidates. Read the reasoning traces:`;
 
 export default function ScoutPanel() {
   const { currentUser } = useUser();
-  const { runs, loading, stats, reasoningTraces, recentExecutions } = useScoutRuns();
+  const { runs, loading, stats, reasoningTraces } = useScoutRuns();
   const copy = useCopyScout(currentUser);
 
   const handleShare = () => {
@@ -52,7 +51,6 @@ export default function ScoutPanel() {
           <>
             <PortfolioStats stats={stats} />
             <ReasoningTraces traces={reasoningTraces} />
-            <RecentSettlements executions={recentExecutions} />
             <PredictionMarketPreview traces={reasoningTraces} />
             <ActivityFeed runs={runs} />
           </>

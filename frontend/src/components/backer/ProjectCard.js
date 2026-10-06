@@ -85,18 +85,18 @@ export default function ProjectCard({ project, onBack, scoutScore }) {
           </span>
 
           {/* AI Scout Badge */}
-          {scoutScore?.backed && (
+          {scoutScore?.flagged || scoutScore?.backed ? (
             <span className="inline-flex items-center gap-1 text-[11px] font-medium text-indigo-700 bg-indigo-50 rounded-full px-2 py-0.5">
               🤖 {scoutScore.score}/100
             </span>
-          )}
+          ) : null}
 
           {/* Cached Underwriter summary — first caller paid, this read is free */}
           {peekScore != null && (
             <span
               title={`Underwriter · cached ${peek.cachedAge}`}
               className={`inline-flex items-center gap-1 text-[11px] font-medium rounded-full px-2 py-0.5 border ${
-                peek?.summary?.healthVerdict === "back"
+                peek?.summary?.healthVerdict === "fundable"
                   ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                   : "bg-gray-50 text-gray-600 border-gray-200"
               }`}

@@ -13,8 +13,8 @@ const DOT = {
 
 function describe(run) {
   switch (run.type) {
-    case "execution":  return `Executed ${run.totalBacked || 0} backings`;
-    case "scout":      return `Evaluated ${run.projectsEvaluated || 0} projects, recommended ${run.projectsBacked || 0}`;
+    case "execution":  return `Legacy pre-rail Executor run — ${run.totalBacked || 0} backings`;
+    case "scout":      return `Evaluated ${run.projectsEvaluated || 0} projects, flagged ${run.projectsFlagged ?? run.projectsBacked ?? 0} bridge-loan candidates`;
     case "underwrite": return `Analyzed ${run.project?.name || "project"}`;
     default:           return "Agent run";
   }

@@ -5,21 +5,20 @@ import { CpuChipIcon, BoltIcon } from '@heroicons/react/24/solid';
 
 function formatAgentRun(run) {
   const type = run.type || 'scout';
-  const agent = type === 'execution' ? 'Executor' : type === 'scout' ? 'Scout' : type === 'underwrite' ? 'Underwriter' : 'Agent';
+  const agent = type === 'execution' ? 'Legacy Executor' : type === 'scout' ? 'Scout' : type === 'underwrite' ? 'Underwriter' : 'Agent';
   const evaluated = run.projectsEvaluated || run.projects?.length || 0;
-  const backed = run.projectsBacked || run.backed || 0;
-  const totalStake = run.totalStakeRecommended || run.totalStaked || 0;
+  const flagged = run.projectsFlagged ?? run.projectsBacked ?? run.backed ?? 0;
 
   if (type === 'execution') {
-    return `${agent} executed ${backed} backing${backed !== 1 ? 's' : ''} — ${totalStake.toFixed(2)} USDC settled`;
+    return `${agent} — legacy pre-rail run (${run.totalBacked || 0} backings)`;
   }
   if (type === 'scout') {
-    return `${agent} evaluated ${evaluated} projects, recommended ${backed} — ${totalStake.toFixed(2)} USDC`;
+    return `${agent} evaluated ${evaluated} projects, flagged ${flagged} bridge-loan candidates`;
   }
   if (type === 'underwrite') {
     return `${agent} scored project ${run.project?.name || run.projectId || 'unknown'} — ${run.healthScore || '?'}/100`;
   }
-  return `${agent} completed run — ${evaluated} evaluated, ${backed} backed`;
+  return `${agent} completed run — ${evaluated} evaluated, ${flagged} flagged`;
 }
 
 export default function LiveAgentTicker() {
@@ -94,7 +93,7 @@ export default function LiveAgentTicker() {
   // Compute live stats from real data
   const totalRuns = runs.length;
   const successfulRuns = runs.filter((r) =>
-    r.type === 'execution' ? (r.totalBacked || 0) > 0 : (r.projectsBacked || r.backed || 0) > 0
+    (r.projectsFlagged ?? r.projectsBacked ?? r.backed ?? 0) > 0
   ).length;
 
   return (
