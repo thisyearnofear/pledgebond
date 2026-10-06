@@ -1,6 +1,5 @@
 export { default as AnalyzeHeader } from "./AnalyzeHeader";
 export { default as ProjectSearch } from "./ProjectSearch";
-export { default as CreditScoreCard } from "./CreditScoreCard";
 export { default as ProjectGrid } from "./ProjectGrid";
 export { default as ProjectCard } from "./ProjectCard";
 export { default as AnalysisResult } from "./AnalysisResult";

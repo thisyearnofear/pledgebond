@@ -310,14 +310,6 @@ function completionPercentage(s: AuthState) {
   return Math.round((keys.filter((k) => status[k]).length / keys.length) * 100);
 }
 
-function fundingEligibility(s: AuthState) {
-  const data = s.creditData;
-  if (!data) return { eligible: false, amount: 0, reason: "No credit data" };
-  const score = data.creditScore || 0;
-  if (score < 400) return { eligible: false, amount: 0, reason: "Credit score too low" };
-  return { eligible: true, amount: Math.min(score * 5, 5000), reason: "OK" };
-}
-
 function isProfileComplete(s: AuthState) {
   return completionPercentage(s) === 100;
 }
@@ -363,7 +355,6 @@ export const authActions = {
   clearProfile,
   isAuthenticated,
   completionPercentage,
-  fundingEligibility,
   isProfileComplete,
   hasMinimumProfile,
   getRecommendations,
@@ -405,7 +396,6 @@ export function useUser() {
     clearProfile,
     isAuthenticated: () => isAuthenticated({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
     completionPercentage: () => completionPercentage({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
-    fundingEligibility: () => fundingEligibility({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
     isProfileComplete: () => isProfileComplete({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
     hasMinimumProfile: () => hasMinimumProfile({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),
     getRecommendations: () => getRecommendations({ currentUser, loading, userRole, userProfile, creditData, onboardingComplete, linkedWallets, decentralizedAuth } as any),

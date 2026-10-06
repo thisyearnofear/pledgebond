@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card } from '@/components/common/Card';
-import ScoreBar from '@/components/common/ScoreBar';
 import Button from '@/components/common/Button';
 import { useScorePreview } from '@/hooks/useScorePreview';
 
@@ -33,33 +32,24 @@ export default function ScorePreviewCard({
 
       {result && (
         <Card className="mt-4 p-4 text-left border border-default bg-surface/80 backdrop-blur-sm">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <p className="text-xs text-secondary">Estimated Credit Score</p>
-              <p className="text-2xl font-bold text-primary">{result.estimatedScore}</p>
-            </div>
-            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-              result.estimatedScore >= 700 ? 'bg-success-50 text-success-700' :
-              result.estimatedScore >= 550 ? 'bg-warning-50 text-warning-700' :
-              'bg-surface-secondary text-secondary'
-            }`}>
-              {result.tier}
-            </span>
-          </div>
-          <ScoreBar score={result.estimatedScore} />
-          <div className="flex justify-between text-xs text-secondary mt-1 mb-3">
-            <span>400</span><span>550</span><span>700</span><span>850</span>
+          <div className="mb-2">
+            <p className="text-xs text-secondary">Public shipping track record</p>
+            <p className="text-sm text-secondary">
+              Bridge loans are sized against a confirmed prize, not a score — this is the record lenders see alongside your win claim.
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-secondary">
-            <span>📦 {result.stats.publicRepos} repos</span>
+            <span>📦 {result.stats.publicRepos} public repos</span>
             <span>⭐ {result.stats.totalStars} stars</span>
+            <span>👥 {result.stats.followers} followers</span>
+            <span>🕒 {result.stats.accountAgeDays} days on GitHub</span>
           </div>
           {onGetStarted && (
             <button
               onClick={onGetStarted}
               className="mt-3 w-full text-center text-sm font-semibold text-primary hover:text-primary-600"
             >
-              Connect to unlock your full credit profile →
+              Claim a win to get on the public payout ledger →
             </button>
           )}
         </Card>

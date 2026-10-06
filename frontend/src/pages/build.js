@@ -153,13 +153,13 @@ export default function BuildPage() {
           <div className="text-center space-y-6">
           <PageHeader
             align="center"
-            title={isPayoutReferral ? "Get Paid Today, Not in 67 Days" : "Connect wallet for credit tools"}
+            title={isPayoutReferral ? "Get Paid Today, Not in 67 Days" : "Connect wallet for your win desk"}
             subtitle={
               isPayoutReferral
                 ? "You won. The organizer hasn't paid yet. PledgeBond advances USDC against that prize so you can keep building — you set the rate and repay when they pay."
                 : currentUser
-                  ? "Your win desk above works without a wallet. Connect to manage credit, funding, and cross-chain tools."
-                  : `Connect your ${activeChainFamily === "solana" ? "Solana" : "EVM"} wallet to view your credit score, request funding, and manage projects.`
+                  ? "Your win desk above works without a wallet. Connect to manage bridge loans, funding requests, and cross-chain tools."
+                  : `Connect your ${activeChainFamily === "solana" ? "Solana" : "EVM"} wallet to view your bridge loans, request funding, and manage projects.`
             }
             icon={
               isPayoutReferral ? (
@@ -203,7 +203,7 @@ export default function BuildPage() {
                 <Link href="/login?mode=signup">
                   <Button variant="primary" size="md">Get Funded Now</Button>
                 </Link>
-                <span className="text-sm text-text-tertiary">or preview your credit score below</span>
+                <span className="text-sm text-text-tertiary">or preview your builder track record below</span>
               </div>
             ) : (
               <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
@@ -214,12 +214,12 @@ export default function BuildPage() {
 
           <div className={isPayoutReferral ? "" : "border-t border-default pt-8"}>
             <h2 className="text-lg font-semibold text-primary mb-2">
-              {isPayoutReferral ? "📊 Your Estimated Credit" : "🔍 Preview Your Score"}
+              {isPayoutReferral ? "📊 Your Builder Track Record" : "🔍 Preview Your Track Record"}
             </h2>
             <p className="text-sm text-secondary mb-4">
               {isPayoutReferral
-                ? "Enter your GitHub username to see how much USDC you qualify for — no wallet or login required."
-                : "Enter your GitHub username to see an estimated credit score — no login required."}
+                ? "Enter your GitHub username to see the public record lenders read alongside your win claim — no wallet or login required."
+                : "Enter your GitHub username to see your public shipping stats — no login required."}
             </p>
             <ScorePreviewCard />
           </div>

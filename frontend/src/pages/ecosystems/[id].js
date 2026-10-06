@@ -232,11 +232,11 @@ export default function EcosystemPage() {
         <Card className="p-6 mt-8 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-primary mb-2">Inspired by these projects?</h3>
-              <p className="text-gray-600 dark:text-gray-400">Get your developer credit score and unlock funding.</p>
+              <h3 className="text-lg font-semibold text-primary mb-2">Won a hackathon like these?</h3>
+              <p className="text-gray-600 dark:text-gray-400">Claim your win and bridge the unpaid prize with a USDC loan — paid in hours, not 90 days.</p>
             </div>
-            <Button onClick={() => router.push('/credit')} className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white whitespace-nowrap">
-              Get Funded
+            <Button onClick={() => router.push('/build')} className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white whitespace-nowrap">
+              Claim Your Win
             </Button>
           </div>
         </Card>

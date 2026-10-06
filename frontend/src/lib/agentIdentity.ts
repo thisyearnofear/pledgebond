@@ -12,13 +12,13 @@ export const AGENT_IDENTITIES = {
   scout: {
     domain: 'pledgebond-scout.sol',
     displayName: 'Scout Agent',
-    description: 'Evaluates projects and recommends micro-backings',
+    description: 'Scans projects and flags bridge-loan candidates',
     icon: '🔭',
   },
   underwrite: {
     domain: 'pledgebond-underwriter.sol',
     displayName: 'Underwriter Agent',
-    description: 'Analyzes project health and creditworthiness',
+    description: 'Analyzes project health and payout-track-record signals',
     icon: '🤖',
   },
   verify: {

@@ -195,29 +195,6 @@ ${projectData.ecosystem ? `Ecosystem: ${projectData.ecosystem}` : ''}`;
   }
 
   /**
-   * Generate a credit score explanation via local QVAC.
-   * Financial data never leaves the user's machine.
-   */
-  async explainCreditScore(scoreData: {
-    reputation: number;
-    totalBacking: string;
-    milestonesCompleted: number;
-    milestonesTotal: number;
-  }): Promise<QvacCompletionResult> {
-    const prompt = `Explain this builder's credit score in 2-3 sentences:
-- Reputation: ${scoreData.reputation}/800
-- Total Backing: $${scoreData.totalBacking} USDC
-- Milestones: ${scoreData.milestonesCompleted}/${scoreData.milestonesTotal} completed
-
-Focus on what the score means for their borrowing capacity and what would improve it.`;
-
-    return this.complete({
-      prompt,
-      systemPrompt: 'You are a credit analyst. Be concise and actionable.',
-    });
-  }
-
-  /**
    * Check if QVAC is available and throw if not.
    * Convenience method for callers that want a simple gate.
    */

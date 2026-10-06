@@ -114,10 +114,10 @@ function AuthBanner({ userRole, onDismiss, router }) {
     },
     {
       icon: BanknotesIcon,
-      title: "3. Unlock Credit",
-      desc: "Your verified track record collateralizes a USDC credit line",
+      title: "3. Bridge Your Prize",
+      desc: "Fund a USDC bridge loan against your unpaid prize — paid in hours, not 90 days",
       action: () => router.push("/build"),
-      cta: "View Credit \u2192",
+      cta: "Bridge \u2192",
     },
   ];
 
@@ -138,10 +138,10 @@ function AuthBanner({ userRole, onDismiss, router }) {
     },
     {
       icon: BanknotesIcon,
-      title: "3. Back a Builder",
-      desc: "Stake USDC — principal + multiplier repaid from prize wins, shielded by default",
+      title: "3. Fund a Bridge Loan",
+      desc: "Lend USDC against a confirmed win — principal + your rate repaid when the organizer pays",
       action: () => router.push("/back?tab=discover"),
-      cta: "Stake \u2192",
+      cta: "Fund \u2192",
     },
   ];
 

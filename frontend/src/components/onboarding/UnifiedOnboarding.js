@@ -17,7 +17,7 @@ const TOUR_STEPS = [
   {
     id: 'welcome',
     title: 'You Won. Now Get Paid.',
-    description: 'PledgeBond turns hackathon wins into working capital. We verify your win on a public ledger — and your track record unlocks credit.',
+    description: 'PledgeBond turns hackathon wins into working capital. We anchor your win on a public ledger — and lenders bridge your unpaid prize in USDC.',
     icon: TrophyIcon,
     color: 'bg-amber-500'
   },
@@ -37,8 +37,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'credit',
-    title: 'Unlock Credit',
-    description: 'Your verified track record collateralizes a USDC credit line. Start your next build before the prize check arrives.',
+    title: 'Bridge Your Prize',
+    description: 'Fund a USDC bridge loan against a confirmed win. Start your next build before the prize check arrives.',
     icon: BanknotesIcon,
     color: 'bg-purple-500'
   }

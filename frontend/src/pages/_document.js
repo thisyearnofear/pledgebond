@@ -26,7 +26,7 @@ export default function Document() {
               "@context": "https://schema.org",
               "@type": "WebApplication",
               name: "PledgeBond",
-              description: "Post-win layer for hackathon builders: public payout truth, verified wins, and Underwriter packets that unlock credit.",
+              description: "Post-win layer for hackathon builders: public payout truth, verified wins, and USDC bridge loans against unpaid prizes.",
               url: "https://pledgebond.vercel.app",
               applicationCategory: "FinanceApplication",
               operatingSystem: "Web",

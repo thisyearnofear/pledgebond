@@ -155,7 +155,7 @@ export function computeStrategicAdvice(project) {
   } else {
     advice.bagsRecommendation = {
       recommended: false,
-      reason: "Project favors stable utility over viral growth. Focus on a Circle-backed Credit Line for now.",
+      reason: "Project favors stable utility over viral growth. A bridge loan on Arc against a declared win fits better than a token launch.",
       parameters: null
     };
   }

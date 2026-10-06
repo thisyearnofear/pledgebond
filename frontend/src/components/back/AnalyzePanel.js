@@ -4,15 +4,11 @@
 
 import React, { useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import { useUser } from "@/stores/authStore";
 import useAnalyzeProjects from "@/hooks/useAnalyzeProjects";
-import useUserCreditScore from "@/hooks/useUserCreditScore";
 import useAnalyzeProject from "@/hooks/useAnalyzeProject";
-import useExplainCredit from "@/hooks/useExplainCredit";
 import {
   AnalyzeHeader,
   ProjectSearch,
-  CreditScoreCard,
   ProjectGrid,
   AnalysisResult,
   AnalysisLoading,
@@ -21,11 +17,8 @@ import {
 
 export default function AnalyzePanel() {
   const router = useRouter();
-  const { currentUser } = useUser();
   const { projects, filtered, loading, searchQuery, setSearchQuery } = useAnalyzeProjects();
-  const userScore = useUserCreditScore(currentUser);
   const analyze = useAnalyzeProject();
-  const explainCredit = useExplainCredit(userScore);
   const autoRunRef = useRef(null);
 
   useEffect(() => {
@@ -45,15 +38,6 @@ export default function AnalyzePanel() {
     <div className="space-y-6">
       <AnalyzeHeader compact />
       <ProjectSearch value={searchQuery} onChange={setSearchQuery} />
-
-      {userScore && (
-        <CreditScoreCard
-          userScore={userScore}
-          result={explainCredit.result}
-          loading={explainCredit.loading}
-          onExplain={explainCredit.run}
-        />
-      )}
 
       <div>
         <h2 className="text-lg font-bold text-text-primary mb-4">Select a Project</h2>

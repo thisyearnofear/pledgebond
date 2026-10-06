@@ -2,12 +2,11 @@
  * Project Analysis API Endpoint
  *
  * Cloud fallback for QVAC on-device analysis. Uses the same prompts as
- * QvacService.analyzeProject() and explainCreditScore() so results are
+ * QvacService.analyzeProject() so results are
  * consistent regardless of inference source.
  *
  * POST /api/agent/analyze
  *   Body: { project: { name, description, githubUrl?, ecosystem? } }
- *   Body: { type: 'credit', scoreData: { reputation, totalBacking, milestonesCompleted, milestonesTotal } }
  *   Body: { type: 'claim_verification', project: { hackathons: [...] } }
  *   Body: { type: 'genlayer_verdict', description, evidenceUrl, criteria? }
  *   Body: { type: 'listing_improvement', project: { ... } }
@@ -24,20 +23,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { project, type, scoreData } = req.body;
-
-    // Credit score explanation
-    if (type === 'credit' && scoreData) {
-      const prompt = `Explain this builder's credit score in 2-3 sentences:
-- Reputation: ${scoreData.reputation}/800
-- Total Backing: $${scoreData.totalBacking} USDC
-- Milestones: ${scoreData.milestonesCompleted}/${scoreData.milestonesTotal} completed
-
-Focus on what the score means for their borrowing capacity and what would improve it.`;
-
-      const analysis = await callAI(prompt, 'You are a credit analyst. Be concise and actionable.');
-      return res.status(200).json({ success: true, analysis, source: 'cloud' });
-    }
+    const { project, type } = req.body;
 
     // ── Claim verification with on-chain attestation ─────────────
     if (type === 'claim_verification' && project) {
@@ -334,7 +320,7 @@ ${project.ecosystem ? `Ecosystem: ${project.ecosystem}` : ''}`;
       return res.status(200).json({ success: true, analysis, source: 'cloud' });
     }
 
-    return res.status(400).json({ error: 'Missing project or scoreData in request body' });
+    return res.status(400).json({ error: 'Missing project or type in request body' });
   } catch (err) {
     console.error('Analyze API error:', err);
     return res.status(500).json({ error: 'Analysis failed', details: err.message });
