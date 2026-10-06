@@ -1,19 +1,17 @@
 /**
- * ScoutHeader — hero band for the /scout page.
+ * ScoutHeader — hero band for the scout panel.
  *
- * Title, agent badge with pulse dot, description, Share + Copy buttons.
- * The Copy button toggles to a "Copying Scout" disabled state when
- * the user is already subscribed.
+ * Title, agent badge with pulse dot, description, Share button.
+ * There is no Copy button: the Scout publishes reasoning traces only —
+ * it never executes anything on a user's behalf.
  */
 import Button from "@/components/common/Button";
 import {
   CpuChipIcon,
-  BoltIcon,
   ShareIcon,
-  CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
-export default function ScoutHeader({ subscribed, onShare, onCopy, embedded = false }) {
+export default function ScoutHeader({ onShare, embedded = false }) {
   const TitleTag = embedded ? "h2" : "h1";
   return (
     <div className="bg-gradient-to-b from-indigo-900/20 to-slate-950 border-b border-slate-800">
@@ -37,17 +35,6 @@ export default function ScoutHeader({ subscribed, onShare, onCopy, embedded = fa
               <ShareIcon className="w-3.5 h-3.5 mr-1" />
               Share
             </Button>
-            {subscribed ? (
-              <Button disabled className="bg-emerald-600 text-white text-xs opacity-80 cursor-default">
-                <CheckCircleIcon className="w-3.5 h-3.5 mr-1" />
-                Copying Scout
-              </Button>
-            ) : (
-              <Button onClick={onCopy} className="bg-cyan-500 hover:bg-cyan-600 text-white text-xs">
-                <BoltIcon className="w-3.5 h-3.5 mr-1" />
-                Copy Scout
-              </Button>
-            )}
           </div>
         </div>
       </div>

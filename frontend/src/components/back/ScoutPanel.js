@@ -7,14 +7,12 @@ import { LoadingSpinner } from "@/components/common/LoadingStates";
 import { trackEvent } from "@/lib/analytics";
 import { agentsHref } from "@/config/navigation";
 import useScoutRuns from "@/hooks/useScoutRuns";
-import useCopyScout from "@/hooks/useCopyScout";
 import {
   ScoutHeader,
   PortfolioStats,
   ReasoningTraces,
   PredictionMarketPreview,
   ActivityFeed,
-  CopyScoutModal,
 } from "@/components/scout";
 
 const SHARE_TEXT = (stats) =>
@@ -23,7 +21,6 @@ const SHARE_TEXT = (stats) =>
 export default function ScoutPanel() {
   const { currentUser } = useUser();
   const { runs, loading, stats, reasoningTraces } = useScoutRuns();
-  const copy = useCopyScout(currentUser);
 
   const handleShare = () => {
     trackEvent("scout_portfolio_shared", { user: currentUser?.uid || "anonymous" });
@@ -40,7 +37,7 @@ export default function ScoutPanel() {
 
   return (
     <div className="rounded-xl overflow-hidden bg-slate-950 text-slate-100 border border-slate-800">
-      <ScoutHeader subscribed={copy.subscribed} onShare={handleShare} onCopy={copy.openModal} embedded />
+      <ScoutHeader onShare={handleShare} embedded />
 
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         {loading ? (
@@ -56,14 +53,6 @@ export default function ScoutPanel() {
           </>
         )}
       </div>
-
-      {copy.modalOpen && (
-        <CopyScoutModal
-          onClose={copy.closeModal}
-          onConfirm={copy.subscribe}
-          loading={copy.loading}
-        />
-      )}
     </div>
   );
 }
