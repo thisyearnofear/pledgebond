@@ -66,7 +66,7 @@ export default function LeaderboardRow({ entry, rank, type }) {
           {entry.velocity || entry.score || 0}
         </div>
         <p className="text-xs text-text-tertiary">
-          {type === "builders" ? "shipping velocity" : "backing score"}
+          {type === "builders" ? "shipping velocity" : "funding velocity"}
         </p>
         {entry.source === "torque" && (
           <span className="inline-block mt-0.5 text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium">

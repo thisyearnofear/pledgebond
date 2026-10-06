@@ -29,7 +29,7 @@ describe('LeaderboardRow', () => {
     render(<LeaderboardRow entry={entry} rank={2} type="backers" />);
     expect(screen.getByText('bob')).toBeInTheDocument();
     expect(screen.getByText('$1,234 funded · 7 projects')).toBeInTheDocument();
-    expect(screen.getByText('backing score')).toBeInTheDocument();
+    expect(screen.getByText('funding velocity')).toBeInTheDocument();
     expect(screen.getByText('88')).toBeInTheDocument();
   });
 

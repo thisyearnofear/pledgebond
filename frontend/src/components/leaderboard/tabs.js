@@ -37,7 +37,7 @@ export function generateShareText(entry, rank, type) {
     return `#${rank} ${entry.name || truncateAddress(entry.address)} — ${entry.velocity || entry.score || 0} shipping velocity on @pledgebond`;
   }
   if (type === "backers") {
-    return `#${rank} ${entry.name || truncateAddress(entry.address)} — ${entry.velocity || entry.score || 0} backing score on @pledgebond`;
+    return `#${rank} ${entry.name || truncateAddress(entry.address)} — ${entry.velocity || entry.score || 0} funding velocity on @pledgebond`;
   }
   return `#${rank} ${entry.name || truncateAddress(entry.address)} on @pledgebond`;
 }
