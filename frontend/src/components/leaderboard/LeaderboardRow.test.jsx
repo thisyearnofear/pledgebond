@@ -24,9 +24,9 @@ describe('LeaderboardRow', () => {
     expect(screen.getByText('99')).toBeInTheDocument();
   });
 
-  it('renders the backer-specific copy for backers', () => {
+  it('renders the lender-specific copy for lenders', () => {
     const entry = { name: 'bob', address: '0xabc', totalBacked: 1234, projectsBacked: 7, score: 88 };
-    render(<LeaderboardRow entry={entry} rank={2} type="backers" />);
+    render(<LeaderboardRow entry={entry} rank={2} type="lenders" />);
     expect(screen.getByText('bob')).toBeInTheDocument();
     expect(screen.getByText('$1,234 funded · 7 projects')).toBeInTheDocument();
     expect(screen.getByText('funding velocity')).toBeInTheDocument();

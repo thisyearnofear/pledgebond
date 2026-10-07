@@ -38,10 +38,10 @@ describe('EmptyState', () => {
     expect(screen.getByRole('link', { name: /Submit a proven project/ })).toHaveAttribute('href', '/build');
   });
 
-  it('renders the "backers" config pointing to /back', () => {
-    render(<EmptyState tab="backers" />);
-    expect(screen.getByText(/No backers yet/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Back a project/ })).toHaveAttribute('href', '/back');
+  it('renders the "lenders" config pointing to /back', () => {
+    render(<EmptyState tab="lenders" />);
+    expect(screen.getByText(/No lenders yet/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Fund a bridge loan/ })).toHaveAttribute('href', '/back');
   });
 
   it('renders the "hackathons" config', () => {

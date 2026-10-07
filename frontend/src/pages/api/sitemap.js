@@ -12,7 +12,7 @@ const STATIC_ROUTES = [
   { path: "/leaderboard?tab=proof-builders", priority: "0.8", changefreq: "hourly" },
   { path: "/leaderboard?tab=projects", priority: "0.8", changefreq: "hourly" },
   { path: "/leaderboard?tab=builders", priority: "0.7", changefreq: "daily" },
-  { path: "/leaderboard?tab=backers", priority: "0.7", changefreq: "daily" },
+  { path: "/leaderboard?tab=lenders", priority: "0.7", changefreq: "daily" },
   { path: "/build", priority: "0.8", changefreq: "weekly" },
   { path: "/back", priority: "0.8", changefreq: "daily" },
   { path: "/analyze", priority: "0.6", changefreq: "weekly" },

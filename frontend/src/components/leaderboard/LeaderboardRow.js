@@ -1,8 +1,8 @@
 /**
- * LeaderboardRow — Default row for builders/backers (torque or firestore).
+ * LeaderboardRow — Default row for builders/lenders (torque or firestore).
  *
  * Renders the rank medal, identity (name + SNS), stats line, score, share
- * button, and explorer link. Used by the `builders` and `backers` tabs.
+ * button, and explorer link. Used by the `builders` and `lenders` tabs.
  */
 
 import { useMemo } from "react";

@@ -25,11 +25,13 @@ import {
   ProvenProjectsList,
 } from "@/components/leaderboard";
 
-const EMPTY_ENTRIES = { builders: [], proofBuilders: [], projects: [], backers: [], hackathons: [] };
+const EMPTY_ENTRIES = { builders: [], proofBuilders: [], projects: [], lenders: [], hackathons: [] };
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const tab = router.query.tab || "hackathons";
+  // "backers" was the pre-rail tab id; old shared links keep working.
+  const rawTab = router.query.tab === "backers" ? "lenders" : router.query.tab;
+  const tab = rawTab || "hackathons";
   const setTab = (t) => {
     router.replace(
       { pathname: router.pathname, query: t === "hackathons" ? {} : { tab: t } },
@@ -41,12 +43,22 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState(EMPTY_ENTRIES);
 
   useEffect(() => {
+    if (router.query.tab === "backers" && router.isReady) {
+      router.replace(
+        { pathname: router.pathname, query: { tab: "lenders" } },
+        undefined,
+        { shallow: true },
+      );
+    }
+  }, [router.query.tab, router.isReady]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadTorque() {
-      // Only gates the builders/backers tabs; hackathon tabs render from the
+      // Only gates the builders/lenders tabs; hackathon tabs render from the
       // second fetch so a slow/failing Torque call can't blank the page.
-      const needsTorque = tab === "builders" || tab === "backers";
+      const needsTorque = tab === "builders" || tab === "lenders";
       if (needsTorque) setLoading(true);
       try {
         const res = await fetch("/api/torque/leaderboard");
@@ -56,7 +68,7 @@ export default function LeaderboardPage() {
         setEntries((prev) => ({
           ...prev,
           builders: (data.builders || []).map((b) => ({ ...b, source: b.source || "firestore" })),
-          backers: (data.backers || []).map((b) => ({ ...b, source: b.source || "firestore" })),
+          lenders: (data.backers || []).map((b) => ({ ...b, source: b.source || "firestore" })),
         }));
       } catch (err) {
         console.warn("Leaderboard fetch failed:", err);
@@ -68,7 +80,7 @@ export default function LeaderboardPage() {
 
     async function loadHackathons() {
       // Own loading lane so hackathon tabs paint even while Torque is slow.
-      if (tab === "builders" || tab === "backers") return;
+      if (tab === "builders" || tab === "lenders") return;
       setLoading(true);
       try {
         const res = await fetch("/api/hackathons/leaderboard");
@@ -99,7 +111,7 @@ export default function LeaderboardPage() {
     tab === "builders" ? entries.builders :
     tab === "proof-builders" ? entries.proofBuilders :
     tab === "projects" ? entries.projects :
-    tab === "backers" ? entries.backers :
+    tab === "lenders" ? entries.lenders :
     entries.hackathons;
 
   return (

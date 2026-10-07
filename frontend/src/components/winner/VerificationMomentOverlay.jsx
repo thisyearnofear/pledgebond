@@ -156,7 +156,7 @@ export default function VerificationMomentOverlay() {
           You're now part of an exclusive group of proven builders.
         </p>
         <p className="text-sm text-gray-400 mb-8 leading-relaxed max-w-md">
-          Your track record is verified. Backers can now fund you based on proof, not promises.
+          Your track record is verified. Lenders can now fund you based on proof, not promises.
           This is where capital meets credibility.
         </p>
 

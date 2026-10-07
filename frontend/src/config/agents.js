@@ -43,4 +43,4 @@ export const AGENTS = [
 ];
 
 export const AGENTS_INTRO =
-  "For winners: Verifier confirms payouts. Underwriter scores the win into a shareable packet. Scout is optional for backers scanning the wider market.";
+  "For winners: Verifier confirms payouts. Underwriter scores the win into a shareable packet. Scout is optional for lenders scanning the wider market.";

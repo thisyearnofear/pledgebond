@@ -16,7 +16,7 @@ export const TABS = [
   { id: "proof-builders", label: "Proof Builders", icon: TrophyIcon },
   { id: "projects", label: "Proven Projects", icon: FireIcon },
   { id: "builders", label: "Top Builders", icon: RocketLaunchIcon },
-  { id: "backers", label: "Top Backers", icon: BanknotesIcon },
+  { id: "lenders", label: "Top Lenders", icon: BanknotesIcon },
 ];
 
 export const TAB_EXPLAINERS = {
@@ -24,7 +24,7 @@ export const TAB_EXPLAINERS = {
   "proof-builders": "Builders ranked by verified wins, evidence coverage, and proof-backed project claims — the most credible in the ecosystem.",
   projects: "Projects ranked by onchain evidence, verified hackathon claims, and overall credibility score.",
   builders: "Top builders by shipping velocity, project submissions, and milestone completions.",
-  backers: "Top backers by funded volume, projects backed, and portfolio performance.",
+  lenders: "Top lenders by funded volume, bridge loans placed, and portfolio performance.",
 };
 
 export function truncateAddress(addr) {
@@ -36,7 +36,7 @@ export function generateShareText(entry, rank, type) {
   if (type === "builders") {
     return `#${rank} ${entry.name || truncateAddress(entry.address)} — ${entry.velocity || entry.score || 0} shipping velocity on @pledgebond`;
   }
-  if (type === "backers") {
+  if (type === "lenders") {
     return `#${rank} ${entry.name || truncateAddress(entry.address)} — ${entry.velocity || entry.score || 0} funding velocity on @pledgebond`;
   }
   return `#${rank} ${entry.name || truncateAddress(entry.address)} on @pledgebond`;

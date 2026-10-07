@@ -43,11 +43,11 @@ const CATEGORIES = {
   },
   backer: {
     dataKey: "backers",
-    label: "Top Backers",
+    label: "Top Lenders",
     identifierKey: "address",
     source: "torque",
     href: "/leaderboard",
-    rankLabel: "Top Backers",
+    rankLabel: "Top Lenders",
   },
 };
 

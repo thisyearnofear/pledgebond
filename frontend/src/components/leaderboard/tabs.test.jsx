@@ -32,8 +32,8 @@ describe('generateShareText', () => {
     expect(text).toBe('#1 bob — 42 shipping velocity on @pledgebond');
   });
 
-  it('builds backer share text with funding velocity', () => {
-    const text = generateShareText({ name: 'carol', velocity: 5 }, 7, 'backers');
+  it('builds lender share text with funding velocity', () => {
+    const text = generateShareText({ name: 'carol', velocity: 5 }, 7, 'lenders');
     expect(text).toBe('#7 carol — 5 funding velocity on @pledgebond');
   });
 
@@ -55,7 +55,7 @@ describe('TABS', () => {
       'proof-builders',
       'projects',
       'builders',
-      'backers',
+      'lenders',
     ]);
   });
 

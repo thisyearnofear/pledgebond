@@ -403,7 +403,7 @@ export default function UserProfile() {
             )}
             {userRole && (
               <span className={`px-2 py-0.5 text-xs font-medium rounded flex-shrink-0 ${isBacker ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'}`}>
-                {isBacker ? 'Backer' : 'Builder'}
+                {isBacker ? 'Lender' : 'Builder'}
               </span>
             )}
           </div>
@@ -459,7 +459,7 @@ export default function UserProfile() {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Bio</label>
           <textarea
             className="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-            placeholder="Tell backers about yourself — what you build, your background, your mission."
+            placeholder="Tell lenders about yourself — what you build, your background, your mission."
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={3}
@@ -672,7 +672,7 @@ export default function UserProfile() {
                 />
 
                 <EmailToggle
-                  label="Backer activity"
+                  label="Lender activity"
                   description="Notify when someone backs your project, follows you, or leaves feedback."
                   checked={emailBackerActivity}
                   onChange={setEmailBackerActivity}

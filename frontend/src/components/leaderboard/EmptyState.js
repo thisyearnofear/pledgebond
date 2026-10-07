@@ -22,15 +22,15 @@ const CONFIG = {
   },
   projects: {
     label: "proven projects",
-    message: "No proven projects yet. Submit a project with evidence-backed hackathon claims to attract backers.",
+    message: "No proven projects yet. Submit a project with evidence-backed hackathon claims to attract lenders.",
     link: "/build",
     cta: "Submit a proven project",
   },
-  backers: {
-    label: "backers",
-    message: "Be the first to back a project and earn your spot.",
+  lenders: {
+    label: "lenders",
+    message: "Be the first to fund a bridge loan and earn your spot.",
     link: "/back",
-    cta: "Back a project",
+    cta: "Fund a bridge loan",
   },
   hackathons: {
     label: "hackathons",
