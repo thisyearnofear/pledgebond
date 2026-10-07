@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "@/stores/walletStore";
 import { formatUSDC } from "@/lib/format";
 import LoanTermsModal from "@/components/back/LoanTermsModal";
+import BetSlipModal from "@/components/back/BetSlipModal";
 import Button from "@/components/common/Button";
 import { Card } from "@/components/common/Card";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
@@ -25,6 +26,7 @@ export default function OpenWinsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [funding, setFunding] = useState(null);
+  const [betting, setBetting] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,15 +91,26 @@ export default function OpenWinsPanel() {
                   {new Date(win.declaredAt * 1000).toLocaleDateString()}
                 </p>
               </div>
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={!wallet.connected}
-                title={wallet.connected ? undefined : "Connect a wallet to fund"}
-                onClick={() => setFunding(win)}
-              >
-                Fund
-              </Button>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!wallet.connected}
+                  title={wallet.connected ? undefined : "Connect a wallet to bet"}
+                  onClick={() => setBetting(win)}
+                >
+                  Bet
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!wallet.connected}
+                  title={wallet.connected ? undefined : "Connect a wallet to fund"}
+                  onClick={() => setFunding(win)}
+                >
+                  Fund
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
@@ -108,6 +121,15 @@ export default function OpenWinsPanel() {
           opportunity={funding}
           wallet={wallet}
           onClose={() => setFunding(null)}
+          onSuccess={load}
+        />
+      )}
+
+      {betting && (
+        <BetSlipModal
+          market={betting}
+          wallet={wallet}
+          onClose={() => setBetting(null)}
           onSuccess={load}
         />
       )}

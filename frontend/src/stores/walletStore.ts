@@ -161,6 +161,16 @@ async function settleLoan(winId: number) {
   return liquidityRailService.settleLoan(ctx.chainId, ctx.publicClient, winId);
 }
 
+async function placeBet(winId: number, amount: string, expectsPayment: boolean) {
+  const ctx = requireRail();
+  return liquidityRailService.placeBet(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId, amount, expectsPayment);
+}
+
+async function claimBet(winId: number) {
+  const ctx = requireRail();
+  return liquidityRailService.claimBet(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId);
+}
+
 /** Reads rail state for the connected builder. Never throws. */
 async function loadRailState() {
   const { evm, activeChainFamily } = walletStore.getState();
@@ -530,6 +540,8 @@ export function useBuilderCredit() {
     declareWin,
     openLoan,
     settleLoan,
+    placeBet,
+    claimBet,
     loadRailState,
     switchChain: setActiveChainFamily,
     getUSDCBalanceAsync,
@@ -583,6 +595,8 @@ export const walletActions = {
   declareWin,
   openLoan,
   settleLoan,
+  placeBet,
+  claimBet,
   getUSDCBalance: getUSDCBalanceAsync,
   loadRailState,
   loadUserProjects,

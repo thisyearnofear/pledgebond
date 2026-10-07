@@ -8,7 +8,9 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { useWallet } from "@/stores/walletStore";
 import { formatUSDC } from "@/lib/format";
+import BetSlipModal from "@/components/back/BetSlipModal";
 import { Card } from "@/components/common/Card";
 import Button from "@/components/common/Button";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
@@ -44,10 +46,12 @@ function marketChip(win) {
 }
 
 export default function WinHistoryPanel() {
+  const wallet = useWallet();
   const [wins, setWins] = useState([]);
   const [explorer, setExplorer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [betting, setBetting] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -104,6 +108,8 @@ export default function WinHistoryPanel() {
           {wins.map((win) => {
             const loan = loanChip(win);
             const market = marketChip(win);
+            const bettable =
+              win.winStatus === WIN_STATUS.DECLARED && win.betOutcome === 0;
             return (
               <li key={win.winId} className="py-3">
                 <div className="flex items-center justify-between gap-4">
@@ -124,11 +130,24 @@ export default function WinHistoryPanel() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 mt-1">
-                  {market ? (
-                    <p className={`text-xs font-medium ${market.cls}`}>{market.label}</p>
-                  ) : (
-                    <span />
-                  )}
+                  <div className="flex items-center gap-3 min-w-0">
+                    {market ? (
+                      <p className={`text-xs font-medium ${market.cls}`}>{market.label}</p>
+                    ) : (
+                      <span />
+                    )}
+                    {bettable && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={!wallet.connected}
+                        title={wallet.connected ? undefined : "Connect a wallet to bet"}
+                        onClick={() => setBetting(win)}
+                      >
+                        Bet
+                      </Button>
+                    )}
+                  </div>
                   {explorer && win.txHash && (
                     <a
                       href={`${explorer}/tx/${win.txHash}`}
@@ -144,6 +163,15 @@ export default function WinHistoryPanel() {
             );
           })}
         </ul>
+      )}
+
+      {betting && (
+        <BetSlipModal
+          market={betting}
+          wallet={wallet}
+          onClose={() => setBetting(null)}
+          onSuccess={load}
+        />
       )}
     </Card>
   );
