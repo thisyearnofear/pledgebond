@@ -135,7 +135,11 @@ export interface WinHistoryRecord {
   principal: string | null;
   lender: string | null;
   dueAt: number | null;
+  collateral: string | null;
+  originationFee: string | null;
   daysToPay: number | null;
+  /** Unix seconds the win was settled at (paid out), null while unresolved. */
+  settledAt: number | null;
   betsCount: number;
   betPool: string | null;
   /** BetOutcome: 0 unresolved, 1 PAID, 2 UNPAID. */
@@ -602,10 +606,19 @@ class LiquidityRailService {
               : null,
           lender: loanStatus !== LOAN_STATUS.NONE ? (loan as any[])[1] : null,
           dueAt: loanStatus !== LOAN_STATUS.NONE ? Number((loan as any[])[8]) : null,
+          collateral:
+            loanStatus !== LOAN_STATUS.NONE
+              ? formatUnits((loan as any[])[5], USDC_DECIMALS)
+              : null,
+          originationFee:
+            loanStatus !== LOAN_STATUS.NONE
+              ? formatUnits((loan as any[])[7], USDC_DECIMALS)
+              : null,
           daysToPay:
             winStatus === WIN_STATUS.SETTLED
               ? Math.max(0, Math.round((Number(win[4]) - Number(win[3])) / 86400))
               : null,
+          settledAt: winStatus === WIN_STATUS.SETTLED ? Number(win[4]) : null,
           betsCount,
           betPool: betsCount > 0 ? formatUnits(pool, USDC_DECIMALS) : null,
           betOutcome: Number(outcome),

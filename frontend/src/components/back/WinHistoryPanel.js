@@ -20,13 +20,70 @@ const RAIL_CHAIN_ID = Number(process.env.NEXT_PUBLIC_RAIL_CHAIN_ID || 5042002);
 const WIN_STATUS = { DECLARED: 1, SETTLED: 2, DEFAULTED: 3 };
 const LOAN_STATUS = { NONE: 0, OPEN: 1, REPAID: 2, DEFAULTED: 3 };
 
+/** "in 35min" / "in 4h" / "in 3d" from a seconds delta; the rail pays in hours. */
+function formatPayTime(seconds) {
+  if (seconds === null || seconds === undefined) return "";
+  if (seconds < 3600) return `in ${Math.max(1, Math.round(seconds / 60))}min`;
+  if (seconds < 86400) return `in ${Math.round(seconds / 3600)}h`;
+  return `in ${Math.round(seconds / 86400)}d`;
+}
+
+function payDelta(win) {
+  if (win.settledAt !== null && win.settledAt !== undefined) {
+    return Math.max(0, win.settledAt - win.declaredAt);
+  }
+  if (win.daysToPay !== null && win.daysToPay !== undefined) {
+    return win.daysToPay * 86400;
+  }
+  return null;
+}
+
+function ratioChips(win) {
+  const principal = Number(win.principal);
+  if (!(principal > 0)) return [];
+  const chips = [];
+  const collateral = Number(win.collateral);
+  if (collateral > 0) {
+    chips.push({
+      label: `${Math.round((collateral / principal) * 100)}% collateralized`,
+      title: `Collateral ${formatUSDC(collateral)} against ${formatUSDC(principal)} principal`,
+    });
+  }
+  const fee = Number(win.originationFee);
+  if (fee > 0) {
+    chips.push({
+      label: `${((fee / principal) * 100).toFixed(1).replace(/\.0$/, "")}% origination fee`,
+      title: `${formatUSDC(fee)} fee on ${formatUSDC(principal)} principal`,
+    });
+  }
+  return chips;
+}
+
+function summarize(wins) {
+  if (wins.length === 0) return null;
+  const funded = wins.filter((w) => w.loanStatus !== LOAN_STATUS.NONE).length;
+  const repaid = wins.filter((w) => w.loanStatus === LOAN_STATUS.REPAID || w.winStatus === WIN_STATUS.SETTLED).length;
+  const defaulted = wins.filter(
+    (w) => w.winStatus === WIN_STATUS.DEFAULTED || w.loanStatus === LOAN_STATUS.DEFAULTED
+  ).length;
+  const deltas = wins.map(payDelta).filter((d) => d !== null).sort((a, b) => a - b);
+  const median =
+    deltas.length > 0
+      ? formatPayTime(deltas[Math.floor(deltas.length / 2)]).replace(/^in /, "")
+      : null;
+  const parts = [`${wins.length} wins`, `${funded} funded`, `${repaid} repaid`];
+  if (defaulted > 0) parts.push(`${defaulted} defaulted`);
+  if (median) parts.push(`median payout ${median}`);
+  return parts.join(" · ");
+}
+
 function loanChip(win) {
   if (win.winStatus === WIN_STATUS.DEFAULTED || win.loanStatus === LOAN_STATUS.DEFAULTED) {
     return { label: "Defaulted", cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" };
   }
   if (win.loanStatus === LOAN_STATUS.REPAID || win.winStatus === WIN_STATUS.SETTLED) {
-    const days = win.daysToPay === null ? "" : win.daysToPay <= 0 ? " same day" : ` in ${win.daysToPay}d`;
-    return { label: `Loan repaid${days}`, cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" };
+    const t = formatPayTime(payDelta(win));
+    return { label: `Loan repaid${t ? ` ${t}` : ""}`, cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" };
   }
   if (win.loanStatus === LOAN_STATUS.OPEN) {
     return { label: `Loan active · ${formatUSDC(Number(win.principal))}`, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" };
@@ -77,10 +134,18 @@ export default function WinHistoryPanel() {
     <Card id="rail-history" className="p-5 mb-6">
       <div className="flex items-center justify-between gap-3 mb-1">
         <div>
-          <h3 className="font-semibold text-primary">What already happened on this rail</h3>
+          <h3 className="font-semibold text-primary flex items-center gap-2 flex-wrap">
+            What already happened on this rail
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+              Arc Testnet — real contracts, test USDC
+            </span>
+          </h3>
           <p className="text-sm text-secondary">
             Every declared win, its loan outcome, and its market resolution — straight from the chain.
           </p>
+          {!loading && !error && wins.length > 0 && (
+            <p className="text-xs font-medium text-tertiary mt-1">{summarize(wins)}</p>
+          )}
         </div>
         <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
           Refresh
@@ -108,6 +173,7 @@ export default function WinHistoryPanel() {
           {wins.map((win) => {
             const loan = loanChip(win);
             const market = marketChip(win);
+            const ratios = ratioChips(win);
             const bettable =
               win.winStatus === WIN_STATUS.DECLARED && win.betOutcome === 0;
             return (
@@ -130,12 +196,21 @@ export default function WinHistoryPanel() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 mt-1">
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-3 min-w-0 flex-wrap">
                     {market ? (
                       <p className={`text-xs font-medium ${market.cls}`}>{market.label}</p>
                     ) : (
                       <span />
                     )}
+                    {ratios.map((chip) => (
+                      <span
+                        key={chip.label}
+                        title={chip.title}
+                        className="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                      >
+                        {chip.label}
+                      </span>
+                    ))}
                     {bettable && (
                       <Button
                         variant="ghost"

@@ -51,7 +51,12 @@ export default function OpenWinsPanel() {
     <Card id="open-bridge-loans" className="p-5 mb-6">
       <div className="flex items-center justify-between gap-3 mb-1">
         <div>
-          <h3 className="font-semibold text-primary">Open bridge loans</h3>
+          <h3 className="font-semibold text-primary flex items-center gap-2 flex-wrap">
+            Open bridge loans
+            <span className="text-[11px] font-medium px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+              Arc Testnet — real contracts, test USDC
+            </span>
+          </h3>
           <p className="text-sm text-secondary">
             Wins declared on the rail that no lender has funded yet.
           </p>

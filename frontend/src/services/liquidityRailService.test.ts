@@ -161,17 +161,23 @@ describe("listWinHistory", () => {
     expect(settled.betsCount).toBe(2);
     expect(settled.betPool).toBe("0.1");
     expect(settled.betOutcome).toBe(1);
+    expect(settled.settledAt).toBe(1700259202);
+    expect(settled.collateral).toBe("0.00011");
+    expect(settled.originationFee).toBe("0.000005");
 
     const active = rows[1];
     expect(active.winStatus).toBe(1);
     expect(active.loanStatus).toBe(1);
     expect(active.principal).toBe("0.0001");
+    expect(active.collateral).toBe("0.00011");
+    expect(active.settledAt).toBeNull();
     expect(active.betsCount).toBe(0);
     expect(active.betPool).toBeNull();
 
     const awaiting = rows[2];
     expect(awaiting.loanStatus).toBe(0);
     expect(awaiting.principal).toBeNull();
+    expect(awaiting.collateral).toBeNull();
     expect(awaiting.daysToPay).toBeNull();
   });
 
