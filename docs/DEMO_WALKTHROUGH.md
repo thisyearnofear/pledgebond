@@ -39,6 +39,26 @@ Every run lands on a fresh `winId` (state from prior runs stays on-chain as
 proof it happened — see wins 1–9 on
 `0xa8CB00A09092203Dd3274EBc065845fe034a0d38`).
 
+## The order book you will see on /back?tab=discover
+
+- **Wins 7–9 ("Bridge Demo", settled + repaid)** — the last three full
+  walkthrough runs. This is the track-record strip a new lender sees before
+  funding anything. Wins 8 and 9 also resolved their bettor market `PAID`;
+  win 7's market (2 bets, 0.10 pool) is left open on purpose — calling
+  `settleBet` on it is a one-line demo anyone can do live, and it shows
+  the market resolving from the payout record, not from an admin.
+- **Wins 4, 5, 6 (shown as `Win #4`…`Win #6`)** — declared while debugging
+  the lender listing (they have no `registry.declareWinner` twin, which is
+  why the panels fall back to the address-style name). They are deliberately
+  left DECLARED and unfunded: the live UI shows a non-empty order book with
+  real `placeBet` markets, so a visitor's first Fund/Bet click hits a real
+  open win instead of an empty list. To clear them, fund and settle one
+  through the normal path or re-run the demo — no contract change is needed
+  (there is deliberately no admin cancel; invariant 4).
+- **Wins 1–3** — the earliest bridge-loan runs, all without a bettor
+  market: wins 1 and 2 still carry OPEN loans ($2.00 and $1.00 principal),
+  win 3 completed its loan leg (settled + repaid).
+
 ## Talking points for the walkthrough
 
 - **"Paid in hours, not 90 days"**: step 4 turns a win declared minutes ago into spendable USDC; the whole script runs in ~2 minutes.
