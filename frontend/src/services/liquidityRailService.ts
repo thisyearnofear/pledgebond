@@ -13,7 +13,7 @@
  * because silently doing nothing on a loan would be worse than an error.
  */
 
-import { getContract, formatUnits, parseUnits, maxUint256, parseAbiItem, parseAbi, decodeEventLog } from 'viem';
+import { getContract, formatUnits, parseUnits, maxUint256, parseAbi, decodeEventLog } from 'viem';
 import type { PublicClient, WalletClient } from 'viem';
 
 import {
@@ -27,6 +27,7 @@ import {
   USDC_ADDRESSES,
   HACKATHON_REGISTRY_ADDRESSES,
 } from '../config/tokens';
+import { NETWORK_CONFIGS } from '../lib/wallet/constants';
 
 // constants/abis.js stores human-readable signatures; getContract needs them parsed.
 const railAbi = parseAbi(LIQUIDITY_RAIL_ABI as unknown as string[]);
@@ -140,10 +141,6 @@ export interface WinHistoryRecord {
   /** BetOutcome: 0 unresolved, 1 PAID, 2 UNPAID. */
   betOutcome: number;
 }
-
-const WIN_DECLARED_EVENT = parseAbiItem(
-  'event WinDeclared(uint256 indexed winId, uint256 indexed hackathonId, address indexed builder, string projectName, uint256 prizeAmount, uint256 declaredAt)'
-);
 
 class LiquidityRailService {
   getContracts(
@@ -319,25 +316,51 @@ class LiquidityRailService {
   }
 
   /**
-   * Declared wins on-chain that no one has funded yet — the lender's order
-   * book. Sourced from WinDeclared events (the rail has no enumerable
-   * index). Arc's public RPC rate-limits bursts, so the scan is sequential:
-   * fixed-size chunks walking back from the head, capped at the deployment
-   * start block or 10 chunks (20k blocks), whichever comes first, and the 50
-   * most recent wins. Unfunded wins older than the cap are a cold-listing
-   * concern, not a correctness one — see /api/rail/open-wins for the cache.
+   * Every rail log since deployment, normalized to { data, topics,
+   * transactionHash }. Arc's public RPC caps eth_getLogs ranges hard and
+   * rate-limits chunked walks (the chain outruns a 20k-block lookback within
+   * days), so the Blockscout-style explorer answers for the whole deployment
+   * range in one request; the chunked head-walk stays only as a fallback when
+   * the explorer is down.
    */
-  async listOpenWins(
+  private async _collectRailLogs(
+    railAddress: string,
     chainId: number,
-    publicClient: PublicClient
-  ): Promise<DeclaredWin[]> {
-    const contracts = this.getContracts(chainId, publicClient);
-    const startBlock = (LIQUIDITY_RAIL_START_BLOCKS as Record<number, number>)[chainId];
-    if (!contracts || startBlock === undefined) return [];
+    publicClient: PublicClient,
+    startBlock: number
+  ): Promise<{ data: string; topics: string[]; transactionHash: string }[]> {
+    const explorer = (NETWORK_CONFIGS as Record<number, { blockExplorerUrls?: string[] }>)?.[
+      chainId
+    ]?.blockExplorerUrls?.[0];
+    if (explorer) {
+      // The explorer API rate-limits bursts (HTTP 429); one paced retry
+      // covers a blip, and the RPC window below covers a hard outage.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const url =
+            `${explorer.replace(/\/+$/, '')}/api?module=logs&action=getLogs` +
+            `&address=${railAddress}&fromBlock=${startBlock}&toBlock=latest`;
+          const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+          const body: any = res.ok ? await res.json() : null;
+          if (Array.isArray(body?.result)) {
+            return body.result.map((l: any) => ({
+              data: l.data,
+              topics: (l.topics ?? l.extraData ?? []) as string[],
+              transactionHash: l.transactionHash,
+            }));
+          }
+          if (res.status !== 429) break;
+          await new Promise((r) => setTimeout(r, 2_500));
+        } catch {
+          // Explorer unavailable — fall through to the RPC scan.
+          break;
+        }
+      }
+    }
+    const logs: { data: string; topics: string[]; transactionHash: string }[] = [];
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const CHUNK = 2000n;
     const MAX_CHUNKS = 10;
-    const logs: any[] = [];
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     try {
       const head = await publicClient.getBlockNumber();
       const start = BigInt(startBlock);
@@ -345,67 +368,187 @@ class LiquidityRailService {
       for (let scanned = 0; scanned < MAX_CHUNKS && from >= start; scanned++) {
         const chunkFrom = from - CHUNK + 1n < start ? start : from - CHUNK + 1n;
         const chunk = await publicClient.getLogs({
-          address: contracts.railAddress,
-          event: WIN_DECLARED_EVENT as any,
+          address: railAddress as `0x${string}`,
           fromBlock: chunkFrom,
           toBlock: from,
         });
-        logs.push(...(chunk as any[]));
+        for (const log of chunk as any[]) {
+          logs.push({ data: log.data, topics: log.topics, transactionHash: log.transactionHash });
+        }
         if (chunkFrom === start) break;
         from = chunkFrom - 1n;
         await sleep(150);
       }
     } catch {
-      if (logs.length === 0) return [];
-      // Partial scan still lists what was found; fresher wins dominate.
+      // Partial scan still returns what was found.
     }
-    const byId = new Map<number, (typeof logs)[number]>();
-    for (const log of logs) {
-      const winId = Number(log.args.winId);
-      if (!byId.has(winId)) byId.set(winId, log);
-    }
-    const ids = [...byId.keys()].sort((a, b) => b - a).slice(0, 50);
-    const readOne = async (winId: number): Promise<DeclaredWin | null> => {
-      const log = byId.get(winId)!;
+    return logs;
+  }
+
+  /**
+   * Win ids are a dense counter from 1 (Solidity Counters), and unset wins
+   * read back as the zero struct — so listings probe wins(1), wins(2), …
+   * until the first empty id. This is the only enumeration source that is
+   * immune to the Arc RPC's eth_getLogs range cap and the explorer's
+   * multi-hundred-thousand-block indexing lag; events stay as optional
+   * enrichment (tx links) below.
+   */
+  private async _probeWins(
+    contracts: Contracts
+  ): Promise<{ winId: number; win: any[] }[]> {
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const ZERO_BUILDER = '0x0000000000000000000000000000000000000000';
+    const MAX_WINS = 200;
+    const found: { winId: number; win: any[] }[] = [];
+    const readWin = async (id: bigint): Promise<any[] | null> => {
       try {
-        const [win, loan] = await Promise.all([
-          contracts.rail.read.wins([BigInt(winId)]),
-          contracts.rail.read.loans([BigInt(winId)]),
-        ]);
-        if (
-          Number((win as any[])[5]) !== WIN_STATUS.DECLARED ||
-          Number((loan as any[])[10]) !== LOAN_STATUS.NONE
-        ) {
-          return null;
-        }
-        return {
-          winId,
-          hackathonId: Number((log.args as any).hackathonId),
-          builder: (log.args as any).builder,
-          projectName: (log.args as any).projectName,
-          prizeAmount: formatUnits((log.args as any).prizeAmount, USDC_DECIMALS),
-          declaredAt: Number((log.args as any).declaredAt),
-        } as DeclaredWin;
+        return (await contracts.rail.read.wins([id])) as any[];
       } catch {
         return null;
       }
     };
-    // Small sequential batches; the public RPC rate-limits parallel bursts.
-    const wins: DeclaredWin[] = [];
-    for (let i = 0; i < ids.length; i += 5) {
-      const batch = await Promise.all(ids.slice(i, i + 5).map(readOne));
-      wins.push(...batch.filter(Boolean) as DeclaredWin[]);
-      if (i + 5 < ids.length) await sleep(150);
+    // A total failure on the very first batch is the public RPC's rate
+    // limiter, not an empty rail — one paced retry clears most blips.
+    let first = await Promise.all([1n, 2n, 3n, 4n].map(readWin));
+    if (first.every((w) => w === null)) {
+      await sleep(700);
+      first = await Promise.all([1n, 2n, 3n, 4n].map(readWin));
     }
-    return wins.sort((a, b) => b.winId - a.winId);
+    outer: for (let i = 1n; i <= BigInt(MAX_WINS); i += 4n) {
+      const batch =
+        i === 1n
+          ? first.map((win, off) => ({ id: 1n + BigInt(off), win }))
+          : await Promise.all(
+              [0n, 1n, 2n, 3n].map(async (off) => {
+                const id = i + off;
+                return { id, win: await readWin(id) };
+              })
+            );
+      for (const { id, win } of batch) {
+        if (!win) break outer;
+        if (
+          Number(win[5]) === 0 &&
+          String(win[1]).toLowerCase() === ZERO_BUILDER
+        ) {
+          break outer;
+        }
+        found.push({ winId: Number(id), win });
+      }
+      await sleep(120);
+    }
+    return found;
+  }
+
+  /**
+   * Project names live in the WinDeclared event and in the registry — the
+   * win struct itself has none. The registry's declaration list is a view,
+   * so names resolve without touching logs: match (hackathonId, builder).
+   */
+  private async _projectNames(
+    contracts: Contracts,
+    entries: { winId: number; win: any[] }[]
+  ): Promise<Map<number, string>> {
+    const names = new Map<number, string>();
+    const byHack = new Map<number, any[]>();
+    const hackathonIds = [...new Set(entries.map((e) => Number(e.win[0])))];
+    for (const hid of hackathonIds) {
+      try {
+        byHack.set(hid, ((await contracts.registry.read.getWinnerDeclarations([BigInt(hid)])) as any[]) || []);
+      } catch {
+        byHack.set(hid, []);
+      }
+    }
+    for (const { winId, win } of entries) {
+      const decls = byHack.get(Number(win[0])) || [];
+      const builder = String(win[1]).toLowerCase();
+      const prize = BigInt(win[2]);
+      const declaredAt = Number(win[3]);
+      let best: { name: string; drift: number } | null = null;
+      for (const d of decls) {
+        const winner = String((d as any).winner ?? (d as any)[0]).toLowerCase();
+        if (winner !== builder) continue;
+        const dPrize = BigInt((d as any).prizeAmount ?? (d as any)[2]);
+        const drift = Math.abs(Number((d as any).declaredAt ?? (d as any)[3]) - declaredAt);
+        if (dPrize === prize && drift <= 120 && (!best || drift < best.drift)) {
+          best = { name: String((d as any).projectName ?? (d as any)[1]), drift };
+        }
+      }
+      names.set(winId, best ? best.name : '');
+    }
+    return names;
+  }
+
+  /** Best-effort winId -> declare-tx map from events; never breaks a listing. */
+  private async _txHashByWin(
+    contracts: Contracts,
+    chainId: number,
+    publicClient: PublicClient,
+    startBlock: number
+  ): Promise<Map<number, string>> {
+    const map = new Map<number, string>();
+    const rawLogs = await this._collectRailLogs(
+      contracts.railAddress, chainId, publicClient, startBlock
+    );
+    for (const log of rawLogs) {
+      try {
+        const decoded = decodeEventLog({
+          abi: railAbi,
+          data: log.data as `0x${string}`,
+          topics: log.topics as [`0x${string}`, ...`0x${string}`[]],
+        });
+        if (decoded.eventName === 'WinDeclared') {
+          const winId = Number((decoded.args as any).winId);
+          if (!map.has(winId)) map.set(winId, log.transactionHash);
+        }
+      } catch {
+        // not a rail event we model
+      }
+    }
+    return map;
+  }
+
+  /**
+   * Declared wins on-chain that no one has funded yet — the lender's order
+   * book, from view reads only (see _probeWins). See /api/rail/open-wins
+   * for the server cache.
+   */
+  async listOpenWins(
+    chainId: number,
+    publicClient: PublicClient
+  ): Promise<DeclaredWin[]> {
+    const contracts = this.getContracts(chainId, publicClient);
+    if (!contracts) return [];
+    const entries = await this._probeWins(contracts);
+    const names = await this._projectNames(contracts, entries);
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const open: DeclaredWin[] = [];
+    for (const { winId, win } of entries) {
+      if (Number(win[5]) !== WIN_STATUS.DECLARED) continue;
+      let loan: any[];
+      try {
+        loan = (await contracts.rail.read.loans([BigInt(winId)])) as any[];
+      } catch {
+        continue;
+      }
+      if (Number(loan[10]) !== LOAN_STATUS.NONE) continue;
+      open.push({
+        winId,
+        hackathonId: Number(win[0]),
+        builder: win[1],
+        projectName: names.get(winId) || '',
+        prizeAmount: formatUnits(win[2], USDC_DECIMALS),
+        declaredAt: Number(win[3]),
+      });
+      await sleep(80);
+    }
+    return open.sort((a, b) => b.winId - a.winId).slice(0, 50);
   }
 
   /**
    * Every declared win and what actually happened to it — the rail's public
-   * track record, read for the lender discover panel. Same event scan as
-   * listOpenWins but unfiltered (one getLogs per chunk decodes WinDeclared
-   * and BetPlaced locally), then wins/loans/betOutcome per win. The bet pool
-   * comes from BetPlaced sums so resolving market size costs zero extra reads.
+   * track record, read for the lender discover panel. Enumeration and bet
+   * totals come from views (wins/loans/betOutcome/bets); events only supply
+   * the explorer tx links and degrade to null when unavailable.
    */
   async listWinHistory(
     chainId: number,
@@ -414,83 +557,43 @@ class LiquidityRailService {
     const contracts = this.getContracts(chainId, publicClient);
     const startBlock = (LIQUIDITY_RAIL_START_BLOCKS as Record<number, number>)[chainId];
     if (!contracts || startBlock === undefined) return [];
-    const CHUNK = 2000n;
-    const MAX_CHUNKS = 10;
-    const declared = new Map<
-      number,
-      { projectName: string; builder: string; prizeAmount: bigint; declaredAt: bigint; txHash: string }
-    >();
-    const betSums = new Map<number, { count: number; pool: bigint }>();
+    const entries = await this._probeWins(contracts);
+    const names = await this._projectNames(contracts, entries);
+    const txByWin = startBlock !== undefined
+      ? await this._txHashByWin(contracts, chainId, publicClient, startBlock)
+      : new Map<number, string>();
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    try {
-      const head = await publicClient.getBlockNumber();
-      const start = BigInt(startBlock);
-      let from = head;
-      for (let scanned = 0; scanned < MAX_CHUNKS && from >= start; scanned++) {
-        const chunkFrom = from - CHUNK + 1n < start ? start : from - CHUNK + 1n;
-        const logs = await publicClient.getLogs({
-          address: contracts.railAddress,
-          fromBlock: chunkFrom,
-          toBlock: from,
-        });
-        for (const log of logs as any[]) {
-          let decoded: any;
-          try {
-            decoded = decodeEventLog({
-              abi: railAbi,
-              data: log.data,
-              topics: log.topics,
-            });
-          } catch {
-            continue; // not a rail event we model
-          }
-          if (decoded.eventName === "WinDeclared") {
-            const winId = Number(decoded.args.winId);
-            if (!declared.has(winId)) {
-              declared.set(winId, {
-                projectName: decoded.args.projectName,
-                builder: decoded.args.builder,
-                prizeAmount: decoded.args.prizeAmount,
-                declaredAt: decoded.args.declaredAt,
-                txHash: log.transactionHash,
-              });
-            }
-          } else if (decoded.eventName === "BetPlaced") {
-            const winId = Number(decoded.args.winId);
-            const prev = betSums.get(winId) || { count: 0, pool: 0n };
-            betSums.set(winId, {
-              count: prev.count + 1,
-              pool: prev.pool + decoded.args.amount,
-            });
-          }
-        }
-        if (chunkFrom === start) break;
-        from = chunkFrom - 1n;
-        await sleep(150);
-      }
-    } catch {
-      if (declared.size === 0) return [];
-    }
-    const ids = [...declared.keys()].sort((a, b) => b - a).slice(0, 30);
-    const readOne = async (winId: number): Promise<WinHistoryRecord | null> => {
-      const d = declared.get(winId)!;
+    const rows: WinHistoryRecord[] = [];
+    for (const { winId, win } of entries) {
       try {
-        const [win, loan, outcome] = await Promise.all([
-          contracts.rail.read.wins([BigInt(winId)]),
+        const [loan, outcome] = (await Promise.all([
           contracts.rail.read.loans([BigInt(winId)]),
           contracts.rail.read.betOutcome([BigInt(winId)]),
-        ]);
-        const winStatus = Number((win as any[])[5]);
-        const settledAt = Number((win as any[])[4]);
+        ])) as [any[], any];
+        // Public mapping-to-struct-array getters have no length form
+        // (Solidity limitation), so bets are probed index-wise until the
+        // out-of-range revert.
+        let betsCount = 0;
+        let pool = 0n;
+        for (;;) {
+          try {
+            const bet = (await contracts.rail.read.bets([BigInt(winId), BigInt(betsCount)])) as any[];
+            pool += bet[1];
+            betsCount++;
+          } catch {
+            break;
+          }
+          if (betsCount >= 50) break;
+        }
+        const winStatus = Number(win[5]);
         const loanStatus = Number((loan as any[])[10]);
-        const bets = betSums.get(winId);
-        return {
+        rows.push({
           winId,
-          projectName: d.projectName,
-          builder: d.builder,
-          prizeAmount: formatUnits(d.prizeAmount, USDC_DECIMALS),
-          declaredAt: Number(d.declaredAt),
-          txHash: d.txHash,
+          projectName: names.get(winId) || '',
+          builder: win[1],
+          prizeAmount: formatUnits(win[2], USDC_DECIMALS),
+          declaredAt: Number(win[3]),
+          txHash: txByWin.get(winId) ?? '',
           winStatus,
           loanStatus,
           principal:
@@ -501,23 +604,18 @@ class LiquidityRailService {
           dueAt: loanStatus !== LOAN_STATUS.NONE ? Number((loan as any[])[8]) : null,
           daysToPay:
             winStatus === WIN_STATUS.SETTLED
-              ? Math.max(0, Math.round((settledAt - Number(d.declaredAt)) / 86400))
+              ? Math.max(0, Math.round((Number(win[4]) - Number(win[3])) / 86400))
               : null,
-          betsCount: bets?.count ?? 0,
-          betPool: bets ? formatUnits(bets.pool, USDC_DECIMALS) : null,
+          betsCount,
+          betPool: betsCount > 0 ? formatUnits(pool, USDC_DECIMALS) : null,
           betOutcome: Number(outcome),
-        };
+        });
+        await sleep(100);
       } catch {
-        return null;
+        continue;
       }
-    };
-    const rows: WinHistoryRecord[] = [];
-    for (let i = 0; i < ids.length; i += 4) {
-      const batch = await Promise.all(ids.slice(i, i + 4).map(readOne));
-      rows.push(...batch.filter(Boolean) as WinHistoryRecord[]);
-      if (i + 4 < ids.length) await sleep(150);
     }
-    return rows.sort((a, b) => b.winId - a.winId);
+    return rows.sort((a, b) => b.winId - a.winId).slice(0, 30);
   }
 
   // ── Writes ──────────────────────────────────────────────────────────────
@@ -598,6 +696,48 @@ class LiquidityRailService {
     const contracts = this.getContracts(chainId, publicClient);
     if (!contracts) throw new Error('Rail contracts not found');
     const hash = await contracts.rail.write.defaultLoan([BigInt(winId)] as any);
+    return publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  /**
+   * Bets go against a declared win's payout market. `expectsPayment: true`
+   * backs the organizer paying; false backs them not paying. Stake comes out
+   * of the connected wallet only — bettor capital is structurally fenced off
+   * from lending.
+   */
+  async placeBet(
+    chainId: number,
+    publicClient: PublicClient,
+    walletClient: WalletClient,
+    winId: number,
+    amount: string,
+    expectsPayment: boolean
+  ) {
+    const contracts = this.getContracts(chainId, publicClient, walletClient);
+    if (!contracts) throw new Error('Rail contracts not found');
+
+    const account = walletClient.account!.address;
+    const stake = parseUnits(amount, USDC_DECIMALS);
+    if (stake <= 0n) throw new Error('Bet amount must be greater than zero.');
+    await this._ensureAllowance(publicClient, contracts, account, stake);
+
+    const hash = await contracts.rail.write.placeBet([
+      BigInt(winId),
+      stake,
+      expectsPayment,
+    ] as any);
+    return publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  async claimBet(
+    chainId: number,
+    publicClient: PublicClient,
+    walletClient: WalletClient,
+    winId: number
+  ) {
+    const contracts = this.getContracts(chainId, publicClient, walletClient);
+    if (!contracts) throw new Error('Rail contracts not found');
+    const hash = await contracts.rail.write.claimBet([BigInt(winId)] as any);
     return publicClient.waitForTransactionReceipt({ hash });
   }
 

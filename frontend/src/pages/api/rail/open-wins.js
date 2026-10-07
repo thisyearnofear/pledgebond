@@ -31,7 +31,7 @@ export default async function handler(req, res) {
   }
 
   const key = `${chainId}`;
-  if (cache.key === key && Date.now() - cache.at < CACHE_TTL_MS) {
+  if (cache.key === key && cache.wins.length > 0 && Date.now() - cache.at < CACHE_TTL_MS) {
     res.setHeader("Cache-Control", "public, max-age=30");
     return res.status(200).json({ wins: cache.wins, cached: true, chainId });
   }
