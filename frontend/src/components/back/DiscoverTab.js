@@ -11,6 +11,7 @@ import { useProjectData } from "@/hooks/useProjectData";
 import useProjectFilters from "@/hooks/useProjectFilters";
 import ProjectCard from "@/components/backer/ProjectCard";
 import OpenWinsPanel from "@/components/back/OpenWinsPanel";
+import WinHistoryPanel from "@/components/back/WinHistoryPanel";
 import LoanTermsModal from "@/components/back/LoanTermsModal";
 import { Card } from "@/components/common/Card";
 import Button from "@/components/common/Button";
@@ -194,6 +195,8 @@ export default function DiscoverTab() {
       </Card>
 
       <OpenWinsPanel />
+
+      <WinHistoryPanel />
 
       <div className="flex flex-col md:flex-row gap-3 mb-4 items-start md:items-center">
         <div className="relative w-full md:max-w-sm">

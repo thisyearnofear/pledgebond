@@ -77,6 +77,7 @@ export const LIQUIDITY_RAIL_ABI = [
   "function wins(uint256 winId) external view returns (uint256 hackathonId, address builder, uint256 prizeAmount, uint256 declaredAt, uint256 settledAt, uint8 status)",
   "function loans(uint256 winId) external view returns (uint256 winId, address lender, address builder, address trancheProvider, uint256 principal, uint256 collateral, uint256 trancheSize, uint256 originationFee, uint256 dueAt, uint8 mode, uint8 status, uint256 incentives)",
   "function bets(uint256 winId, uint256 index) external view returns (address bettor, uint256 amount, bool expectsPayment, bool claimed)",
+  "function betOutcome(uint256 winId) external view returns (uint8)",
   "function builderHistory(address builder) external view returns (uint256 winsDeclared, uint256 loansTaken, uint256 loansRepaid, uint256 winsSettledInFull, uint256 winsDefaulted, uint256 totalDaysToPay, uint256 fastestDaysToPay)",
   "function coverageRateBps(address builder) external view returns (uint256)",
   "function averageDaysToPay(address builder) external view returns (uint256)",
@@ -96,5 +97,6 @@ export const LIQUIDITY_RAIL_ABI = [
   "event LoanDefaulted(uint256 indexed winId, address indexed builder, uint256 principal, uint256 collateralLiquidated, uint256 trancheAbsorbed)",
   "event CollateralReleased(uint256 indexed winId, address indexed builder, uint256 amount)",
   "event WinSettled(uint256 indexed winId, address indexed builder, uint256 daysToPay)",
+  "event BetPlaced(uint256 indexed winId, address indexed bettor, uint256 amount, bool expectsPayment)",
   "event FeesWithdrawn(address indexed to, uint256 amount)"
 ];

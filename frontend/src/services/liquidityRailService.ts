@@ -13,7 +13,7 @@
  * because silently doing nothing on a loan would be worse than an error.
  */
 
-import { getContract, formatUnits, parseUnits, maxUint256, parseAbiItem, parseAbi } from 'viem';
+import { getContract, formatUnits, parseUnits, maxUint256, parseAbiItem, parseAbi, decodeEventLog } from 'viem';
 import type { PublicClient, WalletClient } from 'viem';
 
 import {
@@ -118,6 +118,27 @@ export interface DeclaredWin {
   projectName: string;
   prizeAmount: string;
   declaredAt: number;
+}
+
+export interface WinHistoryRecord {
+  winId: number;
+  projectName: string;
+  builder: string;
+  prizeAmount: string;
+  declaredAt: number;
+  txHash: string;
+  /** WinStatus: 1 DECLARED, 2 SETTLED, 3 DEFAULTED. */
+  winStatus: number;
+  /** LoanStatus: 0 none, 1 open, 2 repaid, 3 defaulted. */
+  loanStatus: number;
+  principal: string | null;
+  lender: string | null;
+  dueAt: number | null;
+  daysToPay: number | null;
+  betsCount: number;
+  betPool: string | null;
+  /** BetOutcome: 0 unresolved, 1 PAID, 2 UNPAID. */
+  betOutcome: number;
 }
 
 const WIN_DECLARED_EVENT = parseAbiItem(
@@ -377,6 +398,126 @@ class LiquidityRailService {
       if (i + 5 < ids.length) await sleep(150);
     }
     return wins.sort((a, b) => b.winId - a.winId);
+  }
+
+  /**
+   * Every declared win and what actually happened to it — the rail's public
+   * track record, read for the lender discover panel. Same event scan as
+   * listOpenWins but unfiltered (one getLogs per chunk decodes WinDeclared
+   * and BetPlaced locally), then wins/loans/betOutcome per win. The bet pool
+   * comes from BetPlaced sums so resolving market size costs zero extra reads.
+   */
+  async listWinHistory(
+    chainId: number,
+    publicClient: PublicClient
+  ): Promise<WinHistoryRecord[]> {
+    const contracts = this.getContracts(chainId, publicClient);
+    const startBlock = (LIQUIDITY_RAIL_START_BLOCKS as Record<number, number>)[chainId];
+    if (!contracts || startBlock === undefined) return [];
+    const CHUNK = 2000n;
+    const MAX_CHUNKS = 10;
+    const declared = new Map<
+      number,
+      { projectName: string; builder: string; prizeAmount: bigint; declaredAt: bigint; txHash: string }
+    >();
+    const betSums = new Map<number, { count: number; pool: bigint }>();
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    try {
+      const head = await publicClient.getBlockNumber();
+      const start = BigInt(startBlock);
+      let from = head;
+      for (let scanned = 0; scanned < MAX_CHUNKS && from >= start; scanned++) {
+        const chunkFrom = from - CHUNK + 1n < start ? start : from - CHUNK + 1n;
+        const logs = await publicClient.getLogs({
+          address: contracts.railAddress,
+          fromBlock: chunkFrom,
+          toBlock: from,
+        });
+        for (const log of logs as any[]) {
+          let decoded: any;
+          try {
+            decoded = decodeEventLog({
+              abi: railAbi,
+              data: log.data,
+              topics: log.topics,
+            });
+          } catch {
+            continue; // not a rail event we model
+          }
+          if (decoded.eventName === "WinDeclared") {
+            const winId = Number(decoded.args.winId);
+            if (!declared.has(winId)) {
+              declared.set(winId, {
+                projectName: decoded.args.projectName,
+                builder: decoded.args.builder,
+                prizeAmount: decoded.args.prizeAmount,
+                declaredAt: decoded.args.declaredAt,
+                txHash: log.transactionHash,
+              });
+            }
+          } else if (decoded.eventName === "BetPlaced") {
+            const winId = Number(decoded.args.winId);
+            const prev = betSums.get(winId) || { count: 0, pool: 0n };
+            betSums.set(winId, {
+              count: prev.count + 1,
+              pool: prev.pool + decoded.args.amount,
+            });
+          }
+        }
+        if (chunkFrom === start) break;
+        from = chunkFrom - 1n;
+        await sleep(150);
+      }
+    } catch {
+      if (declared.size === 0) return [];
+    }
+    const ids = [...declared.keys()].sort((a, b) => b - a).slice(0, 30);
+    const readOne = async (winId: number): Promise<WinHistoryRecord | null> => {
+      const d = declared.get(winId)!;
+      try {
+        const [win, loan, outcome] = await Promise.all([
+          contracts.rail.read.wins([BigInt(winId)]),
+          contracts.rail.read.loans([BigInt(winId)]),
+          contracts.rail.read.betOutcome([BigInt(winId)]),
+        ]);
+        const winStatus = Number((win as any[])[5]);
+        const settledAt = Number((win as any[])[4]);
+        const loanStatus = Number((loan as any[])[10]);
+        const bets = betSums.get(winId);
+        return {
+          winId,
+          projectName: d.projectName,
+          builder: d.builder,
+          prizeAmount: formatUnits(d.prizeAmount, USDC_DECIMALS),
+          declaredAt: Number(d.declaredAt),
+          txHash: d.txHash,
+          winStatus,
+          loanStatus,
+          principal:
+            loanStatus !== LOAN_STATUS.NONE
+              ? formatUnits((loan as any[])[4], USDC_DECIMALS)
+              : null,
+          lender: loanStatus !== LOAN_STATUS.NONE ? (loan as any[])[1] : null,
+          dueAt: loanStatus !== LOAN_STATUS.NONE ? Number((loan as any[])[8]) : null,
+          daysToPay:
+            winStatus === WIN_STATUS.SETTLED
+              ? Math.max(0, Math.round((settledAt - Number(d.declaredAt)) / 86400))
+              : null,
+          betsCount: bets?.count ?? 0,
+          betPool: bets ? formatUnits(bets.pool, USDC_DECIMALS) : null,
+          betOutcome: Number(outcome),
+        };
+      } catch {
+        return null;
+      }
+    };
+    const rows: WinHistoryRecord[] = [];
+    for (let i = 0; i < ids.length; i += 4) {
+      const batch = await Promise.all(ids.slice(i, i + 4).map(readOne));
+      rows.push(...batch.filter(Boolean) as WinHistoryRecord[]);
+      if (i + 4 < ids.length) await sleep(150);
+    }
+    return rows.sort((a, b) => b.winId - a.winId);
   }
 
   // ── Writes ──────────────────────────────────────────────────────────────
