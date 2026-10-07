@@ -2,7 +2,7 @@
 
 A liquidity rail for hackathon winners — paid in hours, not 90 days.
 
-> **Read first:** [VISION.md](./VISION.md) is the product source of truth — the wedge, the two-pool separation, and the invariants. [MONETIZATION_STRATEGY.md](./MONETIZATION_STRATEGY.md) covers how fees are taken.
+> **Read first:** [VISION.md](./VISION.md) is the product source of truth — the wedge, the two-pool separation, and the invariants. [MONETIZATION_STRATEGY.md](./MONETIZATION_STRATEGY.md) covers how fees are taken. To see the whole thing move real money, run the [live demo walkthrough](./DEMO_WALKTHROUGH.md).
 
 ## How it works
 

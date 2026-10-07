@@ -1,9 +1,10 @@
-// Phase-1 rehearsal: one real bridge loan, start to finish, on Arc Testnet
-// with three genuinely separate parties.
+// Phase-1 rehearsal: one real bridge loan + one resolved payout market, start
+// to finish, on Arc Testnet with four genuinely separate parties.
 //
 //   organizer = deployer host key   (PRIVATE_KEY)     — declares the winner, pays the prize, records the payout
 //   builder   = BUILDER_PRIVATE_KEY — declares the win on the rail, repays out of the prize
-//   lender    = LENDER_PRIVATE_KEY  — funds principal + collateral, gets repaid at par
+//   lender    = LENDER_PRIVATE_KEY  — funds principal + collateral, gets repaid at par; also hedges the skeptic side of the market
+//   bettor    = BETTOR_PRIVATE_KEY  — bets on the organizer paying, claims the pool pro-rata
 //
 // Usage: npx hardhat run scripts/demo-loan.js --network arcTestnet
 // Idempotent-ish: tops demo wallets from the deployer when short, and sweeps
@@ -21,6 +22,7 @@ const PRINCIPAL = USDC(0.3);
 const COLLATERAL = USDC(0.33); // > principal, per the rail's overcollateralized mode
 const RATE_BPS = 500;
 const TERM_DAYS = 30;
+const BET = USDC(0.05); // each side of the payout market
 
 let steps = 0;
 function step(msg) {
@@ -43,11 +45,13 @@ async function main() {
   const organizer = (await ethers.getSigners())[0];
   const builder = new ethers.Wallet(process.env.BUILDER_PRIVATE_KEY, organizer.provider);
   const lender = new ethers.Wallet(process.env.LENDER_PRIVATE_KEY, organizer.provider);
+  const bettor = new ethers.Wallet(process.env.BETTOR_PRIVATE_KEY, organizer.provider);
   const hackathonId = 1;
 
   console.log(`🎭 organizer ${organizer.address}`);
   console.log(`   builder   ${builder.address}`);
   console.log(`   lender    ${lender.address}`);
+  console.log(`   bettor    ${bettor.address}`);
   console.log(`   rail      ${rail.address}`);
 
   const bal = async (w) => usdc.balanceOf(w.address);
@@ -55,7 +59,11 @@ async function main() {
 
   // ── Funding (top up demo wallets when they can't cover their role) ──
   step("Funding wallets");
-  const want = { [builder.address]: USDC(0.5), [lender.address]: COLLATERAL.add(PRINCIPAL) };
+  const want = {
+    [builder.address]: USDC(0.5),
+    [lender.address]: COLLATERAL.add(PRINCIPAL).add(BET),
+    [bettor.address]: BET.add(USDC(0.1)),
+  };
   for (const [addr, min] of Object.entries(want)) {
     if ((await usdc.balanceOf(addr)).lt(min)) {
       const send = min.sub(await usdc.balanceOf(addr)).add(USDC(0.1));
@@ -108,6 +116,24 @@ async function main() {
     "rail booked lender = separate wallet, collateral escrowed from it (invariant: platform funded nothing)"
   );
   assert((await rail.accruedFees()).gte(fee), "platform revenue is exactly the fee");
+
+  // ── 3b. Bettor market: two opposing stakes while the win is still DECLARED ─
+  step("rail.placeBet (bettor bets 'paid', lender hedges 'unpaid')");
+  for (const w of [bettor, lender]) {
+    await (await usdc.connect(w).approve(rail.address, ethers.constants.MaxUint256)).wait();
+  }
+  const stakesBefore = await rail.totalBetStakes();
+  const collAtBets = await rail.totalCollateral();
+  await (await rail.connect(bettor).placeBet(winId, BET, true)).wait();
+  await (await rail.connect(lender).placeBet(winId, BET, false)).wait();
+  assert(
+    (await rail.totalBetStakes()).eq(stakesBefore.add(BET.mul(2))),
+    "bet pool grew by exactly the two stakes"
+  );
+  assert(
+    (await rail.totalCollateral()).eq(collAtBets),
+    "invariant: lending reserves untouched by betting — pools are separate"
+  );
   const lenderMid = await bal(lender);
 
   // ── 4. Organizer pays the prize, then records the payout ──────────────────
@@ -126,19 +152,53 @@ async function main() {
   assert((await bal(lender)).eq(lenderMid.add(PRINCIPAL)), "lender repaid at par");
   assert((await bal(builder)).eq(b2.add(COLLATERAL).sub(PRINCIPAL)), "builder repaid principal, collateral released back");
   const hist = await rail.builderHistory(builder.address);
-  assert(hist.winsSettledInFull.eq(1), "credibility: 1 win settled in full, derived on-chain");
+  assert(hist.winsSettledInFull.gte(1), "credibility: ≥1 win settled in full, derived on-chain");
+
+  // ── 6. Resolve the market and pay the winning side ────────────────────────
+  step("rail.settleBet (anyone) — organizer paid, so the market resolves PAID");
+  await (await rail.settleBet(winId)).wait();
+  assert((await rail.betOutcome(winId)) === 1, "betOutcome = PAID (1)");
+
+  step("rail.claimBet — winning side takes the whole pool");
+  // Arc charges gas in USDC, so claimers net their payout minus gas. Assert
+  // the payout the rail actually sent (BetClaimed event), not raw balances.
+  const parseClaim = async (receipt) => {
+    for (const log of receipt.logs) {
+      try {
+        const p = rail.interface.parseLog(log);
+        if (p.name === "BetClaimed") return p.args.payout;
+      } catch {}
+    }
+    return null;
+  };
+  const bettorClaim = await parseClaim(
+    await (await rail.connect(bettor).claimBet(winId)).wait()
+  );
+  const lenderClaim = await parseClaim(
+    await (await rail.connect(lender).claimBet(winId)).wait()
+  );
+  assert(
+    bettorClaim && bettorClaim.eq(BET.mul(2)),
+    `bettor claimed the full ${fmt(BET.mul(2))} USDC pool on a ${fmt(BET)} stake (2x)`
+  );
+  assert(lenderClaim && lenderClaim.eq(0), "losing side claimed exactly nothing");
+  assert(
+    (await rail.totalBetStakes()).gte(stakesBefore.add(BET.mul(2))),
+    "bet pool accounting consistent with the stakes placed this run"
+  );
 
   // ── Sweep so the next take has runway ─────────────────────────────────────
   step("Re-sweep funds toward the organizer");
-  for (const w of [builder, lender]) {
+  for (const w of [builder, lender, bettor]) {
     const available = (await bal(w)).sub(USDC(0.3));
     if (available.gt(0)) {
       await (await usdc.connect(w).transfer(organizer.address, available)).wait();
     }
   }
 
-  console.log(`\n🎉 Full bridge loan closed on ${network.name} — win #${winId}.`);
+  console.log(`\n🎉 Bridge loan + payout market closed on ${network.name} — win #${winId}.`);
   console.log("   organizer declared & paid · builder declared & repaid · lender funded & recovered at par");
+  console.log("   bettor won the market 2x · lender's losing hedge paid the pool");
 }
 
 main().catch((e) => {
