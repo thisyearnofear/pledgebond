@@ -59,6 +59,32 @@ proof it happened — see wins 1–9 on
   market: wins 1 and 2 still carry OPEN loans ($2.00 and $1.00 principal),
   win 3 completed its loan leg (settled + repaid).
 
+## The default rehearsal (the unpaid path)
+
+`blockchain/scripts/demo-default.js` runs the other branch of the rail in
+two phases — the testnet clock cannot be warped and loans require
+`durationDays >= 1`:
+
+1. **PHASE=1** — declare a win, fund it as **TRANCHE_BACKED** (the
+   organizer commits the first-loss tranche, the lender sends only
+   principal), bettor stakes "paid", lender stakes "won't pay". State
+   lands in `deployments/arcTestnet_default_rehearsal.json`.
+2. **PHASE=2, after `dueAt`** — the organizer never pays:
+   `defaultLoan` → the lender is made whole **from the organizer's named
+   tranche capital** (`totalTrancheAbsorbed` moves, `accruedFees` does
+   not — invariant 1), the win flips to DEFAULTED, `settleBet` resolves
+   the market **UNPAID** from the absence of a registry payout, the
+   skeptic side claims the pool 2x, `releaseTranche` correctly refuses,
+   and the builder's `winsDefaulted` tick-up is the receipt the next
+   lender will price against (invariant 4).
+
+Note the rehearsal deliberately uses tranche mode: in this deployed
+version the overcollateralized mode escrows collateral **from the
+lender** (an open design bug, reported 2026-10-07 — fix + redeploy is
+pending), so an overcollateralized default would pay the wrong party.
+Tranche mode exercises the real loss-absorption path with no bug in the
+way.
+
 ## Talking points for the walkthrough
 
 - **"Paid in hours, not 90 days"**: step 4 turns a win declared minutes ago into spendable USDC; the whole script runs in ~2 minutes.
