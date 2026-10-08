@@ -115,18 +115,35 @@ function attachAuthListener() {
       } else {
         // New user — check for stored referral code and attribute
         try {
-          const { getStoredReferralCode, clearStoredReferralCode, REFERRAL_BONUS_XP } =
-            await import("@/lib/gamification/referral");
+          const {
+            getStoredReferralCode,
+            clearStoredReferralCode,
+            getStoredShareAttribution,
+            clearStoredShareAttribution,
+            REFERRAL_BONUS_XP,
+          } = await import("@/lib/gamification/referral");
           const refCode = getStoredReferralCode();
-          if (refCode) {
+          const shareAttr = getStoredShareAttribution();
+          if (refCode || shareAttr) {
             await setDoc(doc(db, "referrals", user.uid), {
-              referralCode: refCode,
+              referralCode: refCode || shareAttr?.code,
               referredUid: user.uid,
               referredAt: new Date().toISOString(),
               bonusXp: REFERRAL_BONUS_XP,
               status: "pending",
+              // Leaderboard-share attribution — which copy variant and which
+              // entry drove this signup, for the share funnel worksheet.
+              ...(shareAttr
+                ? {
+                    source: "leaderboard_share",
+                    shareCode: shareAttr.code,
+                    shareVariant: shareAttr.variant ?? null,
+                    shareRef: shareAttr.ref ?? null,
+                  }
+                : {}),
             }, { merge: true });
             clearStoredReferralCode();
+            clearStoredShareAttribution();
           }
         } catch { /* non-fatal */ }
       }

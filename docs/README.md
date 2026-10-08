@@ -103,6 +103,8 @@ Payout speed color coding: ≤7d lightning, ≤30d fast, ≤90d moderate, >90d s
 
 Claims with `verificationStatus: "pending"` or missing `evidenceUrl` are excluded from the public leaderboard. Only claims with `verificationStatus` of `payout_verified` or `evidence_attached` (with a real `evidenceUrl`) surface publicly. This ensures unverified self-attested wins never appear on leaderboards that winners' peers and backers read.
 
+Sharing lives in [GROWTH.md](./GROWTH.md): personalized OG cards (`/api/og/leaderboard`), `?ref=` deep links, and the K-factor measurement plan.
+
 ### Payout Verification Flow (End-to-End)
 
 1. Payout lead submitted via `PayoutLeadForm` → `payoutLeads` collection

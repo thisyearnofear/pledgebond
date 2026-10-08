@@ -122,34 +122,35 @@ export default async function handler(req) {
       fetch(FONT_BOLD_URL).then((r) => r.arrayBuffer()),
     ]);
 
-    // Rank display
-    const rankDisplay = rank === 0 ? "" : rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `#${rank}`;
+    // Rank display — giant numeral, Wrapped-style: the rank is the card.
+    const rankDisplay = rank > 0 ? `#${rank}` : "";
+    const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
     const rankLabel = rank === 1 ? "1st" : rank === 2 ? "2nd" : rank === 3 ? "3rd" : `${rank}th`;
 
     // Movement indicator
     let movementEl = null;
     if (movement === "up") {
       movementEl = (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(5,150,105,0.2)", padding: "6px 16px", borderRadius: 20, border: "1px solid rgba(5,150,105,0.3)" }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(5,150,105,0.2)", padding: "10px 22px", borderRadius: 24, border: "1px solid rgba(5,150,105,0.3)" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <path d="M5 15l7-7 7 7" />
           </svg>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#059669" }}>Moved Up</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: "#34d399" }}>Moved Up</span>
         </div>
       );
     } else if (movement === "down") {
       movementEl = (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(220,38,38,0.15)", padding: "6px 16px", borderRadius: 20, border: "1px solid rgba(220,38,38,0.25)" }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(220,38,38,0.15)", padding: "10px 22px", borderRadius: 24, border: "1px solid rgba(220,38,38,0.25)" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
             <path d="M19 9l-7 7-7-7" />
           </svg>
-          <span style={{ fontSize: 14, fontWeight: 700, color: "#dc2626" }}>Moved Down</span>
+          <span style={{ fontSize: 18, fontWeight: 700, color: "#f87171" }}>Moved Down</span>
         </div>
       );
     } else if (movement === "new") {
       movementEl = (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(37,99,235,0.2)", padding: "6px 16px", borderRadius: 20, border: "1px solid rgba(37,99,235,0.3)" }}>
-          <span style={{ fontSize: 14, fontWeight: 800, color: "#2563eb", letterSpacing: "0.5px" }}>NEW</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(37,99,235,0.2)", padding: "10px 22px", borderRadius: 24, border: "1px solid rgba(37,99,235,0.3)" }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: "#60a5fa", letterSpacing: "1px" }}>NEW</span>
         </div>
       );
     }
@@ -253,21 +254,33 @@ export default async function handler(req) {
               marginTop: 40,
             }}
           >
-            {/* Rank badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {/* Rank hero */}
+            <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
               {rankDisplay ? (
-                <span style={{ fontSize: 56, lineHeight: 1 }}>{rankDisplay}</span>
+                <span
+                  style={{
+                    fontSize: 120,
+                    fontWeight: 800,
+                    lineHeight: 0.85,
+                    letterSpacing: "-6px",
+                  }}
+                >
+                  {rankDisplay}
+                </span>
               ) : null}
-              {movementEl}
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {medal && <span style={{ fontSize: 40, lineHeight: 1 }}>{medal}</span>}
+                {movementEl}
+              </div>
             </div>
 
             {/* Name */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
               <span
                 style={{
-                  fontSize: 44,
+                  fontSize: 52,
                   fontWeight: 800,
-                  letterSpacing: "-1px",
+                  letterSpacing: "-1.5px",
                   lineHeight: 1.1,
                   maxWidth: "80%",
                   overflow: "hidden",

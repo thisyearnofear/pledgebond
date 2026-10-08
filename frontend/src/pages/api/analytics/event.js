@@ -15,7 +15,7 @@
 import { db } from "../../../lib/firebase/serverOnly";
 
 const MAX_PROPERTIES_BYTES = 4 * 1024; // 4 KB
-const ALLOWED_FUNNELS = new Set(["login", "payout_lead", "winner_claim", "backing"]);
+const ALLOWED_FUNNELS = new Set(["login", "payout_lead", "winner_claim", "backing", "share"]);
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
   let safeProperties = {};
   try {
     const filtered = {};
-    for (const key of ["funnel", "step", "funnelId", "role", "outcome", "hasEvidence", "projectId", "error"]) {
+    for (const key of ["funnel", "step", "funnelId", "role", "outcome", "hasEvidence", "projectId", "error", "variant", "entryType", "rank", "platform", "ref"]) {
       if (properties[key] !== undefined) filtered[key] = properties[key];
     }
     if (JSON.stringify(filtered).length > MAX_PROPERTIES_BYTES) {

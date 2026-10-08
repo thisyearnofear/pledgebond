@@ -11,7 +11,7 @@ import { computeLeaderboardBadges } from "@/lib/badges/computeBadges";
 import { ProofBadgeGroup } from "@/components/common/ProofBadge";
 import MovementIndicator from "./MovementIndicator";
 import ShareButton from "./ShareButton";
-import { truncateAddress, generateShareText } from "./tabs";
+import { truncateAddress } from "./tabs";
 
 const RANK_STYLES = {
   1: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700",
@@ -76,7 +76,6 @@ export default function LeaderboardRow({ entry, rank, type }) {
       </div>
 
       <ShareButton
-        text={generateShareText(entry, rank, type)}
         entryType={type === "builders" ? "builder" : "backer"}
         entry={entry}
         rank={rank}

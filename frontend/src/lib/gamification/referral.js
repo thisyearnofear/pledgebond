@@ -13,6 +13,20 @@
 
 const REFERRAL_BONUS_XP = 150;
 const REFERRAL_STORAGE_KEY = "pos_referral_code";
+const SHARE_ATTR_STORAGE_KEY = "pos_share_attr";
+
+// Module-level sharer identity, hydrated by pages that render share
+// affordances (see pages/leaderboard.js). Written from effects only, so it
+// never carries state across SSR requests.
+let sharerCode = null;
+
+export function setSharerCode(code) {
+  sharerCode = code || null;
+}
+
+export function getSharerCode() {
+  return sharerCode;
+}
 
 /**
  * Generate a referral code from a username or UID.
@@ -75,4 +89,47 @@ export function clearStoredReferralCode() {
   } catch { /* noop */ }
 }
 
-export { REFERRAL_BONUS_XP, REFERRAL_STORAGE_KEY };
+/**
+ * Store leaderboard-share attribution alongside the referral code.
+ * Unlike the plain referral code this keeps the share context — which copy
+ * variant and which leaderboard entry drove the landing — so the K-factor
+ * worksheet can break conversion down per variant. First-touch wins.
+ */
+export function storeShareAttribution(attr) {
+  if (!attr || !attr.code || typeof window === "undefined" || !window.localStorage) return;
+  try {
+    const existing = window.localStorage.getItem(SHARE_ATTR_STORAGE_KEY);
+    if (!existing) {
+      window.localStorage.setItem(SHARE_ATTR_STORAGE_KEY, JSON.stringify({
+        code: attr.code,
+        variant: attr.variant ?? null,
+        ref: attr.ref ?? null,
+      }));
+    }
+  } catch { /* noop */ }
+}
+
+/**
+ * Get the stored share attribution (called during signup).
+ */
+export function getStoredShareAttribution() {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const raw = window.localStorage.getItem(SHARE_ATTR_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Clear the stored share attribution (after signup captures it).
+ */
+export function clearStoredShareAttribution() {
+  if (typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.removeItem(SHARE_ATTR_STORAGE_KEY);
+  } catch { /* noop */ }
+}
+
+export { REFERRAL_BONUS_XP, REFERRAL_STORAGE_KEY, SHARE_ATTR_STORAGE_KEY };

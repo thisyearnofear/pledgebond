@@ -102,10 +102,6 @@ export default function HackathonLeaderboardRow({ entry, rank }) {
       </div>
 
       <ShareButton
-        text={entry.avgPayoutDays !== null
-          ? `🏆 ${entry.name} pays winners in ${entry.avgPayoutDays}d avg with ${entry.payoutCompletionRate}% payout rate — ranked #${rank} on @pledgebond`
-          : `🏆 ${entry.name} — ranked #${rank} hackathon on @pledgebond`
-        }
         entryType="hackathon"
         entry={entry}
         rank={rank}

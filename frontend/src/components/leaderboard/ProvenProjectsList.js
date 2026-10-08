@@ -64,7 +64,6 @@ export default function ProvenProjectsList({ entries }) {
               </div>
             </div>
             <ShareButton
-              text={`#${rank} Proven Project: ${entry.name} — ${entry.score || 0} credibility · ${entry.evidenceCoverage || 0}% evidence coverage on @pledgebond`}
               entryType="project"
               entry={entry}
               rank={rank}

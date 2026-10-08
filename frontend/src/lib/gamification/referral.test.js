@@ -5,6 +5,11 @@ import {
   storeReferralCode,
   getStoredReferralCode,
   clearStoredReferralCode,
+  storeShareAttribution,
+  getStoredShareAttribution,
+  clearStoredShareAttribution,
+  setSharerCode,
+  getSharerCode,
   REFERRAL_BONUS_XP,
 } from "./referral";
 
@@ -76,6 +81,59 @@ describe("referral", () => {
 
     it("returns null when no code is stored", () => {
       expect(getStoredReferralCode()).toBeNull();
+    });
+  });
+
+  describe("share attribution storage", () => {
+    let store;
+
+    beforeEach(() => {
+      store = {};
+      vi.mocked(localStorage.getItem).mockImplementation((key) => store[key] ?? null);
+      vi.mocked(localStorage.setItem).mockImplementation((key, value) => { store[key] = String(value); });
+      vi.mocked(localStorage.removeItem).mockImplementation((key) => { delete store[key]; });
+      vi.mocked(localStorage.clear).mockImplementation(() => { store = {}; });
+    });
+
+    it("stores and retrieves share attribution", () => {
+      storeShareAttribution({ code: "ref_abc", variant: "1", ref: "hackathon-2" });
+      expect(getStoredShareAttribution()).toEqual({
+        code: "ref_abc",
+        variant: "1",
+        ref: "hackathon-2",
+      });
+    });
+
+    it("does not overwrite existing attribution (first-touch wins)", () => {
+      storeShareAttribution({ code: "ref_first", variant: "0", ref: "builder-1" });
+      storeShareAttribution({ code: "ref_second", variant: "2", ref: "project-3" });
+      expect(getStoredShareAttribution().code).toBe("ref_first");
+    });
+
+    it("normalizes missing variant and ref to null", () => {
+      storeShareAttribution({ code: "ref_abc" });
+      expect(getStoredShareAttribution()).toEqual({ code: "ref_abc", variant: null, ref: null });
+    });
+
+    it("ignores attribution without a code", () => {
+      storeShareAttribution({ variant: "1" });
+      storeShareAttribution(null);
+      expect(getStoredShareAttribution()).toBeNull();
+    });
+
+    it("clears the stored attribution", () => {
+      storeShareAttribution({ code: "ref_abc" });
+      clearStoredShareAttribution();
+      expect(getStoredShareAttribution()).toBeNull();
+    });
+  });
+
+  describe("sharer code", () => {
+    it("round-trips through set/get", () => {
+      setSharerCode("ref_abc");
+      expect(getSharerCode()).toBe("ref_abc");
+      setSharerCode(null);
+      expect(getSharerCode()).toBeNull();
     });
   });
 

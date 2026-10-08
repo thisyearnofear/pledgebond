@@ -32,7 +32,7 @@ Bettor capital must never fund a loan. A bettor must never absorb an organizer t
 - **Submit Projects** — GitHub auto-populate, collapsible optional sections, localStorage draft saving
 - **Badges** — Client-side achievement inference: Verified Winner, Multi-Ecosystem, Prolific, Proof-Backed, etc.
 - **Leaderboard Sharing** — Shareable OG images for leaderboard categories with rank, movement, and metrics
-- **Onboarding** — Dual-mode banner: guest value props + authenticated role-based guide
+- **Onboarding** — Authenticated role-based guide (builder/backer steps). Single dismiss flag, fade/slide transition, respects `prefers-reduced-motion`
 - **SEO & Sharing** — Open Graph meta tags with dynamic badge pills, X/Farcaster share buttons
 
 ## AI Provider Chain
@@ -164,7 +164,7 @@ vercel --prod              # redeploy
 - `frontend/` — Next.js app (pages, components, contexts, services)
 - `blockchain/` — Hardhat workspace (Solidity contracts, deploy scripts, tests)
 - `snap-server/` — Farcaster Snap server (scout + celebration snaps)
-- `docs/` — [Documentation](./docs/README.md), [Colosseum submission](./docs/COLOSSEUM_SUBMISSION.md), [hackathon submission](./docs/HACKATHON_ARC.md), [changelog](./docs/CHANGELOG.md)
+- `docs/` — [Documentation](./docs/README.md), [vision](./docs/VISION.md), [growth](./docs/GROWTH.md), [Colosseum submission](./docs/COLOSSEUM_SUBMISSION.md), [hackathon submission](./docs/HACKATHON_ARC.md), [changelog](./docs/CHANGELOG.md)
 
 ## Links
 

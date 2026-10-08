@@ -14,6 +14,14 @@ import { LoadingSpinner } from "@/components/common/LoadingStates";
 import PageHeader from "@/components/common/PageHeader";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { useLeaderboardOG } from "@/hooks/useLeaderboardOG";
+import { useUser } from "@/stores/authStore";
+import { trackEvent } from "@/lib/analytics";
+import {
+  generateReferralCode,
+  setSharerCode,
+  storeReferralCode,
+  storeShareAttribution,
+} from "@/lib/gamification/referral";
 import {
   TABS,
   TAB_EXPLAINERS,
@@ -106,6 +114,33 @@ export default function LeaderboardPage() {
   }, [tab]);
 
   const { ogImageUrl, ogTitle, ogDescription } = useLeaderboardOG(router.query.ref, entries);
+  const { currentUser } = useUser();
+
+  // Hydrate the sharer identity so ShareButton links carry `s=<code>` —
+  // this is what makes the share → signup path attributable.
+  useEffect(() => {
+    setSharerCode(currentUser ? generateReferralCode(currentUser.uid) : null);
+  }, [currentUser]);
+
+  // Landing from a shared link: record the referral (first-touch wins),
+  // keep the share context for per-variant conversion, and log the
+  // funnel step so invite rate × conversion = K-factor is computable.
+  useEffect(() => {
+    const s = router.query.s;
+    if (!router.isReady || !s) return;
+    const shareCode = String(s);
+    const variant = router.query.v !== undefined ? String(router.query.v) : null;
+    const ref = router.query.ref ? String(router.query.ref) : null;
+    storeReferralCode(shareCode);
+    storeShareAttribution({ code: shareCode, variant, ref });
+    trackEvent("funnel_step", {
+      funnel: "share",
+      step: "landing",
+      funnelId: shareCode,
+      variant,
+      ref,
+    });
+  }, [router.isReady, router.query.s, router.query.v, router.query.ref]);
 
   const currentList =
     tab === "builders" ? entries.builders :
