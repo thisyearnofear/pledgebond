@@ -149,21 +149,25 @@ export default function LeaderboardPage() {
     setSharerCode(currentUser ? generateReferralCode(currentUser.uid) : null);
   }, [currentUser]);
 
-  // Landing from a shared link: record the referral (first-touch wins),
-  // keep the share context for per-variant conversion, and log the
-  // funnel step so invite rate × conversion = K-factor is computable.
+  // Landing from a shared link: log the funnel step whenever the URL marks
+  // a share (s or v), and record first-touch referral attribution when the
+  // sharer is identified — so invite rate × conversion = K-factor is
+  // computable even for anonymous shares.
   useEffect(() => {
+    if (!router.isReady) return;
     const s = router.query.s;
-    if (!router.isReady || !s) return;
-    const shareCode = String(s);
     const variant = router.query.v !== undefined ? String(router.query.v) : null;
     const ref = router.query.ref ? String(router.query.ref) : null;
-    storeReferralCode(shareCode);
-    storeShareAttribution({ code: shareCode, variant, ref });
+    if (!s && variant === null) return;
+    if (s) {
+      const shareCode = String(s);
+      storeReferralCode(shareCode);
+      storeShareAttribution({ code: shareCode, variant, ref });
+    }
     trackEvent("funnel_step", {
       funnel: "share",
       step: "landing",
-      funnelId: shareCode,
+      funnelId: s ? String(s) : "anon",
       variant,
       ref,
     });
