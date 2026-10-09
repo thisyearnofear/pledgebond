@@ -1,4 +1,5 @@
 import { db } from "../../../lib/firebase/serverOnly";
+import { summarizeClaimProof } from "@/lib/leaderboard/proofScoring";
 
 export default async function handler(req, res) {
   const { slug } = req.query;
@@ -56,6 +57,7 @@ async function handleLeaderboard(req, res) {
           milestoneCount: 0,
           ecosystems: new Set(),
           velocity: 0,
+          verifiedWins: 0,
         });
       }
 
@@ -64,6 +66,15 @@ async function handleLeaderboard(req, res) {
       const milestones = Array.isArray(p.milestones) ? p.milestones.length : 0;
       builder.milestoneCount += milestones;
       if (p.ecosystem) builder.ecosystems.add(p.ecosystem);
+
+      // Verified-win count so the share surface (verified wins only) and
+      // OG cards can see the same credibility signal as the proof board.
+      const claims = Array.isArray(p.hackathons) ? p.hackathons : [];
+      for (const claim of claims) {
+        if (claim.name && summarizeClaimProof(claim).isVerifiedWin) {
+          builder.verifiedWins++;
+        }
+      }
 
       builder.velocity = builder.projectCount * 5 + builder.milestoneCount * 10;
     }
@@ -113,6 +124,9 @@ async function handleLeaderboard(req, res) {
         .map((b) => ({
           ...b,
           projectsBacked: b.projectsBacked.size,
+          // Backers are keyed by wallet, same address space as builders —
+          // a lender who is also a verified winner keeps their share surface.
+          verifiedWins: builderMap.get(b.address)?.verifiedWins || 0,
         }))
         .sort((a, b) => b.score - a.score)
         .slice(0, limit);

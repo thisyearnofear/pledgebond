@@ -11,15 +11,17 @@ import { computeLeaderboardBadges } from "@/lib/badges/computeBadges";
 import { ProofBadgeGroup } from "@/components/common/ProofBadge";
 import MovementIndicator from "./MovementIndicator";
 import ShareButton from "./ShareButton";
+import HighlightedEntry from "./HighlightedEntry";
 
-export default function ProvenProjectsList({ entries }) {
+export default function ProvenProjectsList({ entries, highlightedEntry }) {
   return (
     <div className="space-y-3">
       {entries.map((entry, idx) => {
         const entryBadges = computeLeaderboardBadges(entry, "project");
         const rank = idx + 1;
         return (
-          <div key={entry.slug || idx} className="flex items-center gap-4 p-4 rounded-xl border bg-surface-primary border-border-primary hover:shadow-md transition-all">
+          <HighlightedEntry key={entry.slug || idx} highlighted={entry === highlightedEntry}>
+          <div className="flex items-center gap-4 p-4 rounded-xl border bg-surface-primary border-border-primary hover:shadow-md transition-all">
             <div className="w-14 text-center flex-shrink-0">
               <div className="text-lg font-bold">
                 {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${rank}`}
@@ -69,6 +71,7 @@ export default function ProvenProjectsList({ entries }) {
               rank={rank}
             />
           </div>
+          </HighlightedEntry>
         );
       })}
     </div>

@@ -8,6 +8,7 @@
 import { useState, useMemo } from "react";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import HackathonLeaderboardRow from "./HackathonLeaderboardRow";
+import HighlightedEntry from "./HighlightedEntry";
 import PayoutLeadForm from "./PayoutLeadForm";
 
 function SkeletonRow() {
@@ -23,7 +24,7 @@ function SkeletonRow() {
   );
 }
 
-export default function HackathonLeaderboardList({ entries }) {
+export default function HackathonLeaderboardList({ entries, highlightedEntry }) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -74,7 +75,9 @@ export default function HackathonLeaderboardList({ entries }) {
       )}
 
       {filtered.map((entry, idx) => (
-        <HackathonLeaderboardRow key={`${entry.name}-${idx}`} entry={entry} rank={idx + 1} />
+        <HighlightedEntry key={`${entry.name}-${idx}`} highlighted={entry === highlightedEntry}>
+          <HackathonLeaderboardRow entry={entry} rank={idx + 1} />
+        </HighlightedEntry>
       ))}
 
       {filtered.length === 0 && (

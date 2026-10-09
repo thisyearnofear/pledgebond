@@ -35,6 +35,22 @@ import {
 
 const EMPTY_ENTRIES = { builders: [], proofBuilders: [], projects: [], lenders: [], hackathons: [] };
 
+// `?ref=` prefixes map to the tab that owns the entry — shared links
+// auto-switch tabs so the highlighted entry is actually rendered.
+const REF_TO_TAB = {
+  "proof-builder": "proof-builders",
+  project: "projects",
+  hackathon: "hackathons",
+  builder: "builders",
+  backer: "lenders",
+};
+
+function refTargetTab(ref) {
+  if (typeof ref !== "string") return null;
+  const type = Object.keys(REF_TO_TAB).find((k) => ref.startsWith(`${k}-`));
+  return type ? REF_TO_TAB[type] : null;
+}
+
 export default function LeaderboardPage() {
   const router = useRouter();
   // "backers" was the pre-rail tab id; old shared links keep working.
@@ -113,8 +129,19 @@ export default function LeaderboardPage() {
     return () => { cancelled = true; };
   }, [tab]);
 
-  const { ogImageUrl, ogTitle, ogDescription } = useLeaderboardOG(router.query.ref, entries);
+  const { highlightedEntry, ogImageUrl, ogTitle, ogDescription } = useLeaderboardOG(router.query.ref, entries);
   const { currentUser } = useUser();
+
+  // A shared `?ref=` link may target a non-default tab — switch to it while
+  // preserving ref/s/v so the OG card, attribution, and highlight survive.
+  const targetTab = refTargetTab(router.query.ref);
+  useEffect(() => {
+    if (!router.isReady || !targetTab || tab === targetTab) return;
+    const query = { ...router.query };
+    if (targetTab === "hackathons") delete query.tab;
+    else query.tab = targetTab;
+    router.replace({ pathname: router.pathname, query }, undefined, { shallow: true });
+  }, [router.isReady, targetTab, tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Hydrate the sharer identity so ShareButton links carry `s=<code>` —
   // this is what makes the share → signup path attributable.
@@ -208,14 +235,14 @@ export default function LeaderboardPage() {
           ) : tab === "hackathons" ? (
             <>
               <FastestPayoutHero entries={currentList} />
-              <HackathonLeaderboardList entries={currentList} />
+              <HackathonLeaderboardList entries={currentList} highlightedEntry={highlightedEntry?.entry} />
             </>
           ) : tab === "proof-builders" ? (
-            <ProofBuildersList entries={currentList} />
+            <ProofBuildersList entries={currentList} highlightedEntry={highlightedEntry?.entry} />
           ) : tab === "projects" ? (
-            <ProvenProjectsList entries={currentList} />
+            <ProvenProjectsList entries={currentList} highlightedEntry={highlightedEntry?.entry} />
           ) : (
-            <LeaderboardList entries={currentList} type={tab} />
+            <LeaderboardList entries={currentList} type={tab} highlightedEntry={highlightedEntry?.entry} />
           )}
         </div>
       </div>

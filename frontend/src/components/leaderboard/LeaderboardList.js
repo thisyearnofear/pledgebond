@@ -5,12 +5,15 @@
  */
 
 import LeaderboardRow from "./LeaderboardRow";
+import HighlightedEntry from "./HighlightedEntry";
 
-export default function LeaderboardList({ entries, type }) {
+export default function LeaderboardList({ entries, type, highlightedEntry }) {
   return (
     <div className="space-y-3">
       {entries.map((entry, idx) => (
-        <LeaderboardRow key={entry.address || idx} entry={entry} rank={idx + 1} type={type} />
+        <HighlightedEntry key={entry.address || idx} highlighted={entry === highlightedEntry}>
+          <LeaderboardRow entry={entry} rank={idx + 1} type={type} />
+        </HighlightedEntry>
       ))}
     </div>
   );

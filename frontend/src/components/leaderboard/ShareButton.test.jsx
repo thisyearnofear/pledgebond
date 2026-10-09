@@ -23,7 +23,8 @@ describe('ShareButton', () => {
   beforeEach(() => {
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
     trackEvent.mockClear();
-    getSharerCode.mockReturnValue(null);
+    // Signed-in by default so clicks go straight to the share intent.
+    getSharerCode.mockReturnValue('ref_testsharer');
     locationSpy = vi.spyOn(window, 'location', 'get').mockReturnValue({ origin: 'https://test.app' });
   });
 
@@ -88,15 +89,6 @@ describe('ShareButton', () => {
     );
   });
 
-  it('attributes anonymous shares to funnelId "anon"', () => {
-    render(<ShareButton entry={{ name: 'alice', verifiedWins: 1 }} rank={1} entryType="builder" />);
-    fireEvent.click(screen.getByTitle('Share on X'));
-    expect(trackEvent).toHaveBeenCalledWith(
-      'funnel_step',
-      expect.objectContaining({ funnelId: 'anon' })
-    );
-  });
-
   it('uses the explicit `text` prop when provided', () => {
     render(<ShareButton text="custom text" entry={{ name: 'a', verifiedWins: 1 }} rank={1} entryType="builder" />);
     fireEvent.click(screen.getByTitle('Share on X'));
@@ -129,13 +121,6 @@ describe('ShareButton', () => {
     expect(url).toMatch(/v%3D\d/);
   });
 
-  it('omits s= when the sharer is anonymous', () => {
-    render(<ShareButton entry={{ name: 'alice', verifiedWins: 1 }} rank={1} entryType="builder" />);
-    fireEvent.click(screen.getByTitle('Share on X'));
-    const url = openSpy.mock.calls[0][0];
-    expect(url).not.toContain('s%3D');
-  });
-
   it('uses the explicit `url` prop when provided', () => {
     render(<ShareButton text="t" url="https://custom.example.com/x" entry={{ name: 'a', verifiedWins: 1 }} rank={1} entryType="builder" />);
     fireEvent.click(screen.getByTitle('Share on X'));
@@ -149,5 +134,53 @@ describe('ShareButton', () => {
     const url = openSpy.mock.calls[0][0];
     expect(url).not.toContain('%40pledgebond');
     expect(url).toContain('hello');
+  });
+
+  describe('anonymous sharer', () => {
+    beforeEach(() => {
+      getSharerCode.mockReturnValue(null);
+    });
+
+    it('shows the sign-in prompt instead of opening the share intent', () => {
+      render(<ShareButton entry={{ name: 'alice', verifiedWins: 1 }} rank={1} entryType="builder" />);
+      fireEvent.click(screen.getByTitle('Share on X'));
+      expect(openSpy).not.toHaveBeenCalled();
+      expect(screen.getByText('Sign in')).toBeInTheDocument();
+      expect(screen.getByText('Share anyway')).toBeInTheDocument();
+      expect(trackEvent).toHaveBeenCalledWith(
+        'funnel_step',
+        expect.objectContaining({ funnel: 'share', step: 'anon_prompt', funnelId: 'anon' })
+      );
+    });
+
+    it('links the sign-in prompt to /login with a leaderboard redirect', () => {
+      render(<ShareButton entry={{ name: 'alice', verifiedWins: 1 }} rank={1} entryType="builder" />);
+      fireEvent.click(screen.getByTitle('Share on X'));
+      const link = screen.getByText('Sign in').closest('a');
+      expect(link.getAttribute('href')).toContain('/login');
+      expect(link.getAttribute('href')).toContain('redirect=');
+    });
+
+    it('"Share anyway" opens the intent with funnelId "anon" and no s= param', () => {
+      render(<ShareButton entry={{ name: 'alice', verifiedWins: 1 }} rank={1} entryType="builder" />);
+      fireEvent.click(screen.getByTitle('Share on X'));
+      fireEvent.click(screen.getByText('Share anyway'));
+      expect(openSpy).toHaveBeenCalled();
+      const url = openSpy.mock.calls[0][0];
+      expect(url).toContain('twitter.com/intent/tweet');
+      expect(url).not.toContain('s%3D');
+      expect(trackEvent).toHaveBeenCalledWith(
+        'funnel_step',
+        expect.objectContaining({ step: 'clicked', funnelId: 'anon' })
+      );
+    });
+
+    it('dismisses the prompt via the close button', () => {
+      render(<ShareButton entry={{ name: 'alice', verifiedWins: 1 }} rank={1} entryType="builder" />);
+      fireEvent.click(screen.getByTitle('Share on X'));
+      fireEvent.click(screen.getByLabelText('Dismiss'));
+      expect(screen.queryByText('Share anyway')).not.toBeInTheDocument();
+      expect(openSpy).not.toHaveBeenCalled();
+    });
   });
 });
