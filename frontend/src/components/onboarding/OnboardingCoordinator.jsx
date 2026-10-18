@@ -34,7 +34,7 @@ export default function OnboardingCoordinator({ children }) {
 
   useEffect(() => {
     if (!migrated || loading || router.pathname !== "/") return;
-    if (currentUser && onboardingComplete) return;
+    if (!currentUser || onboardingComplete) return;
     if (isTourDismissed()) return;
 
     const timer = setTimeout(() => setTourOpen(true), 1500);
