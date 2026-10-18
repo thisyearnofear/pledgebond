@@ -54,7 +54,7 @@ export default function Hero({ onClaimWin, onSeePayouts }) {
           </div>
 
           <p className="mt-6 text-sm text-tertiary">
-            Verifier confirms payouts. The win anchors on-chain. Liquidity follows once it's real.
+            Free to look around — connect a wallet only when you're ready to claim or back a win.
           </p>
         </div>
       </div>

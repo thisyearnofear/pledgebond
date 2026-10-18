@@ -5,6 +5,7 @@ import { useUser } from "@/stores/authStore";
 import LiveAgentTicker from "@/components/common/LiveAgentTicker";
 import Hero from "@/components/sections/Hero";
 import LandingPayoutStrip from "@/components/sections/LandingPayoutStrip";
+import HowItWorks from "@/components/sections/HowItWorks";
 import CTASection from "@/components/sections/CTASection";
 
 LandingPage.fullWidth = true;
@@ -30,6 +31,7 @@ export default function LandingPage() {
         onClaimWin={handleClaimWin}
         onSeePayouts={handleSeePayouts}
       />
+      <HowItWorks />
       <LandingPayoutStrip />
       <CTASection onClaimWin={handleClaimWin} onSeePayouts={handleSeePayouts} />
     </div>

@@ -82,7 +82,7 @@ export default function Navbar() {
                     <Link href="/" className="flex items-center space-x-2 sm:space-x-3">
                       <img
                         src="/pledgebond.png"
-                        alt="Proof Of Ship Logo"
+                        alt="PledgeBond logo"
                         width={32}
                         height={32}
                         className="rounded w-8 h-8 sm:w-10 sm:h-10"
