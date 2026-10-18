@@ -33,17 +33,26 @@ export default function OnboardingCoordinator({ children }) {
   }, []);
 
   useEffect(() => {
-    if (!migrated || loading || router.pathname !== "/") return;
+    if (!migrated || loading) return;
+    // Explicit request — any route, any auth state: "?tour=1" opens the tour.
+    if (router.query.tour === "1") {
+      setTourOpen(true);
+      return;
+    }
+    if (router.pathname !== "/") return;
     if (!currentUser || onboardingComplete) return;
     if (isTourDismissed()) return;
 
     const timer = setTimeout(() => setTourOpen(true), 1500);
     return () => clearTimeout(timer);
-  }, [migrated, loading, router.pathname, currentUser, onboardingComplete]);
+  }, [migrated, loading, router.pathname, router.query.tour, currentUser, onboardingComplete]);
 
   const closeTour = () => {
     setTourOpen(false);
     markTourDismissed();
+    if (router.query.tour) {
+      router.replace(router.pathname, undefined, { shallow: true });
+    }
   };
 
   const value = useMemo(

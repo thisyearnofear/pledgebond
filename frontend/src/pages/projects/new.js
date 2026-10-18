@@ -31,10 +31,10 @@ export default function NewProjectPage() {
       <ProjectEditor />
 
       <Card className="p-6 mt-6 bg-surface-secondary border border-default">
-        <div className="text-sm text-gray-600">
-          Tip: once you’ve submitted, share your portfolio link with your subdomain
-          (e.g. <span className="font-mono">yourname.yourdomain.com</span>) or
-          <span className="font-mono"> /u/yourname</span>.
+        <div className="text-sm text-secondary">
+          Tip: name the hackathon and add a link that proves the win — a Devpost
+          page, announcement, or leaderboard entry. The verifier checks it, the win
+          anchors on-chain, and the payout clock starts measuring.
         </div>
       </Card>
     </div>

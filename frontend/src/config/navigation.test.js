@@ -9,11 +9,12 @@ import {
 } from "@/config/navigation";
 
 describe("PRIMARY_NAV", () => {
-  it("exposes four top-level items", () => {
-    expect(PRIMARY_NAV).toHaveLength(4);
+  it("exposes five top-level items", () => {
+    expect(PRIMARY_NAV).toHaveLength(5);
     expect(PRIMARY_NAV.map((item) => item.id)).toEqual([
       "explore",
       "leaderboard",
+      "how",
       "build",
       "back",
     ]);
@@ -26,7 +27,7 @@ describe("filterNavItems", () => {
       currentUser: { uid: "u1" },
       userRole: "backer",
     });
-    expect(items.map((i) => i.id)).toEqual(["explore", "leaderboard", "back"]);
+    expect(items.map((i) => i.id)).toEqual(["explore", "leaderboard", "how", "back"]);
   });
 
   it("hides build for guests", () => {
@@ -34,7 +35,7 @@ describe("filterNavItems", () => {
       currentUser: null,
       userRole: null,
     });
-    expect(items.map((i) => i.id)).toEqual(["explore", "leaderboard", "back"]);
+    expect(items.map((i) => i.id)).toEqual(["explore", "leaderboard", "how", "back"]);
   });
 
   it("shows build for authenticated builders", () => {
@@ -42,7 +43,7 @@ describe("filterNavItems", () => {
       currentUser: { uid: "u1" },
       userRole: "builder",
     });
-    expect(items.map((i) => i.id)).toEqual(["explore", "leaderboard", "build", "back"]);
+    expect(items.map((i) => i.id)).toEqual(["explore", "leaderboard", "how", "build", "back"]);
   });
 });
 

@@ -17,6 +17,7 @@
 export const PRIMARY_NAV = [
   { id: "explore", label: "Explore", href: "/explore" },
   { id: "leaderboard", label: "Payouts", href: "/leaderboard" },
+  { id: "how", label: "How it works", href: "/?tour=1" },
   { id: "build", label: "Build", href: "/build", auth: true, builderOnly: true },
   { id: "back", label: "Back", href: "/back" },
 ];

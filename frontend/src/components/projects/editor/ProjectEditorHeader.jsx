@@ -33,7 +33,7 @@ export default function ProjectEditorHeader({
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            {isEditMode ? "Edit project" : "Add a project"}
+            {isEditMode ? "Edit project" : "Claim your win"}
           </h2>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Keep it crisp. Links + contract address are the minimum viable proof.
