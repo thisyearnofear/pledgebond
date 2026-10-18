@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 /**
  * @title IHackathonRegistry
@@ -70,23 +70,26 @@ interface IHackathonRegistry {
     /**
      * @dev Declares a winner for a hackathon with prize metadata.
      * Anchors the declaration timestamp on-chain.
+     * @return declarationIndex The declaration's position — consumers bind to it.
      */
     function declareWinner(
         uint256 hackathonId,
         address winner,
         string calldata projectName,
         uint256 prizeAmount
-    ) external;
+    ) external returns (uint256 declarationIndex);
     
     /**
-     * @dev Records a payout for a previously declared winner.
-     * Completes the time delta: declaredAt → paidAt.
+     * @dev Attests a payout for a specific declaration. paidAt is set only
+     * once requiredSignatures distinct verifiers attest — index-exact, never
+     * inferred from the winner address.
+     * @return finalized True when this attestation set paidAt.
      */
     function recordPayout(
         uint256 hackathonId,
-        address winner,
+        uint256 declarationIndex,
         string calldata payoutTxHash
-    ) external;
+    ) external returns (bool finalized);
     
     /**
      * @dev Gets all winner declarations for a hackathon.
@@ -94,6 +97,11 @@ interface IHackathonRegistry {
      * not merely that the hackathon paid some other winner.
      */
     function getWinnerDeclarations(uint256 hackathonId) external view returns (WinnerDeclaration[] memory);
+
+    /**
+     * @dev Gets a single declaration by index. Reverts out of range.
+     */
+    function getDeclaration(uint256 hackathonId, uint256 index) external view returns (WinnerDeclaration memory);
     
     /**
      * @dev Gets payout statistics for a hackathon

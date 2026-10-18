@@ -559,8 +559,8 @@ export default function DeveloperDashboard() {
                 <div className="flex-1">
                   <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">Repaid on time</div>
                   <div className="text-4xl font-black text-indigo-600 dark:text-indigo-400">
-                    {creditProfile.coverageRateBps != null
-                      ? `${Math.round(creditProfile.coverageRateBps / 100)}%`
+                    {creditProfile.repaymentRateBps != null
+                      ? `${Math.round(creditProfile.repaymentRateBps / 100)}%`
                       : "—"}
                   </div>
                 </div>

@@ -4,15 +4,15 @@
 
 Two contracts:
 
-- **`HackathonRegistry.sol`** — hackathons, verifiers, and the **credibility anchor**. `declareWinner` / `recordPayout` anchor the `declaredAt` / `paidAt` pair for a win. That pair is what makes an unpaid prize legible as an asset: it is the receipt a bridge loan is written against, and it is the public record that produces a builder's coverage rate and time-to-pay. `getPayoutStats` returns the latency distribution the leaderboard markets.
-- **`LiquidityRail.sol`** — the core rail. Bridge loans against confirmed wins, plus a payout market. Holds principal, collateral, bet stakes, and accrued fees as **separately accounted reserves**.
+- **`HackathonRegistry.sol`** — hackathons, verifiers, and the **credibility anchor**. `declareWinner` anchors `declaredAt`; `recordPayout` is index-exact and **M-of-N**: `paidAt` is set only once `requiredSignatures` distinct verifiers attest a specific declaration — one compromised key cannot forge the payout record markets settle on. That pair is what makes an unpaid prize legible as an asset. `getPayoutStats` returns the latency distribution the leaderboard markets.
+- **`LiquidityRail.sol`** — the core rail. Lifecycle: `anchorWin` binds a specific registry declaration → `proposeLoan` (lender offers terms) → `commitTranche` (named first-loss provider escrows) → `acceptLoan` (**the builder consents**: posts collateral, draws principal net of fee) → `repayLoan` / `defaultLoan`. The payout market is parimutuel and resolves on the registry's `paidAt` or the per-win `resolutionDeadline` — never on the loan's fate. Holds collateral, tranche capacity, bet stakes, and accrued fees as **separately accounted reserves**.
 
 ### The invariants the contract enforces
 
-1. **The platform never absorbs a credit loss.** Every loan is `OVERCOLLATERALIZED` (collateral ≥ principal, default means liquidation) or `TRANCHE_BACKED` (a designated first-loss slice absorbs defaults up to its size).
-2. **Fees on notional only.** `accruedFees` is the sole withdrawable balance for `FEE_ROLE`. It is incremented atomically inside `openLoan` / `settleLoan`. There is no code path that can reach principal or collateral.
-3. **Lenders and bettors never mix.** Bet stakes sit in a separate accounting pool from lending principal. `settleBet` can only ever pay from the bet pool.
-4. **Credibility is derived, never assigned.** `BuilderHistory` updates from settled outcomes. There is no setter and no admin role.
+1. **The platform never absorbs a credit loss.** Every loan is `OVERCOLLATERALIZED`, `TRANCHE_BACKED`, or `HYBRID` — collateral plus committed tranche always covers principal. On default the builder's collateral liquidates to the lender first, the tranche covers the shortfall, and surplus returns to its owner.
+2. **Fees on notional only.** `accruedFees` is the sole withdrawable balance for `FEE_ROLE` — and it is *funded*: the fee is pulled into the contract inside `acceptLoan`, so withdrawals can never touch escrowed capital.
+3. **Lenders and bettors never mix.** Bet stakes sit in a separate accounting pool from lending capital. `claimWinnings` pays only from the bet pool, pro-rata.
+4. **Credibility is derived, never assigned.** `BuilderHistory` updates only from anchor, accept, repay, default, and market resolution. Builder consent is load-bearing: nobody can open a loan against someone else's win.
 5. **No multiplier.** A routed prize splits by principal. Any value above 100 is a promise backed by someone other than the prize.
 
 The audit question to answer before mainnet: *can any legitimate sequence of user actions make the platform pay principal?* It must be no.

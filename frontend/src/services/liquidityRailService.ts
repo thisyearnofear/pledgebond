@@ -1,16 +1,15 @@
 /**
  * LiquidityRailService — viem bindings for the bridge-loan rail.
  *
- * Replaces creditService. Mirrors its calling convention (chainId + clients
- * leading, USDC 6-decimals, try/catch defaults) so callers read the same way.
+ * Lifecycle on-chain: anchorWin → proposeLoan → commitTranche? → acceptLoan →
+ * repayLoan | defaultLoan. The payout market resolves via resolveMarket and
+ * pays out via claimWinnings. Nothing here throws for "not deployed" on
+ * reads; writes throw loudly, because silently doing nothing on a loan would
+ * be worse than an error.
  *
  * Deliberately NOT registered in lib/chains/registry.ts: that registry has no
  * consumers and its two services have incompatible signatures, so extending it
  * would add indirection for nothing. EVM only — the rail is EVM-only.
- *
- * Every read degrades to a defined shape when the contract is not deployed on
- * a network. Nothing here throws for "not deployed"; writes throw loudly,
- * because silently doing nothing on a loan would be worse than an error.
  */
 
 import { getContract, formatUnits, parseUnits, maxUint256, parseAbi, decodeEventLog } from 'viem';
@@ -35,10 +34,12 @@ const erc20Abi = parseAbi(ERC20_ABI as unknown as string[]);
 const registryAbi = parseAbi(HACKATHON_REGISTRY_ABI as unknown as string[]);
 
 const USDC_DECIMALS = 6;
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
 
 export const LOAN_MODES = {
   OVERCOLLATERALIZED: 0,
   TRANCHE_BACKED: 1,
+  HYBRID: 2,
 } as const;
 
 export const LOAN_STATUS = {
@@ -48,11 +49,17 @@ export const LOAN_STATUS = {
   DEFAULTED: 3,
 } as const;
 
-export const WIN_STATUS = {
+export const PROPOSAL_STATUS = {
   NONE: 0,
-  DECLARED: 1,
-  SETTLED: 2,
-  DEFAULTED: 3,
+  OPEN: 1,
+  ACCEPTED: 2,
+  CANCELLED: 3,
+} as const;
+
+export const MARKET_OUTCOME = {
+  UNRESOLVED: 0,
+  PAID: 1,
+  UNPAID: 2,
 } as const;
 
 /**incentives bitfield flags a builder can commit to. */
@@ -63,18 +70,23 @@ export const INCENTIVES = {
 } as const;
 
 export interface RailCredibility {
-  winsDeclared: number;
+  winsAnchored: number;
+  winsPaid: number;
+  winsUnpaid: number;
   loansTaken: number;
-  winsSettledInFull: number;
-  winsDefaulted: number;
-  /** Wins settled in full, per 10,000 resolved wins. */
-  coverageRateBps: number;
+  loansRepaid: number;
+  loansDefaulted: number;
+  /** Share of anchored wins the organizer paid, per 10,000 resolved. */
+  payoutRateBps: number;
+  /** Share of loans repaid, per 10,000 resolved loans. */
+  repaymentRateBps: number;
   /** Mean days from declared win to recorded payout. */
   averageDaysToPay: number;
 }
 
 export interface LoanPosition {
   winId: number;
+  proposalId: number;
   lender: string;
   builder: string;
   principal: string;
@@ -86,12 +98,28 @@ export interface LoanPosition {
   status: number;
 }
 
+export interface LoanProposalView {
+  proposalId: number;
+  winId: number;
+  lender: string;
+  principal: string;
+  collateral: string;
+  trancheSize: string;
+  trancheProvider: string;
+  trancheCommitted: boolean;
+  feeBps: number;
+  durationDays: number;
+  incentives: number;
+  status: number;
+}
+
 export interface LoanTerms {
   principal: string;
+  /** Collateral the BUILDER must post at accept. */
   collateral?: string;
   trancheSize?: string;
   trancheProvider?: `0x${string}` | null;
-  rateBps: number;
+  feeBps: number;
   durationDays: number;
   incentives?: number;
 }
@@ -104,17 +132,21 @@ interface Contracts {
 }
 
 const EMPTY_CREDIBILITY: RailCredibility = {
-  winsDeclared: 0,
+  winsAnchored: 0,
+  winsPaid: 0,
+  winsUnpaid: 0,
   loansTaken: 0,
-  winsSettledInFull: 0,
-  winsDefaulted: 0,
-  coverageRateBps: 0,
+  loansRepaid: 0,
+  loansDefaulted: 0,
+  payoutRateBps: 0,
+  repaymentRateBps: 0,
   averageDaysToPay: 0,
 };
 
 export interface DeclaredWin {
   winId: number;
   hackathonId: number;
+  declarationIndex: number;
   builder: string;
   projectName: string;
   prizeAmount: string;
@@ -128,8 +160,8 @@ export interface WinHistoryRecord {
   prizeAmount: string;
   declaredAt: number;
   txHash: string;
-  /** WinStatus: 1 DECLARED, 2 SETTLED, 3 DEFAULTED. */
-  winStatus: number;
+  /** True once the registry records paidAt on the bound declaration. */
+  paid: boolean;
   /** LoanStatus: 0 none, 1 open, 2 repaid, 3 defaulted. */
   loanStatus: number;
   principal: string | null;
@@ -138,12 +170,11 @@ export interface WinHistoryRecord {
   collateral: string | null;
   originationFee: string | null;
   daysToPay: number | null;
-  /** Unix seconds the win was settled at (paid out), null while unresolved. */
-  settledAt: number | null;
-  betsCount: number;
+  /** Unix seconds the organizer payout was recorded, null while unpaid. */
+  paidAt: number | null;
   betPool: string | null;
-  /** BetOutcome: 0 unresolved, 1 PAID, 2 UNPAID. */
-  betOutcome: number;
+  /** MarketOutcome: 0 unresolved, 1 PAID, 2 UNPAID. */
+  marketOutcome: number;
 }
 
 class LiquidityRailService {
@@ -185,16 +216,18 @@ class LiquidityRailService {
   async getBounds(
     chainId: number,
     publicClient: PublicClient
-  ): Promise<{ maxLoanSize: bigint; maxRateBps: bigint; maxLoanDuration: bigint } | null> {
+  ): Promise<{ maxLoanSize: bigint; maxFeeBps: bigint; maxLoanDuration: bigint; marketResolutionWindow: bigint } | null> {
     try {
       const contracts = this.getContracts(chainId, publicClient);
       if (!contracts) return null;
-      const [maxLoanSize, maxRateBps, maxLoanDuration] = await Promise.all([
-        contracts.rail.read.maxLoanSize(),
-        contracts.rail.read.maxRateBps(),
-        contracts.rail.read.maxLoanDuration(),
-      ]);
-      return { maxLoanSize, maxRateBps, maxLoanDuration };
+      const [maxLoanSize, maxFeeBps, maxLoanDuration, marketResolutionWindow] =
+        await Promise.all([
+          contracts.rail.read.maxLoanSize(),
+          contracts.rail.read.maxFeeBps(),
+          contracts.rail.read.maxLoanDuration(),
+          contracts.rail.read.marketResolutionWindow(),
+        ]);
+      return { maxLoanSize, maxFeeBps, maxLoanDuration, marketResolutionWindow };
     } catch {
       return null;
     }
@@ -204,21 +237,22 @@ class LiquidityRailService {
     chainId: number,
     publicClient: PublicClient,
     winId: number
-  ): Promise<{ builder: string; prizeAmount: string; declaredAt: number; status: number } | null> {
+  ): Promise<{ hackathonId: number; declarationIndex: number; builder: string; prizeAmount: string; declaredAt: number; resolutionDeadline: number } | null> {
     try {
       const contracts = this.getContracts(chainId, publicClient);
       if (!contracts) return null;
       const win = await contracts.rail.read.wins([BigInt(winId)]);
       // viem returns multi-output reads as positional arrays.
-      const [, builder, prizeAmount, declaredAt, , status] = win as any[];
-      if (!win || builder === '0x0000000000000000000000000000000000000000') {
-        return null;
-      }
+      const [hackathonId, declarationIndex, builder, prizeAmount, declaredAt, resolutionDeadline] =
+        win as any[];
+      if (!win || builder === ZERO_ADDR) return null;
       return {
+        hackathonId: Number(hackathonId),
+        declarationIndex: Number(declarationIndex),
         builder,
         prizeAmount: formatUnits(prizeAmount, USDC_DECIMALS),
         declaredAt: Number(declaredAt),
-        status: Number(status),
+        resolutionDeadline: Number(resolutionDeadline),
       };
     } catch {
       return null;
@@ -236,6 +270,7 @@ class LiquidityRailService {
       const loan = await contracts.rail.read.loans([BigInt(winId)]);
       const [
         loanWinId,
+        proposalId,
         lender,
         builder,
         ,
@@ -250,6 +285,7 @@ class LiquidityRailService {
       if (!loan || Number(status) === LOAN_STATUS.NONE) return null;
       return {
         winId: Number(loanWinId),
+        proposalId: Number(proposalId),
         lender,
         builder,
         principal: formatUnits(principal, USDC_DECIMALS),
@@ -265,6 +301,120 @@ class LiquidityRailService {
     }
   }
 
+  async getProposal(
+    chainId: number,
+    publicClient: PublicClient,
+    proposalId: number
+  ): Promise<LoanProposalView | null> {
+    try {
+      const contracts = this.getContracts(chainId, publicClient);
+      if (!contracts) return null;
+      const p = await contracts.rail.read.proposals([BigInt(proposalId)]);
+      const [
+        winId,
+        lender,
+        principal,
+        collateral,
+        trancheSize,
+        trancheProvider,
+        trancheCommitted,
+        feeBps,
+        durationDays,
+        incentives,
+        status,
+      ] = p as any[];
+      if (!p || Number(status) === PROPOSAL_STATUS.NONE) return null;
+      return {
+        proposalId,
+        winId: Number(winId),
+        lender,
+        principal: formatUnits(principal, USDC_DECIMALS),
+        collateral: formatUnits(collateral, USDC_DECIMALS),
+        trancheSize: formatUnits(trancheSize, USDC_DECIMALS),
+        trancheProvider,
+        trancheCommitted: Boolean(trancheCommitted),
+        feeBps: Number(feeBps),
+        durationDays: Number(durationDays),
+        incentives: Number(incentives),
+        status: Number(status),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  /** Open proposals on a win — the offers a builder can accept. */
+  async listOpenProposals(
+    chainId: number,
+    publicClient: PublicClient,
+    winId: number
+  ): Promise<LoanProposalView[]> {
+    const contracts = this.getContracts(chainId, publicClient);
+    if (!contracts) return [];
+    try {
+      const count = Number(await contracts.rail.read.proposalCount());
+      const out: LoanProposalView[] = [];
+      for (let i = 1; i <= count; i++) {
+        const p = await this.getProposal(chainId, publicClient, i);
+        if (p && p.winId === winId && p.status === PROPOSAL_STATUS.OPEN) {
+          out.push(p);
+        }
+      }
+      return out.sort((a, b) => b.proposalId - a.proposalId);
+    } catch {
+      return [];
+    }
+  }
+
+  /** Anchored win ids for a builder, cheapest possible read. */
+  async getBuilderWins(
+    chainId: number,
+    publicClient: PublicClient,
+    builder: string
+  ): Promise<number[]> {
+    try {
+      const contracts = this.getContracts(chainId, publicClient);
+      if (!contracts) return [];
+      const ids = await contracts.rail.read.builderWins([builder as `0x${string}`]);
+      return (ids as bigint[]).map(Number);
+    } catch {
+      return [];
+    }
+  }
+
+  /** Market state for a win: pools plus resolution outcome. */
+  async getMarket(
+    chainId: number,
+    publicClient: PublicClient,
+    winId: number,
+    bettor?: string
+  ): Promise<{ paidPool: string; unpaidPool: string; outcome: number; resolvedAt: number; myPaidStake: string; myUnpaidStake: string } | null> {
+    try {
+      const contracts = this.getContracts(chainId, publicClient);
+      if (!contracts) return null;
+      const m = await contracts.rail.read.markets([BigInt(winId)]);
+      const [paidPool, unpaidPool, outcome, resolvedAt] = m as any[];
+      let myPaidStake = 0n;
+      let myUnpaidStake = 0n;
+      if (bettor) {
+        [myPaidStake, myUnpaidStake] = (await Promise.all([
+          contracts.rail.read.paidStakes([BigInt(winId), bettor as `0x${string}`]),
+          contracts.rail.read.unpaidStakes([BigInt(winId), bettor as `0x${string}`]),
+        ])) as bigint[];
+      }
+      return {
+        paidPool: formatUnits(paidPool, USDC_DECIMALS),
+        unpaidPool: formatUnits(unpaidPool, USDC_DECIMALS),
+        outcome: Number(outcome),
+        resolvedAt: Number(resolvedAt),
+        myPaidStake: formatUnits(myPaidStake, USDC_DECIMALS),
+        myUnpaidStake: formatUnits(myUnpaidStake, USDC_DECIMALS),
+      };
+    } catch {
+      return null;
+    }
+  }
+
   async getBuilderCredibility(
     chainId: number,
     publicClient: PublicClient,
@@ -273,24 +423,30 @@ class LiquidityRailService {
     try {
       const contracts = this.getContracts(chainId, publicClient);
       if (!contracts) return { ...EMPTY_CREDIBILITY };
-      const [history, coverageRateBps, averageDaysToPay] = await Promise.all([
-        contracts.rail.read.builderHistory([builder as `0x${string}`]),
-        contracts.rail.read.coverageRateBps([builder as `0x${string}`]),
-        contracts.rail.read.averageDaysToPay([builder as `0x${string}`]),
-      ]);
+      const [history, payoutRateBps, repaymentRateBps, averageDaysToPay] =
+        await Promise.all([
+          contracts.rail.read.builderHistory([builder as `0x${string}`]),
+          contracts.rail.read.payoutRateBps([builder as `0x${string}`]),
+          contracts.rail.read.repaymentRateBps([builder as `0x${string}`]),
+          contracts.rail.read.averageDaysToPay([builder as `0x${string}`]),
+        ]);
       const [
-        winsDeclared,
+        winsAnchored,
+        winsPaid,
+        winsUnpaid,
         loansTaken,
-        ,
-        winsSettledInFull,
-        winsDefaulted,
+        loansRepaid,
+        loansDefaulted,
       ] = history as any[];
       return {
-        winsDeclared: Number(winsDeclared),
+        winsAnchored: Number(winsAnchored),
+        winsPaid: Number(winsPaid),
+        winsUnpaid: Number(winsUnpaid),
         loansTaken: Number(loansTaken),
-        winsSettledInFull: Number(winsSettledInFull),
-        winsDefaulted: Number(winsDefaulted),
-        coverageRateBps: Number(coverageRateBps),
+        loansRepaid: Number(loansRepaid),
+        loansDefaulted: Number(loansDefaulted),
+        payoutRateBps: Number(payoutRateBps),
+        repaymentRateBps: Number(repaymentRateBps),
         averageDaysToPay: Number(averageDaysToPay),
       };
     } catch {
@@ -390,19 +546,21 @@ class LiquidityRailService {
   }
 
   /**
-   * Win ids are a dense counter from 1 (Solidity Counters), and unset wins
-   * read back as the zero struct — so listings probe wins(1), wins(2), …
-   * until the first empty id. This is the only enumeration source that is
-   * immune to the Arc RPC's eth_getLogs range cap and the explorer's
-   * multi-hundred-thousand-block indexing lag; events stay as optional
-   * enrichment (tx links) below.
+   * winCount is a public counter, so listings read wins(1..winCount) directly.
+   * Reads are still batched with pacing because Arc's public RPC rate-limits
+   * bursts, and the first batch is retried once to ride out a blip.
    */
-  private async _probeWins(
+  private async _readWins(
     contracts: Contracts
   ): Promise<{ winId: number; win: any[] }[]> {
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const ZERO_BUILDER = '0x0000000000000000000000000000000000000000';
-    const MAX_WINS = 200;
+    let count = 0;
+    try {
+      count = Number(await contracts.rail.read.winCount());
+    } catch {
+      return [];
+    }
+    if (count <= 0) return [];
     const found: { winId: number; win: any[] }[] = [];
     const readWin = async (id: bigint): Promise<any[] | null> => {
       try {
@@ -411,32 +569,15 @@ class LiquidityRailService {
         return null;
       }
     };
-    // A total failure on the very first batch is the public RPC's rate
-    // limiter, not an empty rail — one paced retry clears most blips.
-    let first = await Promise.all([1n, 2n, 3n, 4n].map(readWin));
-    if (first.every((w) => w === null)) {
-      await sleep(700);
-      first = await Promise.all([1n, 2n, 3n, 4n].map(readWin));
-    }
-    outer: for (let i = 1n; i <= BigInt(MAX_WINS); i += 4n) {
-      const batch =
-        i === 1n
-          ? first.map((win, off) => ({ id: 1n + BigInt(off), win }))
-          : await Promise.all(
-              [0n, 1n, 2n, 3n].map(async (off) => {
-                const id = i + off;
-                return { id, win: await readWin(id) };
-              })
-            );
+    for (let i = 1; i <= count; i += 4) {
+      const batch = await Promise.all(
+        [0, 1, 2, 3]
+          .map((off) => i + off)
+          .filter((id) => id <= count)
+          .map(async (id) => ({ id, win: await readWin(BigInt(id)) }))
+      );
       for (const { id, win } of batch) {
-        if (!win) break outer;
-        if (
-          Number(win[5]) === 0 &&
-          String(win[1]).toLowerCase() === ZERO_BUILDER
-        ) {
-          break outer;
-        }
-        found.push({ winId: Number(id), win });
+        if (win && win[2] !== ZERO_ADDR) found.push({ winId: id, win });
       }
       await sleep(120);
     }
@@ -444,45 +585,35 @@ class LiquidityRailService {
   }
 
   /**
-   * Project names live in the WinDeclared event and in the registry — the
-   * win struct itself has none. The registry's declaration list is a view,
-   * so names resolve without touching logs: match (hackathonId, builder).
+   * Declarations fetched once per hackathon. Each win is bound to a specific
+   * declarationIndex, so names and paidAt resolve exactly — no fuzzy
+   * matching on builder+prize like the old free-form declareWin needed.
    */
-  private async _projectNames(
+  private async _declarations(
     contracts: Contracts,
     entries: { winId: number; win: any[] }[]
-  ): Promise<Map<number, string>> {
-    const names = new Map<number, string>();
+  ): Promise<Map<number, any[]>> {
     const byHack = new Map<number, any[]>();
     const hackathonIds = [...new Set(entries.map((e) => Number(e.win[0])))];
     for (const hid of hackathonIds) {
       try {
-        byHack.set(hid, ((await contracts.registry.read.getWinnerDeclarations([BigInt(hid)])) as any[]) || []);
+        byHack.set(
+          hid,
+          ((await contracts.registry.read.getWinnerDeclarations([BigInt(hid)])) as any[]) || []
+        );
       } catch {
         byHack.set(hid, []);
       }
     }
-    for (const { winId, win } of entries) {
-      const decls = byHack.get(Number(win[0])) || [];
-      const builder = String(win[1]).toLowerCase();
-      const prize = BigInt(win[2]);
-      const declaredAt = Number(win[3]);
-      let best: { name: string; drift: number } | null = null;
-      for (const d of decls) {
-        const winner = String((d as any).winner ?? (d as any)[0]).toLowerCase();
-        if (winner !== builder) continue;
-        const dPrize = BigInt((d as any).prizeAmount ?? (d as any)[2]);
-        const drift = Math.abs(Number((d as any).declaredAt ?? (d as any)[3]) - declaredAt);
-        if (dPrize === prize && drift <= 120 && (!best || drift < best.drift)) {
-          best = { name: String((d as any).projectName ?? (d as any)[1]), drift };
-        }
-      }
-      names.set(winId, best ? best.name : '');
-    }
-    return names;
+    return byHack;
   }
 
-  /** Best-effort winId -> declare-tx map from events; never breaks a listing. */
+  /** Declaration for a win, from the pre-fetched per-hackathon map. */
+  private _declFor(win: any[], byHack: Map<number, any[]>): any | null {
+    return byHack.get(Number(win[0]))?.[Number(win[1])] ?? null;
+  }
+
+  /** Best-effort winId -> anchor-tx map from events; never breaks a listing. */
   private async _txHashByWin(
     contracts: Contracts,
     chainId: number,
@@ -500,7 +631,7 @@ class LiquidityRailService {
           data: log.data as `0x${string}`,
           topics: log.topics as [`0x${string}`, ...`0x${string}`[]],
         });
-        if (decoded.eventName === 'WinDeclared') {
+        if (decoded.eventName === 'WinAnchored') {
           const winId = Number((decoded.args as any).winId);
           if (!map.has(winId)) map.set(winId, log.transactionHash);
         }
@@ -512,9 +643,8 @@ class LiquidityRailService {
   }
 
   /**
-   * Declared wins on-chain that no one has funded yet — the lender's order
-   * book, from view reads only (see _probeWins). See /api/rail/open-wins
-   * for the server cache.
+   * Anchored wins that are unfunded and unpaid — the lender's order book.
+   * See /api/rail/open-wins for the server cache.
    */
   async listOpenWins(
     chainId: number,
@@ -522,26 +652,29 @@ class LiquidityRailService {
   ): Promise<DeclaredWin[]> {
     const contracts = this.getContracts(chainId, publicClient);
     if (!contracts) return [];
-    const entries = await this._probeWins(contracts);
-    const names = await this._projectNames(contracts, entries);
+    const entries = await this._readWins(contracts);
+    const decls = await this._declarations(contracts, entries);
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const open: DeclaredWin[] = [];
     for (const { winId, win } of entries) {
-      if (Number(win[5]) !== WIN_STATUS.DECLARED) continue;
+      const decl = this._declFor(win, decls);
+      // An already-paid prize is not bridgeable.
+      if (decl && Number(decl.paidAt ?? decl[4]) > 0) continue;
       let loan: any[];
       try {
         loan = (await contracts.rail.read.loans([BigInt(winId)])) as any[];
       } catch {
         continue;
       }
-      if (Number(loan[10]) !== LOAN_STATUS.NONE) continue;
+      if (Number(loan[11]) !== LOAN_STATUS.NONE) continue;
       open.push({
         winId,
         hackathonId: Number(win[0]),
-        builder: win[1],
-        projectName: names.get(winId) || '',
-        prizeAmount: formatUnits(win[2], USDC_DECIMALS),
-        declaredAt: Number(win[3]),
+        declarationIndex: Number(win[1]),
+        builder: win[2],
+        projectName: String(decl?.projectName ?? decl?.[1] ?? ''),
+        prizeAmount: formatUnits(win[3], USDC_DECIMALS),
+        declaredAt: Number(win[4]),
       });
       await sleep(80);
     }
@@ -549,10 +682,10 @@ class LiquidityRailService {
   }
 
   /**
-   * Every declared win and what actually happened to it — the rail's public
-   * track record, read for the lender discover panel. Enumeration and bet
-   * totals come from views (wins/loans/betOutcome/bets); events only supply
-   * the explorer tx links and degrade to null when unavailable.
+   * Every anchored win and what actually happened to it — the rail's public
+   * track record, read for the lender discovery panel. Loan and market state
+   * come from views; events only supply the explorer tx links and degrade to
+   * null when unavailable.
    */
   async listWinHistory(
     chainId: number,
@@ -561,8 +694,8 @@ class LiquidityRailService {
     const contracts = this.getContracts(chainId, publicClient);
     const startBlock = (LIQUIDITY_RAIL_START_BLOCKS as Record<number, number>)[chainId];
     if (!contracts || startBlock === undefined) return [];
-    const entries = await this._probeWins(contracts);
-    const names = await this._projectNames(contracts, entries);
+    const entries = await this._readWins(contracts);
+    const decls = await this._declarations(contracts, entries);
     const txByWin = startBlock !== undefined
       ? await this._txHashByWin(contracts, chainId, publicClient, startBlock)
       : new Map<number, string>();
@@ -570,58 +703,45 @@ class LiquidityRailService {
     const rows: WinHistoryRecord[] = [];
     for (const { winId, win } of entries) {
       try {
-        const [loan, outcome] = (await Promise.all([
+        const [loan, market] = (await Promise.all([
           contracts.rail.read.loans([BigInt(winId)]),
-          contracts.rail.read.betOutcome([BigInt(winId)]),
-        ])) as [any[], any];
-        // Public mapping-to-struct-array getters have no length form
-        // (Solidity limitation), so bets are probed index-wise until the
-        // out-of-range revert.
-        let betsCount = 0;
-        let pool = 0n;
-        for (;;) {
-          try {
-            const bet = (await contracts.rail.read.bets([BigInt(winId), BigInt(betsCount)])) as any[];
-            pool += bet[1];
-            betsCount++;
-          } catch {
-            break;
-          }
-          if (betsCount >= 50) break;
-        }
-        const winStatus = Number(win[5]);
-        const loanStatus = Number((loan as any[])[10]);
+          contracts.rail.read.markets([BigInt(winId)]),
+        ])) as [any[], any[]];
+        const decl = this._declFor(win, decls);
+        const paidAt = Number(decl?.paidAt ?? decl?.[4] ?? 0);
+        const loanStatus = Number(loan[11]);
+        const marketOutcome = Number(market[2]);
+        const pool = BigInt(market[0]) + BigInt(market[1]);
         rows.push({
           winId,
-          projectName: names.get(winId) || '',
-          builder: win[1],
-          prizeAmount: formatUnits(win[2], USDC_DECIMALS),
-          declaredAt: Number(win[3]),
+          projectName: String(decl?.projectName ?? decl?.[1] ?? ''),
+          builder: win[2],
+          prizeAmount: formatUnits(win[3], USDC_DECIMALS),
+          declaredAt: Number(win[4]),
           txHash: txByWin.get(winId) ?? '',
-          winStatus,
+          paid: paidAt > 0,
           loanStatus,
           principal:
             loanStatus !== LOAN_STATUS.NONE
-              ? formatUnits((loan as any[])[4], USDC_DECIMALS)
+              ? formatUnits(loan[5], USDC_DECIMALS)
               : null,
-          lender: loanStatus !== LOAN_STATUS.NONE ? (loan as any[])[1] : null,
-          dueAt: loanStatus !== LOAN_STATUS.NONE ? Number((loan as any[])[8]) : null,
+          lender: loanStatus !== LOAN_STATUS.NONE ? loan[2] : null,
+          dueAt: loanStatus !== LOAN_STATUS.NONE ? Number(loan[9]) : null,
           collateral:
             loanStatus !== LOAN_STATUS.NONE
-              ? formatUnits((loan as any[])[5], USDC_DECIMALS)
+              ? formatUnits(loan[6], USDC_DECIMALS)
               : null,
           originationFee:
             loanStatus !== LOAN_STATUS.NONE
-              ? formatUnits((loan as any[])[7], USDC_DECIMALS)
+              ? formatUnits(loan[8], USDC_DECIMALS)
               : null,
           daysToPay:
-            winStatus === WIN_STATUS.SETTLED
-              ? Math.max(0, Math.round((Number(win[4]) - Number(win[3])) / 86400))
+            paidAt > 0
+              ? Math.max(0, Math.round((paidAt - Number(win[4])) / 86400))
               : null,
-          settledAt: winStatus === WIN_STATUS.SETTLED ? Number(win[4]) : null,
-          betsCount,
-          betPool: betsCount > 0 ? formatUnits(pool, USDC_DECIMALS) : null,
-          betOutcome: Number(outcome),
+          paidAt: paidAt > 0 ? paidAt : null,
+          betPool: pool > 0n ? formatUnits(pool, USDC_DECIMALS) : null,
+          marketOutcome,
         });
         await sleep(100);
       } catch {
@@ -635,30 +755,32 @@ class LiquidityRailService {
   // These throw rather than resolving empty. Silently no-op'ing a loan
   // request would leave a builder thinking they had drawn when they hadn't.
 
-  async declareWin(
+  /**
+   * Anchors a registry declaration on the rail. The builder address and prize
+   * come from the host's declaration — this call just indexes attested truth.
+   */
+  async anchorWin(
     chainId: number,
     publicClient: PublicClient,
     walletClient: WalletClient,
-    args: { hackathonId: number; builder: string; projectName: string; prizeAmount: string }
+    args: { hackathonId: number; declarationIndex: number }
   ) {
     const contracts = this.getContracts(chainId, publicClient, walletClient);
     if (!contracts) throw new Error('Rail contracts not found');
-    const hash = await contracts.rail.write.declareWin([
+    const hash = await contracts.rail.write.anchorWin([
       BigInt(args.hackathonId),
-      args.builder as `0x${string}`,
-      args.projectName,
-      parseUnits(args.prizeAmount, USDC_DECIMALS),
+      BigInt(args.declarationIndex),
     ] as any);
     return publicClient.waitForTransactionReceipt({ hash });
   }
 
   /**
-   * Overcollateralized: pass `collateral` >= principal.
-   * Tranche-backed: pass `trancheSize` >= principal and a third-party
-   * `trancheProvider` (never the lender — self-funded protection is not
-   * protection).
+   * Lender offers funded terms against an anchored win. Nothing moves yet —
+   * the builder pulls collateral and receives principal at acceptLoan.
+   * `collateral` is required FROM THE BUILDER; `trancheSize` requires a
+   * named third-party provider who must commitTranche before accept.
    */
-  async openLoan(
+  async proposeLoan(
     chainId: number,
     publicClient: PublicClient,
     walletClient: WalletClient,
@@ -668,7 +790,6 @@ class LiquidityRailService {
     const contracts = this.getContracts(chainId, publicClient, walletClient);
     if (!contracts) throw new Error('Rail contracts not found');
 
-    const account = walletClient.account!.address;
     const principal = parseUnits(terms.principal, USDC_DECIMALS);
     const collateral = terms.collateral
       ? parseUnits(terms.collateral, USDC_DECIMALS)
@@ -677,36 +798,121 @@ class LiquidityRailService {
       ? parseUnits(terms.trancheSize, USDC_DECIMALS)
       : 0n;
     const trancheProvider =
-      (terms.trancheProvider as `0x${string}`) ||
-      '0x0000000000000000000000000000000000000000';
+      (terms.trancheProvider as `0x${string}`) || ZERO_ADDR;
 
-    // Collateral or tranche is escrowed; principal flows straight through.
-    const escrowed = collateral > 0n ? collateral : trancheSize;
-    const from = collateral > 0n ? account : trancheProvider;
-    await this._ensureAllowance(publicClient, contracts, from, escrowed);
-
-    const hash = await contracts.rail.write.openLoan([
+    const hash = await contracts.rail.write.proposeLoan([
       BigInt(winId),
       principal,
       collateral,
       trancheSize,
       trancheProvider,
-      BigInt(terms.rateBps),
+      BigInt(terms.feeBps),
       BigInt(terms.durationDays),
       BigInt(terms.incentives ?? 0),
     ] as any);
     return publicClient.waitForTransactionReceipt({ hash });
   }
 
-  async settleLoan(chainId: number, publicClient: PublicClient, winId: number) {
-    const contracts = this.getContracts(chainId, publicClient);
+  /** First-loss provider escrows their tranche for a proposal. */
+  async commitTranche(
+    chainId: number,
+    publicClient: PublicClient,
+    walletClient: WalletClient,
+    proposalId: number,
+    amount: string
+  ) {
+    const contracts = this.getContracts(chainId, publicClient, walletClient);
     if (!contracts) throw new Error('Rail contracts not found');
-    const hash = await contracts.rail.write.settleLoan([BigInt(winId)] as any);
+    await this._ensureAllowance(
+      publicClient,
+      contracts,
+      walletClient.account!.address,
+      parseUnits(amount, USDC_DECIMALS)
+    );
+    const hash = await contracts.rail.write.commitTranche([BigInt(proposalId)] as any);
     return publicClient.waitForTransactionReceipt({ hash });
   }
 
-  async defaultLoan(chainId: number, publicClient: PublicClient, winId: number) {
-    const contracts = this.getContracts(chainId, publicClient);
+  async withdrawTranche(
+    chainId: number,
+    publicClient: PublicClient,
+    walletClient: WalletClient,
+    proposalId: number
+  ) {
+    const contracts = this.getContracts(chainId, publicClient, walletClient);
+    if (!contracts) throw new Error('Rail contracts not found');
+    const hash = await contracts.rail.write.withdrawTranche([BigInt(proposalId)] as any);
+    return publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  async cancelProposal(
+    chainId: number,
+    publicClient: PublicClient,
+    walletClient: WalletClient,
+    proposalId: number
+  ) {
+    const contracts = this.getContracts(chainId, publicClient, walletClient);
+    if (!contracts) throw new Error('Rail contracts not found');
+    const hash = await contracts.rail.write.cancelProposal([BigInt(proposalId)] as any);
+    return publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  /**
+   * Builder accepts a proposal: posts their own collateral (approval handled
+   * here) and receives principal net of the fee in the same transaction.
+   */
+  async acceptLoan(
+    chainId: number,
+    publicClient: PublicClient,
+    walletClient: WalletClient,
+    proposalId: number,
+    collateralRequired: string
+  ) {
+    const contracts = this.getContracts(chainId, publicClient, walletClient);
+    if (!contracts) throw new Error('Rail contracts not found');
+    const collateral = collateralRequired
+      ? parseUnits(collateralRequired, USDC_DECIMALS)
+      : 0n;
+    await this._ensureAllowance(
+      publicClient,
+      contracts,
+      walletClient.account!.address,
+      collateral
+    );
+    const hash = await contracts.rail.write.acceptLoan([BigInt(proposalId)] as any);
+    return publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  /**
+   * Repays an open loan at par. Caller needs USDC covering principal and an
+   * approval — usually the builder once the prize lands.
+   */
+  async repayLoan(
+    chainId: number,
+    publicClient: PublicClient,
+    walletClient: WalletClient,
+    winId: number,
+    principal: string
+  ) {
+    const contracts = this.getContracts(chainId, publicClient, walletClient);
+    if (!contracts) throw new Error('Rail contracts not found');
+    await this._ensureAllowance(
+      publicClient,
+      contracts,
+      walletClient.account!.address,
+      parseUnits(principal, USDC_DECIMALS)
+    );
+    const hash = await contracts.rail.write.repayLoan([BigInt(winId)] as any);
+    return publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  async defaultLoan(
+    chainId: number,
+    publicClient: PublicClient,
+    walletClient: WalletClient,
+    winId: number
+  ) {
+    const contracts = this.getContracts(chainId, publicClient, walletClient);
     if (!contracts) throw new Error('Rail contracts not found');
     const hash = await contracts.rail.write.defaultLoan([BigInt(winId)] as any);
     return publicClient.waitForTransactionReceipt({ hash });
@@ -742,7 +948,23 @@ class LiquidityRailService {
     return publicClient.waitForTransactionReceipt({ hash });
   }
 
-  async claimBet(
+  /**
+   * Permissionless market resolution — callable by anyone once the registry
+   * records the payout (PAID) or the resolution window elapses (UNPAID).
+   */
+  async resolveMarket(
+    chainId: number,
+    publicClient: PublicClient,
+    walletClient?: WalletClient,
+    winId?: number
+  ) {
+    const contracts = this.getContracts(chainId, publicClient, walletClient);
+    if (!contracts) throw new Error('Rail contracts not found');
+    const hash = await contracts.rail.write.resolveMarket([BigInt(winId!)] as any);
+    return publicClient.waitForTransactionReceipt({ hash });
+  }
+
+  async claimWinnings(
     chainId: number,
     publicClient: PublicClient,
     walletClient: WalletClient,
@@ -750,7 +972,7 @@ class LiquidityRailService {
   ) {
     const contracts = this.getContracts(chainId, publicClient, walletClient);
     if (!contracts) throw new Error('Rail contracts not found');
-    const hash = await contracts.rail.write.claimBet([BigInt(winId)] as any);
+    const hash = await contracts.rail.write.claimWinnings([BigInt(winId)] as any);
     return publicClient.waitForTransactionReceipt({ hash });
   }
 

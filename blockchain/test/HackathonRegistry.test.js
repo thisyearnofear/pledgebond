@@ -263,6 +263,107 @@ describe("HackathonRegistry", function () {
     });
   });
 
+  describe("Payout attestation (M-of-N, index-exact)", function () {
+    let hackathonId;
+
+    beforeEach(async function () {
+      await hackathonRegistry.createHackathon(
+        hackathonName,
+        host.address,
+        [verifier1.address, verifier2.address, verifier3.address],
+        2, // two attestations required
+        startDate,
+        endDate
+      );
+      hackathonId = await hackathonRegistry.hackathonsByName(hackathonName);
+      await hackathonRegistry
+        .connect(host)
+        .declareWinner(hackathonId, nonVerifier.address, "Winner Project", 5000);
+    });
+
+    it("does not set paidAt until the threshold of attestations is met", async function () {
+      await hackathonRegistry
+        .connect(verifier1)
+        .recordPayout(hackathonId, 0, "0xpayout");
+
+      let decl = await hackathonRegistry.getDeclaration(hackathonId, 0);
+      expect(decl.paidAt).to.equal(0);
+      expect(
+        await hackathonRegistry.payoutAttestCount(hackathonId, 0)
+      ).to.equal(1);
+
+      await hackathonRegistry
+        .connect(verifier2)
+        .recordPayout(hackathonId, 0, "0xpayout");
+
+      decl = await hackathonRegistry.getDeclaration(hackathonId, 0);
+      expect(decl.paidAt).to.be.gt(0);
+      expect(decl.payoutTxHash).to.equal("0xpayout");
+    });
+
+    it("rejects attestations from non-verifiers and repeats", async function () {
+      await expect(
+        hackathonRegistry
+          .connect(nonVerifier)
+          .recordPayout(hackathonId, 0, "0xpayout")
+      ).to.be.revertedWith("Not a verifier");
+
+      await hackathonRegistry
+        .connect(verifier1)
+        .recordPayout(hackathonId, 0, "0xpayout");
+      await expect(
+        hackathonRegistry
+          .connect(verifier1)
+          .recordPayout(hackathonId, 0, "0xpayout")
+      ).to.be.revertedWith("Already attested");
+    });
+
+    it("marks the exact declaration — a second win by the same builder stays unpaid", async function () {
+      // Same winner, second declaration: the payout for index 0 must not
+      // bleed onto index 1 — the rail binds markets to indexes.
+      await hackathonRegistry
+        .connect(host)
+        .declareWinner(hackathonId, nonVerifier.address, "Second Win", 3000);
+
+      await hackathonRegistry
+        .connect(verifier1)
+        .recordPayout(hackathonId, 0, "0xpayout");
+      await hackathonRegistry
+        .connect(verifier2)
+        .recordPayout(hackathonId, 0, "0xpayout");
+
+      const decl0 = await hackathonRegistry.getDeclaration(hackathonId, 0);
+      const decl1 = await hackathonRegistry.getDeclaration(hackathonId, 1);
+      expect(decl0.paidAt).to.be.gt(0);
+      expect(decl1.paidAt).to.equal(0);
+    });
+
+    it("rejects attestation on an already-paid declaration", async function () {
+      await hackathonRegistry
+        .connect(host)
+        .setRequiredSignatures(hackathonId, 1);
+      await hackathonRegistry
+        .connect(verifier1)
+        .recordPayout(hackathonId, 0, "0xpayout");
+      await expect(
+        hackathonRegistry
+          .connect(verifier2)
+          .recordPayout(hackathonId, 0, "0xpayout")
+      ).to.be.revertedWith("Payout already recorded");
+    });
+
+    it("rejects declarations on an inactive hackathon", async function () {
+      await hackathonRegistry
+        .connect(host)
+        .setHackathonStatus(hackathonId, false);
+      await expect(
+        hackathonRegistry
+          .connect(host)
+          .declareWinner(hackathonId, nonVerifier.address, "Late Win", 1000)
+      ).to.be.revertedWith("Hackathon is not active");
+    });
+  });
+
   describe("Pausing", function () {
     it("Should allow platform admin to pause", async function () {
       await hackathonRegistry.connect(owner).pause();

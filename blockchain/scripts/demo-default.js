@@ -1,16 +1,20 @@
-// Phase-2 rehearsal: the default path, start to finish, on Arc Testnet.
+// Default-path rehearsal: a funded win the organizer never pays, start to
+// finish, on Arc.
 //
-// A lender funds a win that never gets paid. Two phases, because openLoan
-// requires durationDays >= 1 and the testnet clock cannot be warped:
-//
-//   PHASE=1 (now)      declare → tranche-backed loan → bets placed
-//   PHASE=2 (after dueAt) defaultLoan → market resolves UNPAID → claims
+//   PHASE=1 (now)      declare → anchor → tranche-backed offer → commit → accept → bets
+//   PHASE=2 (after dueAt AND the market deadline) defaultLoan → resolveMarket UNPAID → claims
 //
 // Story: the organizer sponsors the first-loss tranche, so a default pays
 // the lender 1:1 out of NAMED third-party capital (invariant 1 — the
 // platform contributes nothing), the builder's default is recorded
 // publicly in builderHistory (invariant 4), and the "doesn't pay" bettors
 // take the pool.
+//
+// Timing note: the market resolves UNPAID on the win's resolutionDeadline —
+// declaredAt + marketResolutionWindow, FROZEN at anchor. Phase 1 shrinks the
+// global window to TERM_DAYS before anchoring so the demo can finish in days,
+// not 90. That freeze is itself the invariant: no admin call can rewrite a
+// live market's deadline.
 //
 // Usage:
 //   PHASE=1 npx hardhat run scripts/demo-default.js --network arcTestnet
@@ -78,7 +82,7 @@ async function main() {
   if (phase === "1") {
     step("Funding wallets");
     const want = {
-      [builder.address]: USDC(0.1),
+      [builder.address]: USDC(0.1), // gas only — no collateral in tranche mode
       [lender.address]: PRINCIPAL.add(BET),
       [bettor.address]: BET.add(USDC(0.1)),
       [organizer.address]: TRANCHE.add(USDC(0.2)),
@@ -91,35 +95,53 @@ async function main() {
       }
     }
 
+    // Shrink the market window BEFORE anchoring — the deadline freezes into
+    // the win at anchor time, so phase 2 can resolve in days. Only affects
+    // wins anchored after this call.
+    step("rail.setResolutionWindow — demo window = loan term");
+    await (await rail.setResolutionWindow(TERM_DAYS * 24 * 60 * 60)).wait();
+
     step("registry.declareWinner (organizer)");
     await (await registry.declareWinner(hackathonId, builder.address, "Default Rehearsal", PRIZE)).wait();
+    const declIndex = (await registry.getWinnerCount(hackathonId)).sub(1);
 
-    step("rail.declareWin (builder)");
+    step("rail.anchorWin (builder)");
     const parsed = await parseFrom(
       rail,
-      await rail.connect(builder).declareWin(hackathonId, builder.address, "Default Rehearsal", PRIZE),
-      ["WinDeclared"]
+      await rail.connect(builder).anchorWin(hackathonId, declIndex),
+      ["WinAnchored"]
     );
-    const winId = parsed.WinDeclared.winId;
-    assert(!winId.isZero(), "WinDeclared parsed → winId " + winId.toString());
+    const winId = parsed.WinAnchored.winId;
+    assert(!winId.isZero(), "WinAnchored parsed → winId " + winId.toString());
 
-    step("rail.openLoan TRANCHE_BACKED (lender funds; organizer commits first-loss)");
+    step("rail.proposeLoan TRANCHE_BACKED → organizer commitTranche → builder acceptLoan");
     await (await usdc.connect(lender).approve(rail.address, ethers.constants.MaxUint256)).wait();
     await (await usdc.connect(bettor).approve(rail.address, ethers.constants.MaxUint256)).wait();
     await (await usdc.connect(organizer).approve(rail.address, TRANCHE)).wait();
     const fee = PRINCIPAL.mul(500).div(10000);
     const before = { builder: await bal(builder), tranchePool: await rail.totalTrancheCapacity() };
-    const openParsed = await parseFrom(
+
+    const propParsed = await parseFrom(
       rail,
-      await rail.connect(lender).openLoan(
+      await rail.connect(lender).proposeLoan(
         winId, PRINCIPAL, 0, TRANCHE, organizer.address, 500, TERM_DAYS, 0
       ),
-      ["LoanOpened"]
+      ["LoanProposed"]
     );
-    const dueAt = Number(openParsed.LoanOpened.dueAt);
+    const proposalId = propParsed.LoanProposed.proposalId;
+    assert(proposalId !== undefined, "LoanProposed → proposalId " + proposalId);
+
+    await (await rail.connect(organizer).commitTranche(proposalId)).wait();
+    await (await rail.connect(builder).acceptLoan(proposalId)).wait();
+
+    const loan = await rail.loans(winId);
+    const dueAt = loan.dueAt.toNumber();
+    // Arc burns gas in USDC — the delta is draw−gas, not exactly draw.
+    const netDraw = PRINCIPAL.sub(fee);
+    const builderDelta = (await bal(builder)).sub(before.builder);
     assert(
-      (await bal(builder)).eq(before.builder.add(PRINCIPAL).sub(fee)),
-      `builder received ${fmt(PRINCIPAL.sub(fee))} USDC (principal minus 5% fee)`
+      builderDelta.lte(netDraw) && builderDelta.gt(netDraw.sub(USDC(0.1))),
+      `builder received ${fmt(netDraw)} USDC (principal minus 5% fee), less gas`
     );
     assert(
       (await rail.totalTrancheCapacity()).eq(before.tranchePool.add(TRANCHE)),
@@ -131,9 +153,24 @@ async function main() {
     await (await rail.connect(lender).placeBet(winId, BET, false)).wait();
     assert((await rail.totalBetStakes()).gte(BET.mul(2)), "both sides staked; pool live");
 
+    // Restore the global window — this win keeps its 1-day deadline (frozen
+    // at anchor) but future wins should get the real 90-day window.
+    await (await rail.setResolutionWindow(90 * 24 * 60 * 60)).wait();
+
     fs.writeFileSync(
       STATE_FILE,
-      JSON.stringify({ winId: winId.toString(), dueAt, hackathonId, startedAt: new Date().toISOString() }, null, 2)
+      JSON.stringify(
+        {
+          winId: winId.toString(),
+          proposalId: proposalId.toString(),
+          declIndex: declIndex.toString(),
+          dueAt,
+          hackathonId,
+          startedAt: new Date().toISOString(),
+        },
+        null,
+        2
+      )
     );
     const ready = new Date((dueAt + 60) * 1000).toISOString();
     console.log(`\n⏳ Phase 1 done — win #${winId}. The organizer will NOT pay this prize.`);
@@ -144,28 +181,34 @@ async function main() {
   // ── Phase 2 ───────────────────────────────────────────────────────────────
   const state = JSON.parse(fs.readFileSync(STATE_FILE));
   const winId = state.winId;
+  const proposalId = state.proposalId;
   const loan = await rail.loans(winId);
   assert(loan.status === 1, "loan still OPEN (phase 2 only)");
-  assert(Number(loan.trancheProvider).toLowerCase() === organizer.address.toLowerCase(), "organizer is the tranche provider");
+  assert(loan.trancheProvider.toLowerCase() === organizer.address.toLowerCase(), "organizer is the tranche provider");
 
-  step("Pre-check: no payout recorded, clock past dueAt");
+  step("Pre-check: no payout recorded, clock past dueAt and the market deadline");
   const histBefore = await rail.builderHistory(builder.address);
   const absorbedBefore = await rail.totalTrancheAbsorbed();
   const feesBefore = await rail.accruedFees();
+  const win = await rail.wins(winId);
   const now = (await ethers.provider.getBlock("latest")).timestamp;
   assert(now >= loan.dueAt.toNumber(), `clock ${now} past dueAt ${loan.dueAt}`);
+  assert(now >= win.resolutionDeadline.toNumber(), `clock ${now} past market deadline ${win.resolutionDeadline}`);
 
   step("rail.defaultLoan (permissionless after dueAt)");
   const defParsed = await parseFrom(
     rail,
     await rail.defaultLoan(winId),
-    ["LoanDefaulted", "CollateralReleased"]
+    ["LoanDefaulted"]
   );
   assert(defParsed.LoanDefaulted, "LoanDefaulted event emitted");
   const loan2 = await rail.loans(winId);
-  const win2 = await rail.wins(winId);
-  assert(loan2.status === 3 && win2.status === 3, "loan DEFAULTED and win DEFAULTED");
-  assert(defParsed.CollateralReleased === undefined, "no collateral refund — this loan was tranche-backed");
+  assert(loan2.status === 3, "loan DEFAULTED");
+  assert(
+    defParsed.LoanDefaulted.trancheToLender.eq(TRANCHE) &&
+      defParsed.LoanDefaulted.collateralToLender.isZero(),
+    "tranche paid the lender in full; there was no collateral to liquidate"
+  );
   assert(
     (await rail.totalTrancheAbsorbed()).eq(absorbedBefore.add(TRANCHE)),
     `tranche consumed exactly ${fmt(TRANCHE)}`
@@ -180,27 +223,33 @@ async function main() {
   assert((await rail.accruedFees()).eq(feesBefore), "platform revenue unchanged by the default");
   const histAfter = await rail.builderHistory(builder.address);
   assert(
-    histAfter.winsDefaulted.gt(histBefore.winsDefaulted),
+    histAfter.loansDefaulted.gt(histBefore.loansDefaulted),
     "builder's public history records the default (invariant 4 — credibility from receipts)"
   );
 
-  step("rail.settleBet — no payout in the registry, so the market resolves UNPAID");
-  await (await rail.settleBet(winId)).wait();
-  assert((await rail.betOutcome(winId)) === 2, "betOutcome = UNPAID (2)");
+  step("rail.resolveMarket — no payout in the registry, deadline passed → UNPAID");
+  await (await rail.resolveMarket(winId)).wait();
+  const market = await rail.markets(winId);
+  assert(Number(market.outcome) === 2, "market outcome = UNPAID (2)");
 
-  step("rail.claimBet — 'won't pay' side takes the whole pool");
-  const lenderClaim = await parseFrom(rail, await rail.connect(lender).claimBet(winId), ["BetClaimed"]);
-  const bettorClaim = await parseFrom(rail, await rail.connect(bettor).claimBet(winId), ["BetClaimed"]);
+  step("rail.claimWinnings — 'won't pay' side takes the whole pool");
+  const lenderClaim = await parseFrom(rail, await rail.connect(lender).claimWinnings(winId), ["WinningsClaimed"]);
   assert(
-    lenderClaim.BetClaimed && lenderClaim.BetClaimed.payout.eq(BET.mul(2)),
-    `lender claimed the full ${fmt(BET.mul(2))} pool on the ${fmt(BET)} losing-organization bet (2x)`
+    lenderClaim.WinningsClaimed && lenderClaim.WinningsClaimed.payout.eq(BET.mul(2)),
+    `lender claimed the full ${fmt(BET.mul(2))} pool on the ${fmt(BET)} 'won't pay' bet (2x)`
   );
-  assert(bettorClaim.BetClaimed && bettorClaim.BetClaimed.payout.isZero(), "bettor's 'paid' side claimed exactly nothing");
+  let bettorRefused = false;
+  try {
+    await (await rail.connect(bettor).claimWinnings(winId)).wait();
+  } catch {
+    bettorRefused = true;
+  }
+  assert(bettorRefused, "bettor's 'paid' side has nothing to claim");
 
-  step("Tranche is gone — releaseTranche must refuse");
+  step("Consumed tranche cannot be withdrawn — withdrawTranche must refuse");
   let refused = false;
   try {
-    await (await rail.connect(organizer).releaseTranche(winId)).wait();
+    await (await rail.connect(organizer).withdrawTranche(proposalId)).wait();
   } catch {
     refused = true;
   }

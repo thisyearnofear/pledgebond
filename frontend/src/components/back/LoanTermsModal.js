@@ -7,7 +7,7 @@
  * and no projected return, because there is no guaranteed return.
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Modal from "@/components/common/Modal";
 import Button from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
@@ -48,8 +48,19 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
   const principal = Number(amount) || 0;
   const collateralAmount = Number(collateral) || 0;
   const prize = Number(opportunity?.prizeAmount) || 0;
-  const maxRateBps = Number(opportunity?.maxRateBps ?? 0);
+  const [maxFeeBps, setMaxFeeBps] = useState(0);
   const winId = opportunity?.winId;
+
+  // The fee ceiling is on-chain; read it rather than trusting a UI constant.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!wallet?.chainId || !wallet?.publicClient) return;
+      const bounds = await liquidityRailService.getBounds(wallet.chainId, wallet.publicClient);
+      if (!cancelled && bounds) setMaxFeeBps(Number(bounds.maxFeeBps));
+    })();
+    return () => { cancelled = true; };
+  }, [wallet?.chainId, wallet?.publicClient]);
 
   async function handleFund() {
     if (principal <= 0) {
@@ -79,19 +90,19 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
       if (collateralAmount < principal) {
         throw new Error("Collateral must cover the principal in an overcollateralized loan.");
       }
-      await walletActions.openLoan(winId, {
+      await walletActions.proposeLoan(winId, {
         principal: amount,
         collateral: collateral,
-        rateBps: maxRateBps > 0 ? maxRateBps : DEFAULT_RATE_BPS,
+        feeBps: maxFeeBps > 0 ? maxFeeBps : DEFAULT_RATE_BPS,
         durationDays: DEFAULT_TERM_DAYS,
       });
       toast.success(
-        `Loan opened against win #${winId}. ${formatUSDC(principal)} went to the builder, net of fees.`
+        `Offer sent on win #${winId}. ${formatUSDC(principal)} draws the moment the builder accepts.`
       );
       onSuccess?.();
       onClose?.();
     } catch (error) {
-      toast.error(`Could not open the loan: ${error.message}`);
+      toast.error(`Could not send the offer: ${error.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -115,7 +126,7 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
             loading={submitting}
             disabled={principal <= 0 || !winId}
           >
-            Fund {principal > 0 ? formatUSDC(principal) : "loan"}
+            Offer {principal > 0 ? formatUSDC(principal) : "loan"}
           </Button>
         </div>
       }
@@ -125,7 +136,7 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
             <p className="font-medium">This shortlisted project has no declared on-chain win to lend against yet.</p>
             <p className="mt-1 text-xs">
-              A bridge loan is only fundable once the organizer declares the win on the rail. Open those in{" "}
+              A bridge loan is only fundable once the win is anchored on the rail. Open those in{" "}
               <span className="font-semibold">Open bridge loans</span> at the top of this page.
             </p>
           </div>
@@ -175,11 +186,11 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
 
         {structure === "overcollateralized" && (
           <Input
-            label="Collateral you'll escrow (USDC)"
+            label="Collateral the builder must post (USDC)"
             type="number"
             value={collateral}
             onChange={(e) => setCollateral(e.target.value)}
-            helperText="Held by the rail for the loan term. If the organizer pays, it is released to the builder; if the builder defaults, it is liquidated to you."
+            helperText="The builder escrows this when they accept your offer. If they repay, it comes back to them; if they default, it is liquidated to you."
             min="1"
           />
         )}
@@ -194,19 +205,25 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
             <span className="font-medium text-primary">The prize payout</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-secondary">Builder's rate ceiling</span>
+            <span className="text-secondary">Origination fee</span>
             <span className="font-medium text-primary">
-              {maxRateBps > 0 ? `${(maxRateBps / 100).toFixed(0)}%` : "—"}
+              {maxFeeBps > 0 ? `${(maxFeeBps / 100).toFixed(0)}%` : "—"}
             </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Funds move when</span>
+            <span className="font-medium text-primary">The builder accepts</span>
           </div>
         </div>
 
         <p className="text-xs text-tertiary leading-relaxed">
-          Repayment happens when the organizer&apos;s payout is recorded on-chain.
-          If it isn&apos;t recorded by the due date the loan can default: with
-          overcollateralized terms the collateral is liquidated to you, and with
-          tranche terms the first-loss provider absorbs it. Either way you are
-          repaid from the prize, never from us.
+          You&apos;re sending an offer, not opening a loan — the builder posts
+          their collateral and draws the principal the moment they accept.
+          Repayment is repaid at par; if the loan passes its due date it can
+          default: with overcollateralized terms the builder&apos;s collateral is
+          liquidated to you, and with tranche terms the first-loss provider
+          absorbs it. Either way you are made whole from the security, never
+          from us.
         </p>
       </div>
     </Modal>

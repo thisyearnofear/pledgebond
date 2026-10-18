@@ -146,19 +146,34 @@ function requireRail() {
   return { chainId: evm.chainId, publicClient: evm.publicClient, walletClient: evm.walletClient };
 }
 
-async function declareWin(args: { hackathonId: number; builder: string; projectName: string; prizeAmount: string }) {
+async function anchorWin(args: { hackathonId: number; declarationIndex: number }) {
   const ctx = requireRail();
-  return liquidityRailService.declareWin(ctx.chainId, ctx.publicClient, ctx.walletClient!, args);
+  return liquidityRailService.anchorWin(ctx.chainId, ctx.publicClient, ctx.walletClient!, args);
 }
 
-async function openLoan(winId: number, terms: any) {
+async function proposeLoan(winId: number, terms: any) {
   const ctx = requireRail();
-  return liquidityRailService.openLoan(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId, terms);
+  return liquidityRailService.proposeLoan(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId, terms);
 }
 
-async function settleLoan(winId: number) {
+async function commitTranche(proposalId: number, amount: string) {
   const ctx = requireRail();
-  return liquidityRailService.settleLoan(ctx.chainId, ctx.publicClient, winId);
+  return liquidityRailService.commitTranche(ctx.chainId, ctx.publicClient, ctx.walletClient!, proposalId, amount);
+}
+
+async function acceptLoan(proposalId: number, collateralRequired: string) {
+  const ctx = requireRail();
+  return liquidityRailService.acceptLoan(ctx.chainId, ctx.publicClient, ctx.walletClient!, proposalId, collateralRequired);
+}
+
+async function repayLoan(winId: number, principal: string) {
+  const ctx = requireRail();
+  return liquidityRailService.repayLoan(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId, principal);
+}
+
+async function defaultLoan(winId: number) {
+  const ctx = requireRail();
+  return liquidityRailService.defaultLoan(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId);
 }
 
 async function placeBet(winId: number, amount: string, expectsPayment: boolean) {
@@ -166,9 +181,14 @@ async function placeBet(winId: number, amount: string, expectsPayment: boolean) 
   return liquidityRailService.placeBet(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId, amount, expectsPayment);
 }
 
-async function claimBet(winId: number) {
+async function resolveMarket(winId: number) {
   const ctx = requireRail();
-  return liquidityRailService.claimBet(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId);
+  return liquidityRailService.resolveMarket(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId);
+}
+
+async function claimWinnings(winId: number) {
+  const ctx = requireRail();
+  return liquidityRailService.claimWinnings(ctx.chainId, ctx.publicClient, ctx.walletClient!, winId);
 }
 
 /** Reads rail state for the connected builder. Never throws. */
@@ -537,11 +557,15 @@ export function useBuilderCredit() {
     connected: s.evm.connected || s.solana.connected,
     signer: s.evm.walletClient,
     contractLoading: false,
-    declareWin,
-    openLoan,
-    settleLoan,
+    anchorWin,
+    proposeLoan,
+    commitTranche,
+    acceptLoan,
+    repayLoan,
+    defaultLoan,
     placeBet,
-    claimBet,
+    resolveMarket,
+    claimWinnings,
     loadRailState,
     switchChain: setActiveChainFamily,
     getUSDCBalanceAsync,
@@ -592,11 +616,15 @@ export const walletActions = {
   setActiveChainFamily,
   disconnect: disconnectEvm,
   disconnectSolana,
-  declareWin,
-  openLoan,
-  settleLoan,
+  anchorWin,
+  proposeLoan,
+  commitTranche,
+  acceptLoan,
+  repayLoan,
+  defaultLoan,
   placeBet,
-  claimBet,
+  resolveMarket,
+  claimWinnings,
   getUSDCBalance: getUSDCBalanceAsync,
   loadRailState,
   loadUserProjects,

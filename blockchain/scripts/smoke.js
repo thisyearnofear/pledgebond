@@ -61,30 +61,27 @@ async function main() {
   check("no bet stakes (pools start empty)", (await rail.totalBetStakes()).isZero());
 
   // A non-FEE_ROLE caller must be rejected. This is the direct test that
-  // withdrawFees can never be reached by a stray key. Pick a signer that is
-  // NOT the fee recipient — on a default deploy they are the same account, and
-  // the call would legitimately succeed.
-  const signers = await ethers.getSigners();
-  const stranger =
-    signers.find((s) => s.address.toLowerCase() !== d.feeRecipient.toLowerCase()) ||
-    signers[0];
+  // withdrawFees can never be reached by a stray key. A random wallet is
+  // guaranteed not to hold FEE_ROLE; callStatic simulates without needing
+  // gas on the stranger key.
+  const stranger = ethers.Wallet.createRandom().connect(ethers.provider);
   try {
-    await rail.connect(stranger).withdrawFees(stranger.address, 1);
+    await rail.connect(stranger).callStatic.withdrawFees(stranger.address, 1);
     check("withdrawFees rejects non-FEE_ROLE caller", false, "call succeeded");
   } catch (err) {
     const msg = err.message || "";
     check(
       "withdrawFees rejects non-FEE_ROLE caller",
       msg.includes("missing role") || msg.includes("AccessControl"),
-      "AccessControl"
+      msg.slice(0, 80)
     );
   }
 
   // ── Bounds initialized ───────────────────────────────────────────────
   const maxLoanSize = await rail.maxLoanSize();
   check("maxLoanSize initialized", maxLoanSize.gt(0), `${maxLoanSize} wei`);
-  const maxRateBps = await rail.maxRateBps();
-  check("maxRateBps initialized", maxRateBps.gt(0), `${maxRateBps} bps`);
+  const maxFeeBps = await rail.maxFeeBps();
+  check("maxFeeBps initialized", maxFeeBps.gt(0), `${maxFeeBps} bps`);
   const maxDuration = await rail.maxLoanDuration();
   check("maxLoanDuration initialized", maxDuration.gt(0), `${maxDuration}s`);
 

@@ -1,6 +1,6 @@
 /**
  * OpenWinsPanel — the lender's order book: declared on-chain wins with no
- * loan yet, read straight from the liquidity rail via WinDeclared events.
+ * loan yet, read straight from the liquidity rail via WinAnchored events.
  *
  * Reads go through /api/rail/open-wins (server-side + cached) because Arc's
  * public RPC rate-limits browser bursts, so the listing works before the

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
@@ -15,9 +15,9 @@ import "./interfaces/IHackathonRegistry.sol";
 contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
     using Counters for Counters.Counter;
     
-    // Roles
+    // Roles — host authority is per-hackathon (hackathons[id].host), so a
+    // global host role would confer nothing and mislead integrators.
     bytes32 public constant PLATFORM_ADMIN_ROLE = keccak256("PLATFORM_ADMIN_ROLE");
-    bytes32 public constant HACKATHON_HOST_ROLE = keccak256("HACKATHON_HOST_ROLE");
     
     Counters.Counter private _hackathonIdCounter;
     
@@ -43,6 +43,11 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
     
     // Winner declarations: hackathonId => winnerAddress[] (ordered by declaration time)
     mapping(uint256 => IHackathonRegistry.WinnerDeclaration[]) public winnerDeclarations;
+
+    // Payout attestations: hackathonId => declarationIndex => verifier => attested.
+    // paidAt is set only once requiredSignatures distinct verifiers attest.
+    mapping(uint256 => mapping(uint256 => mapping(address => bool))) public payoutAttested;
+    mapping(uint256 => mapping(uint256 => uint256)) public payoutAttestCount;
     
     // Events
     event HackathonCreated(uint256 indexed hackathonId, string name, address host, uint8 requiredSignatures);
@@ -50,8 +55,9 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
     event VerifierRemoved(uint256 indexed hackathonId, address verifier);
     event HackathonStatusChanged(uint256 indexed hackathonId, bool active);
     event RequiredSignaturesChanged(uint256 indexed hackathonId, uint8 previousRequired, uint8 newRequired);
-    event WinnerDeclared(uint256 indexed hackathonId, address indexed winner, string projectName, uint256 prizeAmount, uint256 declaredAt);
-    event PayoutRecorded(uint256 indexed hackathonId, address indexed winner, string payoutTxHash, uint256 paidAt);
+    event WinnerDeclared(uint256 indexed hackathonId, address indexed winner, uint256 declarationIndex, string projectName, uint256 prizeAmount, uint256 declaredAt);
+    event PayoutAttested(uint256 indexed hackathonId, uint256 indexed declarationIndex, address indexed verifier, string payoutTxHash);
+    event PayoutRecorded(uint256 indexed hackathonId, address indexed winner, uint256 declarationIndex, string payoutTxHash, uint256 paidAt);
     
     /**
      * @dev Constructor
@@ -117,9 +123,6 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
         
         // Create name lookup
         hackathonsByName[name] = hackathonId;
-        
-        // Grant host role
-        _grantRole(HACKATHON_HOST_ROLE, host);
         
         emit HackathonCreated(hackathonId, name, host, requiredSignatures);
         
@@ -259,18 +262,28 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
         override
         returns (bool)
     {
+        return _isVerifier(hackathonId, account);
+    }
+
+    /// @dev Internal verifier check — avoids an external self-call from
+    /// functions like recordPayout that need the same answer in-glass.
+    function _isVerifier(uint256 hackathonId, address account)
+        internal
+        view
+        returns (bool)
+    {
         HackathonVerifiers storage hackathon = hackathons[hackathonId];
-        
+
         if (!hackathon.active) {
             return false;
         }
-        
+
         for (uint i = 0; i < hackathon.verifiers.length; i++) {
             if (hackathon.verifiers[i] == account) {
                 return true;
             }
         }
-        
+
         return false;
     }
     
@@ -401,6 +414,7 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
     )
         external
         whenNotPaused
+        returns (uint256 declarationIndex)
     {
         HackathonVerifiers storage hackathon = hackathons[hackathonId];
         
@@ -409,6 +423,7 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
             hackathon.host == msg.sender || hasRole(PLATFORM_ADMIN_ROLE, msg.sender),
             "Not authorized"
         );
+        require(hackathon.active, "Hackathon is not active");
         require(winner != address(0), "Invalid winner address");
         require(prizeAmount > 0, "Prize amount must be greater than 0");
         
@@ -420,53 +435,65 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
             paidAt: 0,
             payoutTxHash: ""
         }));
+        declarationIndex = winnerDeclarations[hackathonId].length - 1;
         
-        emit WinnerDeclared(hackathonId, winner, projectName, prizeAmount, block.timestamp);
+        emit WinnerDeclared(hackathonId, winner, declarationIndex, projectName, prizeAmount, block.timestamp);
     }
     
     /**
-     * @dev Records a payout for a previously declared winner.
-     * Called when the actual USDC transfer settles (by host, admin, or verifier agent).
-     * Completes the time delta: declaredAt → paidAt.
+     * @dev Attests a payout for a specific declaration. This is M-of-N: the
+     * declaration's paidAt is set only once `requiredSignatures` distinct
+     * verifiers attest it — a single key cannot forge the payout record that
+     * markets and credibility settle on.
+     *
+     * The index is explicit, never guessed: consumers (LiquidityRail) bind a
+     * win to one declaration, so the payout must land on exactly that one.
+     *
      * @param hackathonId ID of the hackathon
-     * @param winner Address of the winner being paid
+     * @param declarationIndex Position in winnerDeclarations[hackathonId]
      * @param payoutTxHash Transaction hash of the USDC payout
+     * @return finalized True when this attestation reached the threshold and paidAt was set
      */
     function recordPayout(
         uint256 hackathonId,
-        address winner,
+        uint256 declarationIndex,
         string calldata payoutTxHash
     )
         external
         whenNotPaused
+        returns (bool finalized)
     {
         HackathonVerifiers storage hackathon = hackathons[hackathonId];
-        
+
         require(hackathon.host != address(0), "Hackathon does not exist");
-        require(
-            hackathon.host == msg.sender || 
-            hasRole(PLATFORM_ADMIN_ROLE, msg.sender) ||
-            this.isVerifier(hackathonId, msg.sender),
-            "Not authorized"
-        );
-        
+        require(_isVerifier(hackathonId, msg.sender), "Not a verifier");
+
         WinnerDeclaration[] storage declarations = winnerDeclarations[hackathonId];
-        bool found = false;
-        
-        // Find the latest unpaid declaration for this winner
-        for (uint256 i = declarations.length; i > 0; i--) {
-            WinnerDeclaration storage decl = declarations[i - 1];
-            if (decl.winner == winner && decl.paidAt == 0) {
-                decl.paidAt = block.timestamp;
-                decl.payoutTxHash = payoutTxHash;
-                found = true;
-                break;
-            }
+        require(declarationIndex < declarations.length, "Declaration index out of range");
+        WinnerDeclaration storage decl = declarations[declarationIndex];
+        require(decl.paidAt == 0, "Payout already recorded");
+
+        require(
+            !payoutAttested[hackathonId][declarationIndex][msg.sender],
+            "Already attested"
+        );
+        payoutAttested[hackathonId][declarationIndex][msg.sender] = true;
+        uint256 count = ++payoutAttestCount[hackathonId][declarationIndex];
+
+        emit PayoutAttested(hackathonId, declarationIndex, msg.sender, payoutTxHash);
+
+        if (count >= hackathon.requiredSignatures) {
+            decl.paidAt = block.timestamp;
+            decl.payoutTxHash = payoutTxHash;
+            finalized = true;
+            emit PayoutRecorded(
+                hackathonId,
+                decl.winner,
+                declarationIndex,
+                payoutTxHash,
+                block.timestamp
+            );
         }
-        
-        require(found, "No unpaid declaration found for this winner");
-        
-        emit PayoutRecorded(hackathonId, winner, payoutTxHash, block.timestamp);
     }
     
     /**
@@ -480,6 +507,26 @@ contract HackathonRegistry is IHackathonRegistry, AccessControl, Pausable {
         returns (IHackathonRegistry.WinnerDeclaration[] memory)
     {
         return winnerDeclarations[hackathonId];
+    }
+
+    /**
+     * @dev Gets a single declaration by index. Consumers like the rail bind a
+     * win to one declaration, so they should read it directly instead of
+     * copying the whole array across the call boundary.
+     * @param hackathonId ID of the hackathon
+     * @param index Position in winnerDeclarations[hackathonId]
+     * @return The declaration at that index
+     */
+    function getDeclaration(uint256 hackathonId, uint256 index)
+        external
+        view
+        returns (IHackathonRegistry.WinnerDeclaration memory)
+    {
+        require(
+            index < winnerDeclarations[hackathonId].length,
+            "Declaration index out of range"
+        );
+        return winnerDeclarations[hackathonId][index];
     }
     
     /**

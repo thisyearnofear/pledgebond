@@ -17,7 +17,7 @@ import { LoadingSpinner } from "@/components/common/LoadingStates";
 
 const RAIL_CHAIN_ID = Number(process.env.NEXT_PUBLIC_RAIL_CHAIN_ID || 5042002);
 
-const WIN_STATUS = { DECLARED: 1, SETTLED: 2, DEFAULTED: 3 };
+const MARKET_OUTCOME = { UNRESOLVED: 0, PAID: 1, UNPAID: 2 };
 const LOAN_STATUS = { NONE: 0, OPEN: 1, REPAID: 2, DEFAULTED: 3 };
 
 /** "in 35min" / "in 4h" / "in 3d" from a seconds delta; the rail pays in hours. */
@@ -29,8 +29,8 @@ function formatPayTime(seconds) {
 }
 
 function payDelta(win) {
-  if (win.settledAt !== null && win.settledAt !== undefined) {
-    return Math.max(0, win.settledAt - win.declaredAt);
+  if (win.paidAt !== null && win.paidAt !== undefined) {
+    return Math.max(0, win.paidAt - win.declaredAt);
   }
   if (win.daysToPay !== null && win.daysToPay !== undefined) {
     return win.daysToPay * 86400;
@@ -62,44 +62,46 @@ function ratioChips(win) {
 function summarize(wins) {
   if (wins.length === 0) return null;
   const funded = wins.filter((w) => w.loanStatus !== LOAN_STATUS.NONE).length;
-  const repaid = wins.filter((w) => w.loanStatus === LOAN_STATUS.REPAID || w.winStatus === WIN_STATUS.SETTLED).length;
-  const defaulted = wins.filter(
-    (w) => w.winStatus === WIN_STATUS.DEFAULTED || w.loanStatus === LOAN_STATUS.DEFAULTED
-  ).length;
+  const repaid = wins.filter((w) => w.loanStatus === LOAN_STATUS.REPAID).length;
+  const paid = wins.filter((w) => w.paid).length;
+  const defaulted = wins.filter((w) => w.loanStatus === LOAN_STATUS.DEFAULTED).length;
   const deltas = wins.map(payDelta).filter((d) => d !== null).sort((a, b) => a - b);
   const median =
     deltas.length > 0
       ? formatPayTime(deltas[Math.floor(deltas.length / 2)]).replace(/^in /, "")
       : null;
-  const parts = [`${wins.length} wins`, `${funded} funded`, `${repaid} repaid`];
+  const parts = [`${wins.length} wins`, `${paid} prizes paid`, `${funded} funded`, `${repaid} repaid`];
   if (defaulted > 0) parts.push(`${defaulted} defaulted`);
   if (median) parts.push(`median payout ${median}`);
   return parts.join(" · ");
 }
 
 function loanChip(win) {
-  if (win.winStatus === WIN_STATUS.DEFAULTED || win.loanStatus === LOAN_STATUS.DEFAULTED) {
+  if (win.loanStatus === LOAN_STATUS.DEFAULTED) {
     return { label: "Defaulted", cls: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" };
   }
-  if (win.loanStatus === LOAN_STATUS.REPAID || win.winStatus === WIN_STATUS.SETTLED) {
+  if (win.loanStatus === LOAN_STATUS.REPAID) {
     const t = formatPayTime(payDelta(win));
-    return { label: `Loan repaid${t ? ` ${t}` : ""}`, cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" };
+    return { label: `Loan repaid${t ? ` · payout ${t}` : ""}`, cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" };
   }
   if (win.loanStatus === LOAN_STATUS.OPEN) {
     return { label: `Loan active · ${formatUSDC(Number(win.principal))}`, cls: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" };
+  }
+  if (win.paid) {
+    return { label: "Prize paid · no loan drawn", cls: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" };
   }
   return { label: "Awaiting a lender", cls: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300" };
 }
 
 function marketChip(win) {
-  if (win.betsCount === 0) return null;
-  if (win.betOutcome === 1) {
+  if (win.betPool === null || win.betPool === undefined) return null;
+  if (win.marketOutcome === MARKET_OUTCOME.PAID) {
     return { label: `Market resolved paid · pool ${formatUSDC(Number(win.betPool))}`, cls: "text-green-600 dark:text-green-400" };
   }
-  if (win.betOutcome === 2) {
+  if (win.marketOutcome === MARKET_OUTCOME.UNPAID) {
     return { label: `Market resolved unpaid · pool ${formatUSDC(Number(win.betPool))}`, cls: "text-red-600 dark:text-red-400" };
   }
-  return { label: `Market open · ${win.betsCount} bets`, cls: "text-amber-600 dark:text-amber-400" };
+  return { label: `Market open · pool ${formatUSDC(Number(win.betPool))}`, cls: "text-amber-600 dark:text-amber-400" };
 }
 
 export default function WinHistoryPanel() {
@@ -174,8 +176,7 @@ export default function WinHistoryPanel() {
             const loan = loanChip(win);
             const market = marketChip(win);
             const ratios = ratioChips(win);
-            const bettable =
-              win.winStatus === WIN_STATUS.DECLARED && win.betOutcome === 0;
+            const bettable = !win.paid && win.marketOutcome === MARKET_OUTCOME.UNRESOLVED;
             return (
               <li key={win.winId} className="py-3">
                 <div className="flex items-center justify-between gap-4">

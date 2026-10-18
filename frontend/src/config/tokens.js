@@ -114,12 +114,12 @@ export const USDC_ADDRESSES = {
 // ║  Manifests: blockchain/deployments/<network>_deployment.json         ║
 // ╚══════════════════════════════════════════════════════════════════════╝
 
-// LiquidityRail proxy (Arc Testnet, deployed 2026-10-05 by scripts/deployTestnet.js)
+// LiquidityRail proxy (Arc Testnet, v4 deployed 2026-10-07 by scripts/deployTestnet.js)
 export const LIQUIDITY_RAIL_ADDRESSES = {
   // Arc Testnet
   5042002:
     process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_TESTNET_ADDRESS ||
-    "0xa8CB00A09092203Dd3274EBc065845fe034a0d38",
+    "0x3e4290190E6Ae25E0c00f38424B6d23d35F4DDF6",
   // Arc Mainnet — deploy first: npx hardhat run scripts/deployTestnet.js --network arc
   ...(process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_ADDRESS
     ? { 5042: process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_ADDRESS }
@@ -132,19 +132,23 @@ export const HACKATHON_REGISTRY_ADDRESSES = {
   // Arc Testnet
   5042002:
     process.env.NEXT_PUBLIC_HACKATHON_REGISTRY_TESTNET_ADDRESS ||
-    "0x6C523bf8639515FaCCf6F9A577758C5C415DB89b",
+    "0xa0b15807B30Dd84CcE9334e10c491436b73f9AAc",
   // Arc Mainnet — deploy first
   ...(process.env.NEXT_PUBLIC_HACKATHON_REGISTRY_ADDRESS
     ? { 5042: process.env.NEXT_PUBLIC_HACKATHON_REGISTRY_ADDRESS }
     : {}),
 };
 
-// Block the rail proxy landed in — the lower bound for WinDeclared scans.
+// Block the rail proxy landed in — the lower bound for WinAnchored scans.
 // Only chains with a deployment are listed (mirrors LIQUIDITY_RAIL_ADDRESSES).
 export const LIQUIDITY_RAIL_START_BLOCKS = {
   5042002: Number(
-    process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_TESTNET_START_BLOCK || 65661510
+    process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_TESTNET_START_BLOCK || 67010632
   ),
+  // Arc Mainnet — set to the deployment block from arc_deployment.json.
+  ...(process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_START_BLOCK
+    ? { 5042: Number(process.env.NEXT_PUBLIC_LIQUIDITY_RAIL_START_BLOCK) }
+    : {}),
 };
 
 export const TESTNET_CHAIN_INFO = {

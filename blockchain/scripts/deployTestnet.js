@@ -120,7 +120,7 @@ async function main() {
     network: networkName,
     chainId: chainId,
     usdcAddress: usdcAddress,
-    contractVersion: "3.0.0",
+    contractVersion: "4.0.0",
     contracts: {
       LiquidityRail: proxy.address,
       LiquidityRailImpl: impl.address,
@@ -154,9 +154,11 @@ async function main() {
     console.log(`NEXT_PUBLIC_LIQUIDITY_RAIL_TESTNET_ADDRESS=${proxy.address}`);
     console.log(`NEXT_PUBLIC_HACKATHON_REGISTRY_TESTNET_ADDRESS=${hackathonRegistry.address}`);
   } else if (chainId === 5042) {
+    const deployBlock = await ethers.provider.getBlockNumber();
     console.log("\n📝 Set these env vars to point the app at this deployment:");
     console.log(`NEXT_PUBLIC_LIQUIDITY_RAIL_ADDRESS=${proxy.address}`);
     console.log(`NEXT_PUBLIC_HACKATHON_REGISTRY_ADDRESS=${hackathonRegistry.address}`);
+    console.log(`NEXT_PUBLIC_LIQUIDITY_RAIL_START_BLOCK=${deployBlock}`);
     console.log(`LIQUIDITY_RAIL_ADDRESS=${proxy.address}  # server allowlist (RealCircleService)`);
   }
 
