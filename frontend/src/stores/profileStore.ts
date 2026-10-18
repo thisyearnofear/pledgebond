@@ -82,14 +82,20 @@ export const profileStore: Store<ProfileState> = createStore<ProfileState>(initi
 const PREF_KEY = "pledgebond-user-preferences";
 const THEME_KEY = "pledgebond-dashboard-theme";
 
+function readThemeFromDOM(): Theme {
+  const attr = document.documentElement.getAttribute("data-theme");
+  if (attr === "light" || attr === "dark" || attr === "high-contrast") return attr;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
 function loadFromStorage() {
   if (typeof window === "undefined") return;
   try {
-    const themeRaw = window.localStorage.getItem(THEME_KEY);
-    if (themeRaw === "light" || themeRaw === "dark" || themeRaw === "high-contrast") {
-      applyThemeToDOM(themeRaw);
-      profileStore.setState({ theme: themeRaw });
-    }
+    // The pre-paint script in _document already resolved the theme. Adopt it rather
+    // than re-reading storage, so the store and the DOM cannot diverge.
+    const theme = readThemeFromDOM();
+    applyThemeToDOM(theme);
+    profileStore.setState({ theme });
     const prefRaw = window.localStorage.getItem(PREF_KEY);
     if (prefRaw) {
       profileStore.setState({ preferences: JSON.parse(prefRaw) });

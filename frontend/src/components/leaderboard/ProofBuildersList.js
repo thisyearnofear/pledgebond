@@ -34,7 +34,7 @@ export default function ProofBuildersList({ entries, highlightedEntry }) {
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-text-primary truncate">{entry.name || "Builder"}</span>
                 {entry.ecosystem ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-surface-hover text-gray-600 dark:text-gray-400 uppercase">{entry.ecosystem}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-surface-hover text-gray-700 dark:text-gray-200 uppercase">{entry.ecosystem}</span>
                 ) : null}
               </div>
               <p className="text-xs text-text-tertiary mt-0.5">
@@ -50,11 +50,11 @@ export default function ProofBuildersList({ entries, highlightedEntry }) {
                 <div className="text-xs text-text-tertiary">avg proof</div>
               </div>
               <div>
-                <div className="font-bold text-emerald-600 dark:text-emerald-400">{entry.evidenceCoverage || 0}%</div>
+                <div className="font-bold text-emerald-700 dark:text-emerald-400">{entry.evidenceCoverage || 0}%</div>
                 <div className="text-xs text-text-tertiary">evidence</div>
               </div>
               <div>
-                <div className="font-bold text-amber-600 dark:text-amber-400">{entry.score || 0}</div>
+                <div className="font-bold text-amber-700 dark:text-amber-400">{entry.score || 0}</div>
                 <div className="text-xs text-text-tertiary">proof score</div>
               </div>
             </div>

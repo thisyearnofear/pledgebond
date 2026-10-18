@@ -58,10 +58,10 @@
   --color-border-hover: #9ca3af;
   
   --color-text: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-tertiary: #9ca3af;
+  --color-text-secondary: #4b5563;
+  --color-text-tertiary: #5f6b7d;
   --color-text-inverse: #ffffff;
-  --color-text-muted: #6b7280;
+  --color-text-muted: #4b5563;
   
   --color-link: #3b82f6;
   --color-link-hover: #2563eb;
@@ -135,9 +135,9 @@
   
   --color-text: #f9fafb;
   --color-text-secondary: #d1d5db;
-  --color-text-tertiary: #9ca3af;
+  --color-text-tertiary: #c4ccd4;
   --color-text-inverse: #111827;
-  --color-text-muted: #9ca3af;
+  --color-text-muted: #c4ccd4;
   
   /* Adjust shadows for dark theme */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -287,10 +287,11 @@
 }
 
 /* Network Color Utilities */
+/* No .text-base here — that class name belongs to Tailwind's font-size scale.
+   Use .text-network-base for Base-blue text. */
 .text-ethereum { color: var(--color-ethereum); }
 .text-polygon { color: var(--color-polygon); }
 .text-optimism { color: var(--color-optimism); }
-.text-base { color: var(--color-base); }
 .text-linea { color: var(--color-linea); }
 .text-celo { color: var(--color-celo); }
 
@@ -340,7 +341,7 @@
 .text-celo { color: var(--color-celo); }
 .text-celo-light { color: var(--color-celo-light); }
 .text-celo-dark { color: var(--color-celo-dark); }
-.text-base { color: var(--color-base); }
+/* .text-base omitted — collides with Tailwind's font-size utility. */
 .text-base-light { color: var(--color-base-light); }
 .text-base-dark { color: var(--color-base-dark); }
 .text-linea { color: var(--color-linea); }

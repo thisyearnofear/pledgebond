@@ -518,7 +518,7 @@ export default function ProjectDetailPage() {
                                 `Signals: ${s.signals?.join(', ') || 'none'}\nMissing: ${s.missing?.join(', ') || 'none'}\nCredibility: ${s.credibility || 'unknown'}\nScore: ${s.signalScore || 0}/100`
                               );
                             }}
-                            className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-400 underline"
+                            className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-400 underline"
                             title="View verification details"
                           >
                             Signals

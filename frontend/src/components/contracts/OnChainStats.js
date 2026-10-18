@@ -66,7 +66,7 @@ export default function OnChainStats({ contract, prs, releases }) {
             className={`px-4 py-3 text-sm font-medium ${
               activeTab === "overview"
                 ? "border-b-2 border-primary-500 text-primary-600"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-300"
             }`}
             onClick={() => setActiveTab("overview")}
           >
@@ -77,7 +77,7 @@ export default function OnChainStats({ contract, prs, releases }) {
               className={`px-4 py-3 text-sm font-medium ${
                 activeTab === "github"
                   ? "border-b-2 border-primary-500 text-primary-600"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-300"
               }`}
               onClick={() => setActiveTab("github")}
             >
@@ -246,7 +246,7 @@ export default function OnChainStats({ contract, prs, releases }) {
                           href={pr.html_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:text-blue-300 truncate block"
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-300 truncate block"
                         >
                           {pr.title}
                         </a>
@@ -282,7 +282,7 @@ export default function OnChainStats({ contract, prs, releases }) {
                         href={releases[0].html_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:text-blue-300 font-medium"
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-300 font-medium"
                       >
                         {releases[0].name || releases[0].tag_name}
                       </a>

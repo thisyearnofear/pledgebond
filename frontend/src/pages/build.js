@@ -175,7 +175,7 @@ export default function BuildPage() {
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
                   activeChainFamily === "evm"
                     ? "bg-surface text-blue-600 dark:text-blue-400 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-300"
                 }`}
               >
                 EVM (Metamask)
@@ -185,7 +185,7 @@ export default function BuildPage() {
                 className={`px-4 py-2 text-sm font-medium rounded-md transition-all ${
                   activeChainFamily === "solana"
                     ? "bg-surface text-purple-600 dark:text-purple-400 shadow-sm"
-                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300"
+                    : "text-gray-500 hover:text-gray-700 dark:text-gray-300"
                 }`}
               >
                 Solana

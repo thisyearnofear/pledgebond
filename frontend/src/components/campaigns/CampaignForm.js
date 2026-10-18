@@ -287,7 +287,7 @@ export default function CampaignForm({ initialData = null, onSave = null, projec
                 className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${
                   index <= currentStep
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-300 text-gray-600 dark:text-gray-400 dark:bg-gray-600 dark:text-gray-300'
+                    : 'bg-gray-300 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
                 }`}
               >
                 {index + 1}
@@ -303,14 +303,14 @@ export default function CampaignForm({ initialData = null, onSave = null, projec
 
       {/* Error Display */}
       {errors.form && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 dark:text-red-400 text-sm">
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
           {errors.form}
         </div>
       )}
 
       {/* Success Message */}
       {savedMessage && (
-        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300 dark:text-green-400 text-sm">
+        <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-700 dark:text-green-300 text-sm">
           {savedMessage}
         </div>
       )}
@@ -395,7 +395,7 @@ function StepBasicInfo({ formData, handleChange, errors, projects }) {
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">
+        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">
           Project
         </label>
         <select
@@ -414,7 +414,7 @@ function StepBasicInfo({ formData, handleChange, errors, projects }) {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">
+        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">
           Campaign Title <span className="text-gray-500 dark:text-gray-400 text-xs">({formData.title?.length || 0}/100)</span>
         </label>
         <input
@@ -428,7 +428,7 @@ function StepBasicInfo({ formData, handleChange, errors, projects }) {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">
+        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">
           Description <span className="text-gray-500 dark:text-gray-400 text-xs">({formData.description?.length || 0}/2000)</span>
         </label>
         <textarea
@@ -449,7 +449,7 @@ function StepBudget({ formData, handleChange, errors }) {
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">
+          <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">
             Total Budget (USDC)
           </label>
           <input
@@ -463,7 +463,7 @@ function StepBudget({ formData, handleChange, errors }) {
         </div>
 
         <div>
-          <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">
+          <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">
             Per Submission (USDC)
           </label>
           <input
@@ -482,7 +482,7 @@ function StepBudget({ formData, handleChange, errors }) {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">
+        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">
           Token Allocation (%)
         </label>
         <input
@@ -498,7 +498,7 @@ function StepBudget({ formData, handleChange, errors }) {
       </div>
 
       <div>
-        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">
+        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">
           Deadline
         </label>
         <input
@@ -557,7 +557,7 @@ function StepRequirements({ formData, handleChange, handleAddRequirement, handle
           </select>
           <button
             onClick={() => handleRemoveRequirement(idx)}
-            className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 dark:hover:text-red-300"
+            className="text-sm text-red-600 hover:text-red-700 dark:text-red-300 dark:hover:text-red-300"
           >
             Remove
           </button>
@@ -598,13 +598,13 @@ function StepScenarios({ formData, handleChange, handleAddScenario, handleAddSte
           />
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-gray-900 dark:text-gray-100 dark:text-white">Steps</label>
+            <label className="text-sm font-semibold text-gray-900 dark:text-white">Steps</label>
             {scenario.steps.map((step, stepIdx) => (
               <div key={stepIdx} className="flex gap-2">
                 <div className="flex-1 p-2 bg-gray-100 dark:bg-gray-700 rounded text-sm">{stepIdx + 1}. {step}</div>
                 <button
                   onClick={() => handleRemoveStep(idx, stepIdx)}
-                  className="px-2 py-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 dark:hover:text-red-300 text-sm"
+                  className="px-2 py-1 text-red-600 hover:text-red-700 dark:text-red-300 dark:hover:text-red-300 text-sm"
                 >
                   ×
                 </button>
@@ -663,7 +663,7 @@ function StepSuccess({ formData, handleChange, handleAddMetric, handleRemoveMetr
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">
+        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">
           Expected Outcome <span className="text-gray-500 dark:text-gray-400 text-xs">({formData.expectedOutcome?.length || 0}/1000)</span>
         </label>
         <textarea
@@ -677,7 +677,7 @@ function StepSuccess({ formData, handleChange, handleAddMetric, handleRemoveMetr
       </div>
 
       <div>
-        <label className="block text-sm font-semibold mb-3 text-gray-900 dark:text-gray-100 dark:text-white">Success Metrics</label>
+        <label className="block text-sm font-semibold mb-3 text-gray-900 dark:text-white">Success Metrics</label>
         {formData.successMetrics?.map((metric, idx) => (
           <div key={idx} className="flex gap-2 mb-2">
             <input
@@ -704,7 +704,7 @@ function StepSuccess({ formData, handleChange, handleAddMetric, handleRemoveMetr
             />
             <button
               onClick={() => handleRemoveMetric(idx)}
-              className="px-2 py-1 text-red-600 dark:text-red-400 hover:text-red-700 dark:text-red-300 dark:hover:text-red-300 text-sm"
+              className="px-2 py-1 text-red-600 hover:text-red-700 dark:text-red-300 dark:hover:text-red-300 text-sm"
             >
               ×
             </button>
@@ -719,7 +719,7 @@ function StepSuccess({ formData, handleChange, handleAddMetric, handleRemoveMetr
       </div>
 
       <div>
-        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">Minimum Tester Level</label>
+        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">Minimum Tester Level</label>
         <select
           value={formData.eligibility?.minLevel || 'beginner'}
           onChange={(e) => handleChange('eligibility.minLevel', e.target.value)}
@@ -732,7 +732,7 @@ function StepSuccess({ formData, handleChange, handleAddMetric, handleRemoveMetr
       </div>
 
       <div>
-        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-gray-100 dark:text-white">Max Submissions</label>
+        <label className="block text-sm font-semibold mb-2 text-gray-900 dark:text-white">Max Submissions</label>
         <input
           type="number"
           value={formData.maxSubmissions || 50}

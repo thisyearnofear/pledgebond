@@ -14,7 +14,18 @@ export default function Document() {
         <meta name="twitter:title" content="PledgeBond — Post-Win Layer for Hackathon Builders" />
         <meta name="twitter:description" content="You won. Now get paid — and keep building. Public payout speeds, verified wins, and underwriting packets for ecosystems and angels." />
         <link rel="icon" href="/favicon.ico" />
-        
+
+        {/*
+          Resolve the theme before first paint. Tailwind's dark: variants key off the
+          .dark class while the CSS custom properties key off [data-theme]; if this
+          script is absent the two disagree and text renders on the wrong background.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var k="pledgebond-dashboard-theme";var s=localStorage.getItem(k);var t=(s==="light"||s==="dark"||s==="high-contrast")?s:(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");var r=document.documentElement;r.setAttribute("data-theme",t);r.classList.toggle("dark",t==="dark");}catch(e){}`,
+          }}
+        />
+
         {/* Google Fonts: Plus Jakarta Sans for display, Inter for body */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

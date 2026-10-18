@@ -99,7 +99,7 @@ export default function ExploreProjectCard({ project, isBookmarked, onToggleBook
         {Array.isArray(project.tags) && project.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {project.tags.slice(0, 3).map((tag) => (
-              <span key={tag} className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 dark:text-gray-300 rounded text-[10px] font-medium">
+              <span key={tag} className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-[10px] font-medium">
                 {tag}
               </span>
             ))}

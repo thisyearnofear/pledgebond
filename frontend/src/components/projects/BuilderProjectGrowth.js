@@ -474,7 +474,7 @@ export default function BuilderProjectGrowth() {
                       {missingCount > 3 && (
                         <button
                           onClick={() => setExpandedProject(isExpanded ? null : project.id)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300 font-medium ml-5"
+                          className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-300 font-medium ml-5"
                         >
                           +{missingCount - 3} more
                         </button>
@@ -555,7 +555,7 @@ export default function BuilderProjectGrowth() {
                     </Button>
                     <button
                       onClick={() => setExpandedProject(isExpanded ? null : project.id)}
-                      className="ml-auto text-xs text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:text-slate-400 font-medium transition-colors"
+                      className="ml-auto text-xs text-slate-400 hover:text-slate-600 dark:text-slate-400 font-medium transition-colors"
                     >
                       {isExpanded ? 'Less' : 'Details'}
                     </button>

@@ -50,7 +50,7 @@ const PortLeaderboard = ({ projects, ecosystem }) => {
             <div className="ml-4 flex-grow">
               <Link 
                 href={`/projects/${ecosystem}/${project.slug || project.id}`}
-                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:text-blue-300 line-clamp-1"
+                className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-300 line-clamp-1"
               >
                 {project.name}
               </Link>
@@ -75,7 +75,7 @@ const PortLeaderboard = ({ projects, ecosystem }) => {
       
       {projects.length > 10 && (
         <div className="px-6 py-3 bg-gray-50 text-center border-t border-gray-100">
-          <Link href={`/ecosystems/${ecosystem}`} className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:text-blue-300">
+          <Link href={`/ecosystems/${ecosystem}`} className="text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-300">
             View All Ships
           </Link>
         </div>

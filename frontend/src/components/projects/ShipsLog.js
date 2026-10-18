@@ -236,7 +236,7 @@ export default function ShipsLog({ projectSlug, canEdit }) {
             <button
               type="button"
               onClick={addMetricField}
-              className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300 flex items-center gap-1"
+              className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-300 flex items-center gap-1"
             >
               <PlusIcon className="w-3.5 h-3.5" />
               Add metric
@@ -304,7 +304,7 @@ export default function ShipsLog({ projectSlug, canEdit }) {
               <div className="pt-2">
                 <button
                   onClick={() => setShowLowSignal(!showLowSignal)}
-                  className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors w-full"
+                  className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 dark:text-gray-300 font-medium px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors w-full"
                 >
                   <div className="flex-1 h-px bg-gray-200" />
                   {showLowSignal ? 'Hide' : `Show ${lowSignalCount}`} development & bug fix updates

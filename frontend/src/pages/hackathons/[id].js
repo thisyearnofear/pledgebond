@@ -172,7 +172,7 @@ export default function HackathonDetailPage() {
             <div className="flex items-center gap-4 mb-4">
               <Link
                 href="/hackathons"
-                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 flex items-center gap-1"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-300 flex items-center gap-1"
               >
                 <ArrowTopRightOnSquareIcon className="h-4 w-4 transform rotate-180" />
                 All Hackathons

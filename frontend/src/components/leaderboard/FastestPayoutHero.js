@@ -74,35 +74,35 @@ export default function FastestPayoutHero({ entries }) {
             <span className="inline-block text-xs font-bold tracking-wider text-yellow-700 dark:text-yellow-400 uppercase bg-yellow-200/60 dark:bg-yellow-800/40 px-2.5 py-0.5 rounded-full">
               Fastest Paying
             </span>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 dark:text-white mt-0.5">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mt-0.5">
               {fastest.name}
             </h2>
           </div>
         </div>
-        <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-300 ml-[52px]">
-          Pays winners in <span className="font-semibold text-emerald-700 dark:text-emerald-300 dark:text-emerald-400">{fastest.avgPayoutDays} days</span> on average
+        <p className="text-sm text-gray-600 dark:text-gray-300 ml-[52px]">
+          Pays winners in <span className="font-semibold text-emerald-700 dark:text-emerald-300">{fastest.avgPayoutDays} days</span> on average
           {fastest.payoutCompletionRate > 0 && ` with a ${fastest.payoutCompletionRate}% payout rate`}
         </p>
       </div>
 
       <div className="px-6 pb-5 grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-xl bg-white/70 dark:bg-white/5 backdrop-blur-sm border border-yellow-200/60 p-3.5 text-center">
-          <div className="flex items-center justify-center gap-1 text-2xl font-bold text-emerald-700 dark:text-emerald-300 dark:text-emerald-400">
+          <div className="flex items-center justify-center gap-1 text-2xl font-bold text-emerald-700 dark:text-emerald-300">
             {fastest.avgPayoutDays}
-            <span className="text-sm font-normal text-gray-500 dark:text-gray-400">days</span>
+            <span className="text-sm font-normal text-gray-500 dark:text-gray-300">days</span>
           </div>
           <p className="text-xs text-secondary mt-1">Average payout time</p>
         </div>
 
         <div className="rounded-xl bg-white/70 dark:bg-white/5 backdrop-blur-sm border border-yellow-200/60 p-3.5 text-center">
-          <div className={`text-2xl font-bold ${fastest.payoutCompletionRate >= 80 ? "text-green-700 dark:text-green-300 dark:text-green-400" : fastest.payoutCompletionRate >= 50 ? "text-amber-700 dark:text-amber-400" : "text-red-700 dark:text-red-300 dark:text-red-400"}`}>
+          <div className={`text-2xl font-bold ${fastest.payoutCompletionRate >= 80 ? "text-green-700 dark:text-green-300" : fastest.payoutCompletionRate >= 50 ? "text-amber-700 dark:text-amber-400" : "text-red-700 dark:text-red-300"}`}>
             {fastest.payoutCompletionRate}%
           </div>
           <p className="text-xs text-secondary mt-1">Winners paid</p>
         </div>
 
         <div className="rounded-xl bg-white/70 dark:bg-white/5 backdrop-blur-sm border border-yellow-200/60 p-3.5 text-center">
-          <div className="text-2xl font-bold text-gray-800 dark:text-gray-200 dark:text-white">
+          <div className="text-2xl font-bold text-gray-800 dark:text-white">
             {fastest.builderCount || 0}
           </div>
           <p className="text-xs text-secondary mt-1">Active builders</p>
@@ -129,12 +129,12 @@ export default function FastestPayoutHero({ entries }) {
             {ecosystemAverages.map((eco) => {
               const colors = ECOSYSTEM_COLORS[eco.key] || { bg: "bg-gray-50 dark:bg-gray-800/30", text: "text-gray-700 dark:text-gray-300", border: "border-gray-200 dark:border-gray-700" };
               return (
-                <div key={eco.key} className={`rounded-lg ${colors.bg} ${colors.border} border p-2.5 text-center`}>
-                  <div className="text-xs font-medium uppercase tracking-wide opacity-75">{eco.ecosystem}</div>
-                  <div className={`text-lg font-bold ${eco.avgDays <= 14 ? "text-emerald-600 dark:text-emerald-400" : eco.avgDays <= 45 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
-                    {eco.avgDays}<span className="text-sm font-normal opacity-75">d</span>
+                <div key={eco.key} className={`rounded-lg ${colors.bg} ${colors.text} ${colors.border} border p-2.5 text-center`}>
+                  <div className="text-xs font-semibold uppercase tracking-wide">{eco.ecosystem}</div>
+                  <div className={`text-lg font-bold ${eco.avgDays <= 14 ? "text-emerald-700 dark:text-emerald-400" : eco.avgDays <= 45 ? "text-amber-700 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+                    {eco.avgDays}<span className="text-sm font-normal">d</span>
                   </div>
-                  <div className="text-xs text-secondary">{eco.hackCount} hackathons</div>
+                  <div className="text-xs opacity-80">{eco.hackCount} hackathon{eco.hackCount !== 1 ? "s" : ""}</div>
                 </div>
               );
             })}
@@ -154,8 +154,8 @@ export default function FastestPayoutHero({ entries }) {
             </span>
           </div>
           <div className="flex items-center gap-4 text-sm">
-            <span className="font-semibold text-emerald-600 dark:text-emerald-400">{runnerUp.avgPayoutDays}d avg</span>
-            <span className={`font-semibold ${runnerUp.payoutCompletionRate >= 80 ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"}`}>
+            <span className="font-semibold text-emerald-700 dark:text-emerald-400">{runnerUp.avgPayoutDays}d avg</span>
+            <span className={`font-semibold ${runnerUp.payoutCompletionRate >= 80 ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-400"}`}>
               {runnerUp.payoutCompletionRate}%
             </span>
           </div>

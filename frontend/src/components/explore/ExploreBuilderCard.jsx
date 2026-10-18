@@ -41,7 +41,7 @@ function ExploreBuilderFollowButton({ builder, currentUserId }) {
         disabled={loading}
         className={`ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-all duration-200 ${
           following
-            ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-red-50 hover:text-red-600 dark:text-red-400 hover:border-red-200 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+            ? "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-red-50 hover:text-red-600 dark:text-red-400 hover:border-red-200 dark:hover:bg-red-900/20 dark:hover:text-red-400"
             : "bg-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow"
         }`}
       >
@@ -133,7 +133,7 @@ export default function ExploreBuilderCard({ builder, onClick, currentUserId }) 
 
         <div className="flex flex-wrap items-center gap-1.5">
           {primaryEco && ECOSYSTEM_CONFIGS[primaryEco] && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 dark:text-gray-300 rounded text-[10px] font-medium">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-[10px] font-medium">
               {ECOSYSTEM_CONFIGS[primaryEco].icon} {ECOSYSTEM_CONFIGS[primaryEco].shortName}
             </span>
           )}

@@ -47,7 +47,7 @@ describe('HackathonLeaderboardRow', () => {
     const { container } = render(
       <HackathonLeaderboardRow entry={{ ...baseEntry, avgPayoutDays: 5 }} rank={1} />
     );
-    expect(container.innerHTML).toMatch(/text-emerald-600/);
+    expect(container.innerHTML).toMatch(/text-emerald-700/);
     expect(screen.getByText('lightning fast')).toBeInTheDocument();
   });
 
@@ -55,7 +55,7 @@ describe('HackathonLeaderboardRow', () => {
     const { container } = render(
       <HackathonLeaderboardRow entry={{ ...baseEntry, avgPayoutDays: 20 }} rank={1} />
     );
-    expect(container.innerHTML).toMatch(/text-green-600/);
+    expect(container.innerHTML).toMatch(/text-green-700/);
     expect(screen.getByText('fast')).toBeInTheDocument();
   });
 
@@ -63,7 +63,7 @@ describe('HackathonLeaderboardRow', () => {
     const { container } = render(
       <HackathonLeaderboardRow entry={{ ...baseEntry, avgPayoutDays: 60 }} rank={1} />
     );
-    expect(container.innerHTML).toMatch(/text-amber-600/);
+    expect(container.innerHTML).toMatch(/text-amber-700/);
     expect(screen.getByText('moderate')).toBeInTheDocument();
   });
 
@@ -84,14 +84,14 @@ describe('HackathonLeaderboardRow', () => {
     const { container } = render(
       <HackathonLeaderboardRow entry={{ ...baseEntry, payoutCompletionRate: 85, avgPayoutDays: 5 }} rank={1} />
     );
-    expect(container.innerHTML).toMatch(/text-green-600/);
+    expect(container.innerHTML).toMatch(/text-green-700/);
   });
 
   it('uses amber color for payoutCompletionRate 50-79', () => {
     const { container } = render(
       <HackathonLeaderboardRow entry={{ ...baseEntry, payoutCompletionRate: 60 }} rank={1} />
     );
-    expect(container.innerHTML).toMatch(/text-amber-600/);
+    expect(container.innerHTML).toMatch(/text-amber-700/);
   });
 
   it('uses red color for payoutCompletionRate < 50', () => {

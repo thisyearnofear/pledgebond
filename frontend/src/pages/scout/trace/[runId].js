@@ -259,7 +259,7 @@ export default function ScoutTracePage() {
           {/* Raw Data (collapsible, for judges) */}
           <section>
             <details className="group">
-              <summary className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-300 dark:text-slate-500 transition-colors flex items-center gap-2">
+              <summary className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-300 transition-colors flex items-center gap-2">
                 <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded font-mono">RAW</span>
                 Full Run Data
               </summary>

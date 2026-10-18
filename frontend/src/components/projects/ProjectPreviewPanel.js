@@ -60,7 +60,7 @@ export default function ProjectPreviewPanel({ form, imageUrl, githubImport }) {
           {quality.items.map((item) => (
             <div key={item.id} className="flex items-start gap-2 text-xs">
               <span className={`mt-0.5 h-2 w-2 rounded-full ${item.done ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`} />
-              <span className={item.done ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500 dark:text-gray-400'}>
+              <span className={item.done ? 'text-gray-700 dark:text-gray-300' : 'text-gray-500'}>
                 {item.done ? item.label : item.action}
               </span>
             </div>

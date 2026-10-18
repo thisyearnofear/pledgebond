@@ -118,7 +118,7 @@ export default function BuildersTab({ selectedEcosystems = [], onEcosystemsChang
             className="w-full pl-10 pr-10 py-3 rounded-xl border border-secondary bg-surface text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-gray-100"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-400">
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400">
               <XMarkIcon className="w-5 h-5" />
             </button>
           )}

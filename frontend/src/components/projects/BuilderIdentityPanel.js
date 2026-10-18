@@ -30,7 +30,7 @@ function IdentityRow({ icon: Icon, label, value, href, mono }) {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300 transition-colors truncate"
+            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-300 transition-colors truncate"
           >
             <span className={`truncate ${mono ? 'font-mono' : ''}`}>{value || '-'}</span>
             <ArrowTopRightOnSquareIcon className="w-3 h-3 flex-shrink-0" />
@@ -138,7 +138,7 @@ export default function BuilderIdentityPanel({
 
       {project.teamMembers && Array.isArray(project.teamMembers) && project.teamMembers.length > 0 && (
         <details className="mt-4 group">
-          <summary className="text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300 cursor-pointer transition-colors list-none flex items-center gap-1.5">
+          <summary className="text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-300 cursor-pointer transition-colors list-none flex items-center gap-1.5">
             <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>

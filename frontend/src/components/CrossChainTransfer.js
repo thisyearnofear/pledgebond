@@ -403,7 +403,7 @@ export default function CrossChainTransfer() {
         <div className="mt-4">
           <button
             type="button"
-            className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 flex items-center"
+            className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-100 flex items-center"
             onClick={() => setShowAdvanced(!showAdvanced)}
           >
             <span className="mr-2">{showAdvanced ? "▼" : "►"}</span>
@@ -512,7 +512,7 @@ export default function CrossChainTransfer() {
                         .getElementById("transfer-history-section")
                         ?.scrollIntoView({ behavior: "smooth" });
                     }}
-                    className="text-left flex items-center text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:text-blue-300"
+                    className="text-left flex items-center text-blue-600 hover:text-blue-800 dark:text-blue-300"
                   >
                     <ChevronRightIcon className="w-4 h-4 mr-1" />
                     View in transfer history

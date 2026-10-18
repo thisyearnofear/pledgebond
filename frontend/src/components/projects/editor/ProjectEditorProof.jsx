@@ -222,7 +222,7 @@ function TeamMembers({ teamMembers, totalShare, updateArrayItem, addArrayItem, r
                   type="button"
                   variant="ghost"
                   onClick={() => removeArrayItem("teamMembers", idx)}
-                  className="text-red-500 dark:text-red-400 hover:text-red-700 dark:text-red-300"
+                  className="text-red-500 hover:text-red-700 dark:text-red-300"
                 >
                   <TrashIcon className="w-5 h-5" />
                 </Button>

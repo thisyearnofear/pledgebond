@@ -452,24 +452,7 @@ pre code {
   }
 }
 
-/* Dark mode media query support */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --color-background: #111827;
-    --color-background-secondary: #1f2937;
-    --color-background-tertiary: #374151;
-    --color-surface: #1f2937;
-    --color-surface-secondary: #374151;
-    --color-surface-hover: #4b5563;
-    
-    --color-border: #374151;
-    --color-border-secondary: #4b5563;
-    --color-border-hover: #6b7280;
-    
-    --color-text: #f9fafb;
-    --color-text-secondary: #d1d5db;
-    --color-text-tertiary: #9ca3af;
-    --color-text-inverse: #111827;
-    --color-text-muted: #9ca3af;
-  }
-}
+/* Dark tokens come from [data-theme="dark"] in themes.css, which _document.js
+   always sets before first paint. No prefers-color-scheme override here — a second
+   source of truth would flip the CSS variables without activating Tailwind's dark:
+   variants, which renders light surfaces with dark-mode text. */

@@ -58,14 +58,24 @@ module.exports = {
         // Surface semantic tokens
         surface: {
           DEFAULT: 'var(--color-surface, #ffffff)',
+          primary: 'var(--color-surface, #ffffff)',
           secondary: 'var(--color-surface-secondary, #f9fafb)',
           hover: 'var(--color-surface-hover, #f3f4f6)',
           tertiary: 'var(--color-background-tertiary, #f3f4f6)',
         },
         border: {
           DEFAULT: 'var(--color-border, #e5e7eb)',
+          primary: 'var(--color-border, #e5e7eb)',
           secondary: 'var(--color-border-secondary, #d1d5db)',
           hover: 'var(--color-border-hover, #9ca3af)',
+        },
+        // Text hierarchy tokens. `bg-surface-primary` / `text-text-*` were referenced
+        // across ~128 call sites with no matching key, so they silently inherited.
+        text: {
+          primary: 'var(--color-text, #111827)',
+          secondary: 'var(--color-text-secondary, #4b5563)',
+          tertiary: 'var(--color-text-tertiary, #5f6b7d)',
+          muted: 'var(--color-text-muted, #4b5563)',
         },
         // Credit score colors
         credit: {

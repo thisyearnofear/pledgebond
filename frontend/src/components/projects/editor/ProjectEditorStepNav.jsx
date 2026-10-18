@@ -38,7 +38,7 @@ export default function ProjectEditorStepNav({ wizardStep, setWizardStep, showCo
               >
                 {isCompleted ? <CheckCircleIcon className="w-5 h-5" /> : stepNum}
               </div>
-              <span className={`text-sm font-medium hidden sm:inline ${isActive ? "text-gray-900 dark:text-gray-100" : "text-gray-500 dark:text-gray-400"}`}>
+              <span className={`text-sm font-medium hidden sm:inline ${isActive ? "text-gray-900 dark:text-gray-100" : "text-gray-500"}`}>
                 {stepName}
               </span>
             </button>

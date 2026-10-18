@@ -112,7 +112,7 @@ export default function CampaignDetailPage() {
         <div className="max-w-4xl mx-auto px-4">
           <Card className="p-8 text-center">
             <ExclamationTriangleIcon className="w-16 h-16 text-red-500 dark:text-red-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 dark:text-white mb-2">Campaign Not Found</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Campaign Not Found</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">This campaign could not be found or is no longer available.</p>
             <Button onClick={() => router.push('/campaigns')}>Back to Campaigns</Button>
           </Card>
@@ -140,7 +140,7 @@ export default function CampaignDetailPage() {
           {/* Back Button */}
           <button
             onClick={() => router.back()}
-            className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-300 mb-8"
+            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-300 mb-8"
           >
             <ArrowLeftIcon className="w-4 h-4" />
             Back to Campaigns
@@ -152,7 +152,7 @@ export default function CampaignDetailPage() {
               {/* Title and Status */}
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 dark:text-white">{campaign.title}</h1>
+                  <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{campaign.title}</h1>
                   {campaign.projectId && (
                     <p className="text-gray-600 dark:text-gray-400 mt-2">for project {campaign.projectId}</p>
                   )}
@@ -165,7 +165,7 @@ export default function CampaignDetailPage() {
                     </span>
                   )}
                   {!isOpen && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 dark:text-gray-300">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                       Closed
                     </span>
                   )}
@@ -178,7 +178,7 @@ export default function CampaignDetailPage() {
                   <CurrencyDollarIcon className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                   <div>
                     <p className="text-xs text-gray-600 dark:text-gray-400">Reward</p>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 dark:text-white">
+                    <p className="font-semibold text-gray-900 dark:text-white">
                       ${campaign.budget?.perSubmission || 0}
                     </p>
                   </div>
@@ -189,14 +189,14 @@ export default function CampaignDetailPage() {
                     <p className="text-xs text-gray-600 dark:text-gray-400">
                       {isOpen ? 'Time Left' : 'Ended'}
                     </p>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100 dark:text-white">
+                    <p className="font-semibold text-gray-900 dark:text-white">
                       {daysRemaining > 0 ? `${daysRemaining} days` : 'Closed'}
                     </p>
                   </div>
                 </div>
                 <div>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Submissions</p>
-                  <p className="font-semibold text-gray-900 dark:text-gray-100 dark:text-white">
+                  <p className="font-semibold text-gray-900 dark:text-white">
                     {campaign.stats?.totalSubmissions || 0} / {campaign.maxSubmissions}
                   </p>
                 </div>
@@ -206,23 +206,23 @@ export default function CampaignDetailPage() {
 
           {/* Description */}
           <Card className="p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 dark:text-white mb-3">About This Campaign</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">About This Campaign</h2>
             <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{campaign.description}</p>
           </Card>
 
           {/* Test Scenarios */}
           {campaign.testScenarios && campaign.testScenarios.length > 0 && (
             <Card className="p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 dark:text-white mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 What to Test ({campaign.testScenarios.length} scenarios)
               </h2>
               <div className="space-y-4">
                 {campaign.testScenarios.map((scenario, idx) => (
                   <div key={scenario.id} className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h3 className="font-semibold text-blue-900 dark:text-blue-200 dark:text-blue-300 mb-2">
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">
                       {idx + 1}. {scenario.title}
                     </h3>
-                    <ol className="space-y-1 mb-3 text-sm text-blue-800 dark:text-blue-300 dark:text-blue-200">
+                    <ol className="space-y-1 mb-3 text-sm text-blue-800 dark:text-blue-200">
                       {scenario.steps?.map((step, stepIdx) => (
                         <li key={stepIdx} className="ml-4">
                           {stepIdx + 1}. {step}
@@ -230,7 +230,7 @@ export default function CampaignDetailPage() {
                       ))}
                     </ol>
                     {scenario.expectedResult && (
-                      <p className="text-sm text-blue-800 dark:text-blue-300 dark:text-blue-200">
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
                         <span className="font-semibold">Expected:</span> {scenario.expectedResult}
                       </p>
                     )}
@@ -243,13 +243,13 @@ export default function CampaignDetailPage() {
           {/* Requirements */}
           {campaign.requirements && campaign.requirements.length > 0 && (
             <Card className="p-6 mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 dark:text-white mb-4">Requirements</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Requirements</h2>
               <ul className="space-y-2">
                 {campaign.requirements.map((req, idx) => (
                   <li key={idx} className="flex gap-3">
                     <span className="text-blue-600 dark:text-blue-400 font-bold flex-shrink-0">•</span>
                     <div>
-                      <p className="font-medium text-gray-900 dark:text-gray-100 dark:text-white">{req.title}</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{req.title}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">{req.description}</p>
                     </div>
                   </li>
@@ -263,21 +263,21 @@ export default function CampaignDetailPage() {
             <Card className="p-6 mb-6 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20">
               <div className="flex items-center gap-3 mb-3">
                 <CheckIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
-                <h3 className="font-semibold text-green-900 dark:text-green-200 dark:text-green-300">Your Submission</h3>
+                <h3 className="font-semibold text-green-900 dark:text-green-200">Your Submission</h3>
               </div>
-              <p className="text-sm text-green-800 dark:text-green-300 dark:text-green-200 mb-2">
+              <p className="text-sm text-green-800 dark:text-green-200 mb-2">
                 Status: <span className="font-medium capitalize">{userSubmission.status}</span>
               </p>
               {userSubmission.results?.overallRating > 0 && (
                 <div className="flex items-center gap-1">
-                  <span className="text-sm text-green-800 dark:text-green-300 dark:text-green-200">Rating:</span>
-                  <span className="font-semibold text-green-900 dark:text-green-200 dark:text-green-300">
+                  <span className="text-sm text-green-800 dark:text-green-200">Rating:</span>
+                  <span className="font-semibold text-green-900 dark:text-green-200">
                     {userSubmission.results.overallRating}/5 ⭐
                   </span>
                 </div>
               )}
               {userSubmission.approvalNotes && (
-                <p className="text-sm text-green-800 dark:text-green-300 dark:text-green-200 mt-2 p-2 bg-green-100 dark:bg-green-900/50 rounded">
+                <p className="text-sm text-green-800 dark:text-green-200 mt-2 p-2 bg-green-100 dark:bg-green-900/50 rounded">
                   {userSubmission.approvalNotes}
                 </p>
               )}
@@ -292,7 +292,7 @@ export default function CampaignDetailPage() {
                   <div className="flex items-start gap-4">
                     <SparklesIcon className="w-6 h-6 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-1" />
                     <div className="flex-1">
-                      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 dark:text-white mb-2">Ready to Test?</h2>
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Ready to Test?</h2>
                       <p className="text-gray-600 dark:text-gray-400 mb-4">
                         Complete the test scenarios above and submit your findings with proof.
                       </p>
@@ -330,14 +330,14 @@ export default function CampaignDetailPage() {
           {/* Submission Stats */}
           {submissions.length > 0 && (
             <Card className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 dark:text-white mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 <SparklesIcon className="inline w-5 h-5 mr-2" />
                 Submissions ({submissions.length})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
                   <p className="text-xs text-blue-600 dark:text-blue-400">Approved</p>
-                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-200 dark:text-blue-300">{campaign.stats?.approvedSubmissions || 0}</p>
+                  <p className="text-2xl font-bold text-blue-900 dark:text-blue-200">{campaign.stats?.approvedSubmissions || 0}</p>
                 </div>
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded">
                   <p className="text-xs text-yellow-600 dark:text-yellow-400">Pending Review</p>
@@ -347,7 +347,7 @@ export default function CampaignDetailPage() {
                 </div>
                 <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded">
                   <p className="text-xs text-purple-600 dark:text-purple-400">Avg Rating</p>
-                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-200 dark:text-purple-300">
+                  <p className="text-2xl font-bold text-purple-900 dark:text-purple-200">
                     {campaign.stats?.averageRating ? `${campaign.stats.averageRating}★` : '–'}
                   </p>
                 </div>
@@ -358,7 +358,7 @@ export default function CampaignDetailPage() {
                 {submissions.slice(0, 10).map((sub) => (
                   <div key={sub.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 dark:text-white">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {sub.results?.overallRating && `⭐${sub.results.overallRating}/5`}
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">

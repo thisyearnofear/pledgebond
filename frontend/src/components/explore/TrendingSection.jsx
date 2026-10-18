@@ -36,7 +36,7 @@ export default function TrendingSection({ projects, onDismiss, onProjectClick, i
             </div>
             <button
               onClick={onDismiss}
-              className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 dark:text-gray-500 transition-colors"
+              className="text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
               title="Dismiss"
             >
               <XMarkIcon className="w-5 h-5" />

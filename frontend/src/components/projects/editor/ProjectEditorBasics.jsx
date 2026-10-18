@@ -102,11 +102,11 @@ export default function ProjectEditorBasics({
             <button
               type="button"
               onClick={onAddVideoUrl}
-              className="text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+              className="text-xs font-medium text-gray-600 hover:text-gray-900 dark:text-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
             >
               + Add video URL
             </button>
-            <label className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-lg border border-blue-200 hover:border-blue-300 cursor-pointer transition-colors">
+            <label className="text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-300 px-3 py-1.5 rounded-lg border border-blue-200 hover:border-blue-300 cursor-pointer transition-colors">
               + Add images
               <input type="file" accept="image/*" multiple onChange={onGalleryUpload} className="hidden" />
             </label>

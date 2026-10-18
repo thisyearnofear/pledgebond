@@ -349,7 +349,7 @@ export default function LoginPage() {
               </div>
 
               <div className="flex items-center justify-between">
-                <button onClick={() => setRole(null)} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300">{'←'} Back</button>
+                <button onClick={() => setRole(null)} className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-300">{'←'} Back</button>
                 <button onClick={handleStartOver} className="text-sm text-red-400 hover:text-red-600 dark:text-red-400">Start over</button>
               </div>
             </div>
@@ -446,7 +446,7 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <button onClick={() => setRole(null)} className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-300">{'←'} Back</button>
+              <button onClick={() => setRole(null)} className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-300">{'←'} Back</button>
               <button onClick={handleStartOver} className="text-sm text-red-400 hover:text-red-600 dark:text-red-400">Start over</button>
             </div>
           </div>

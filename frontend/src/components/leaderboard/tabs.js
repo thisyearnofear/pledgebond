@@ -20,7 +20,7 @@ export const TABS = [
 ];
 
 export const TAB_EXPLAINERS = {
-  hackathons: "Real payout speeds from real hackathons. How fast do winners actually get paid? See the data and stop waiting.",
+  hackathons: "How fast do winners actually get paid? See the data and stop waiting.",
   "proof-builders": "Builders ranked by verified wins, evidence coverage, and proof-backed project claims — the most credible in the ecosystem.",
   projects: "Projects ranked by onchain evidence, verified hackathon claims, and overall credibility score.",
   builders: "Top builders by shipping velocity, project submissions, and milestone completions.",

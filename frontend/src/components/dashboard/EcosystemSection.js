@@ -148,7 +148,7 @@ export default function EcosystemSection({
                     className={`p-2 rounded-md transition-colors ${
                       localViewMode === mode
                         ? 'bg-blue-100 text-blue-600 dark:text-blue-400'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:text-gray-100'
+                        : 'text-gray-600 hover:text-gray-900 dark:text-gray-100'
                     }`}
                     title={`${mode} view`}
                   >

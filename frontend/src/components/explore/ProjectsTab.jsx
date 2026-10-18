@@ -202,7 +202,7 @@ export default function ProjectsTab({ selectedEcosystems = [], onEcosystemsChang
             className="w-full pl-10 pr-10 py-3 rounded-xl border border-secondary bg-surface text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-gray-100"
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:text-gray-400">
+            <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400">
               <XMarkIcon className="w-5 h-5" />
             </button>
           )}
@@ -222,7 +222,7 @@ export default function ProjectsTab({ selectedEcosystems = [], onEcosystemsChang
           <div className="flex rounded-xl border border-secondary overflow-hidden">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-2.5 ${viewMode === "grid" ? "bg-blue-600 text-white" : "bg-surface text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:text-gray-400"}`}
+              className={`p-2.5 ${viewMode === "grid" ? "bg-blue-600 text-white" : "bg-surface text-gray-500 hover:text-gray-700 dark:text-gray-300"}`}
               title="Grid view"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -231,7 +231,7 @@ export default function ProjectsTab({ selectedEcosystems = [], onEcosystemsChang
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-2.5 ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-surface text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:text-gray-400"}`}
+              className={`p-2.5 ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-surface text-gray-500 hover:text-gray-700 dark:text-gray-300"}`}
               title="List view"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -245,7 +245,7 @@ export default function ProjectsTab({ selectedEcosystems = [], onEcosystemsChang
             className={`p-2.5 rounded-xl border transition-colors ${
               showFilters || hasActiveFilters
                 ? "bg-blue-50 border-blue-300 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300"
-                : "border-secondary text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800"
+                : "border-secondary text-gray-500 hover:text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
             title="Filters"
           >
@@ -285,7 +285,7 @@ export default function ProjectsTab({ selectedEcosystems = [], onEcosystemsChang
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                       selectedEcosystems.includes(eco.id)
                         ? "bg-blue-600 text-white shadow-sm"
-                        : "bg-surface text-gray-600 dark:text-gray-400 dark:text-gray-300 border border-default hover:border-blue-300"
+                        : "bg-surface text-gray-600 dark:text-gray-300 border border-default hover:border-blue-300"
                     }`}
                   >
                     {eco.label}
@@ -304,7 +304,7 @@ export default function ProjectsTab({ selectedEcosystems = [], onEcosystemsChang
                     className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                       selectedCategories.includes(cat.id)
                         ? "bg-purple-600 text-white shadow-sm"
-                        : "bg-surface text-gray-600 dark:text-gray-400 dark:text-gray-300 border border-default hover:border-purple-300"
+                        : "bg-surface text-gray-600 dark:text-gray-300 border border-default hover:border-purple-300"
                     }`}
                   >
                     {cat.label}

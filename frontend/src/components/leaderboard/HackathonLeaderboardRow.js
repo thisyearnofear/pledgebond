@@ -20,10 +20,10 @@ const RANK_STYLES = {
 
 function payoutSpeedColor(days) {
   if (days === null || days === undefined) return "text-text-tertiary";
-  if (days <= 7) return "text-emerald-600 dark:text-emerald-400";
-  if (days <= 30) return "text-green-600 dark:text-green-400";
-  if (days <= 90) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
+  if (days <= 7) return "text-emerald-700 dark:text-emerald-400";
+  if (days <= 30) return "text-green-700 dark:text-green-400";
+  if (days <= 90) return "text-amber-700 dark:text-amber-400";
+  return "text-red-600 dark:text-red-300";
 }
 
 function payoutSpeedLabel(days) {
@@ -55,7 +55,7 @@ export default function HackathonLeaderboardRow({ entry, rank }) {
         <div className="flex items-center gap-2">
           <span className="font-semibold text-text-primary truncate">{entry.name}</span>
           {entry.ecosystem && (
-            <span className="text-xs px-2 py-0.5 rounded-full bg-surface-hover text-gray-600 dark:text-gray-400 uppercase">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-surface-hover text-gray-700 dark:text-gray-200 uppercase">
               {entry.ecosystem}
             </span>
           )}
@@ -86,7 +86,7 @@ export default function HackathonLeaderboardRow({ entry, rank }) {
         )}
 
         <div className="text-right">
-          <div className={`text-lg font-bold ${entry.payoutCompletionRate >= 80 ? "text-green-600 dark:text-green-400" : entry.payoutCompletionRate >= 50 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400"}`}>
+          <div className={`text-lg font-bold ${entry.payoutCompletionRate >= 80 ? "text-green-700 dark:text-green-400" : entry.payoutCompletionRate >= 50 ? "text-amber-700 dark:text-amber-400" : "text-red-600 dark:text-red-300"}`}>
             {entry.payoutCompletionRate}%
           </div>
           <p className="text-xs text-text-tertiary">paid</p>
