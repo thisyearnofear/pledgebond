@@ -10,6 +10,7 @@ import { LoadingSpinner } from '@/components/common/LoadingStates';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import PayoutTimeline from '@/components/hackathons/PayoutTimeline';
 import { trackEvent } from '@/lib/analytics';
+import { ECOSYSTEM_CONFIGS } from '@/config/ecosystems';
 
 import {
   CalendarIcon,
@@ -20,6 +21,13 @@ import {
   PlusIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
+
+function formatDaysAgo(iso) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  return `${days}d ago`;
+}
 
 /**
  * Individual Hackathon Page
@@ -189,10 +197,18 @@ export default function HackathonDetailPage() {
                     </span>
                   )}
                 </h1>
-                <div className="flex items-center gap-4 mt-2">
+                <div className="flex items-center gap-4 mt-2 flex-wrap">
                   <span className="px-2 py-1 bg-gray-100 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-full">
-                    {hackathon.ecosystem.toUpperCase()}
+                    {(ECOSYSTEM_CONFIGS[hackathon.ecosystem]?.shortName || hackathon.ecosystem).toUpperCase()}
                   </span>
+                  {hackathon.source === 'devpost' && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      via Devpost{hackathon.updatedAt ? ` · checked ${formatDaysAgo(hackathon.updatedAt)}` : ''}
+                      {hackathon.sourceUrl && (
+                        <> · <a href={hackathon.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">event page</a></>
+                      )}
+                    </span>
+                  )}
                   {hackathon.sponsors && hackathon.sponsors.length > 0 && (
                     <div className="flex items-center gap-2">
                       <span className="text-gray-600 dark:text-gray-400 text-sm">Sponsored by:</span>

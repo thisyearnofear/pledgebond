@@ -264,6 +264,34 @@ export const ECOSYSTEM_CONFIGS = {
     showHealthScore: true,
     showActivity: true,
     previewLimit: 4
+  },
+
+  general: {
+    id: 'general',
+    name: 'General',
+    shortName: 'General',
+    description: 'Cross-ecosystem hackathons ingested from public indexes like Devpost',
+    longDescription: 'Hackathons without a single chain sponsor — ingested from public indexes and verified as payout data accumulates.',
+    chainFamily: 'multi',
+    icon: '🏆',
+    color: '#6B7280',
+    bgGradient: 'from-gray-50 to-slate-50',
+    borderColor: 'border-gray-200',
+    textColor: 'text-gray-800',
+    bgColor: 'bg-gray-50',
+    route: '/hackathons',
+    apiEndpoint: '/api/hackathons',
+    features: ['Public index ingest', 'Payout truth tracking'],
+    submissionRequirements: [],
+    category: 'Cross-ecosystem',
+    dataSource: 'dynamic',
+    hasSeasons: false,
+    hasCategories: false,
+    categories: ['other'],
+    defaultSort: 'recent',
+    showHealthScore: false,
+    showActivity: false,
+    previewLimit: 4
   }
 };
 

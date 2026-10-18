@@ -33,15 +33,21 @@ const STRUCTURES = [
     label: "Tranche-backed",
     description:
       "A first-loss provider absorbs the loss before you do. Higher fee, lower risk. You are repaid from the prize.",
-    badge: "Protected",
+    badge: "Soon",
     tone: "blue",
+    unavailable: true,
+    note: "Tranche-backed funding needs the first-loss provider to approve from their own wallet — not live yet.",
   },
 ];
 
 export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess }) {
   const [structure, setStructure] = useState("overcollateralized");
-  const [amount, setAmount] = useState("1000");
-  const [collateral, setCollateral] = useState("1100");
+  const defaultAmount = (() => {
+    const p = Number(opportunity?.prizeAmount) || 0;
+    return p > 0 ? String(Math.min(1000, Math.floor(p))) : "1000";
+  })();
+  const [amount, setAmount] = useState(defaultAmount);
+  const [collateral, setCollateral] = useState(String(Math.ceil(Number(defaultAmount) * 1.1)));
   const [submitting, setSubmitting] = useState(false);
   const toast = useToastActions();
 
@@ -152,9 +158,12 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
                 <button
                   key={opt.id}
                   type="button"
-                  onClick={() => setStructure(opt.id)}
+                  onClick={() => !opt.unavailable && setStructure(opt.id)}
                   aria-pressed={selected}
+                  disabled={opt.unavailable}
                   className={`text-left p-4 rounded-lg border transition ${
+                    opt.unavailable ? "opacity-60 cursor-not-allowed" : ""
+                  } ${
                     selected
                       ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600 dark:bg-indigo-950/40"
                       : "border-default hover:border-gray-400"
@@ -169,6 +178,9 @@ export default function LoanTermsModal({ opportunity, wallet, onClose, onSuccess
                   <p className="text-xs text-secondary leading-relaxed">
                     {opt.description}
                   </p>
+                  {opt.unavailable && opt.note && (
+                    <p className="text-[11px] text-tertiary mt-2">{opt.note}</p>
+                  )}
                 </button>
               );
             })}
