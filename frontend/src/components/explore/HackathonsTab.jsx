@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Card } from "@/components/common/Card";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
 import { CalendarIcon, TrophyIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { ECOSYSTEM_CONFIGS } from "@/config/ecosystems";
 
 const STATUS_GROUPS = [
   { key: "active", title: "Active", icon: <UsersIcon className="h-5 w-5 text-green-600 dark:text-green-400" />, bg: "bg-green-50" },
@@ -78,12 +79,8 @@ export default function HackathonsTab({ selectedEcosystems = [] }) {
           <TrophyIcon className="w-12 h-12 text-gray-300 dark:text-gray-500 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-primary mb-2">No hackathons found</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 max-w-md mx-auto">
-            Hackathon data is loaded from the platform database. Check back soon or submit your hackathon project!
+            The catalog refreshes daily from public indexes. Check back soon, or claim a win to add your hackathon to the payout ledger.
           </p>
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 border border-teal-200 rounded-lg text-sm">
-            <span>🏆</span>
-            <span className="text-teal-700 font-medium">Currently building for: Arc Nano Payments Hackathon</span>
-          </div>
         </div>
       ) : (
         <div className="space-y-8">
@@ -99,8 +96,11 @@ export default function HackathonsTab({ selectedEcosystems = [] }) {
                   <Card key={h.id} className="hover:shadow-md transition-shadow">
                     <Link href={`/hackathons/${h.id}`} className="block p-5">
                       <span className="px-2 py-0.5 bg-gray-100 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-full">
-                        {h.ecosystem?.toUpperCase()}
+                        {(ECOSYSTEM_CONFIGS[h.ecosystem]?.shortName || h.ecosystem || '').toUpperCase()}
                       </span>
+                      {h.source === 'devpost' && (
+                        <span className="ml-2 text-[10px] text-gray-400 dark:text-gray-500">via Devpost</span>
+                      )}
                       <h3 className="text-lg font-semibold text-primary mt-2">{h.name}</h3>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         {new Date(h.startDate).toLocaleDateString()} – {new Date(h.endDate).toLocaleDateString()}

@@ -279,7 +279,7 @@ export const ECOSYSTEM_CONFIGS = {
     borderColor: 'border-gray-200',
     textColor: 'text-gray-800',
     bgColor: 'bg-gray-50',
-    route: '/hackathons',
+    route: '/explore?tab=hackathons',
     apiEndpoint: '/api/hackathons',
     features: ['Public index ingest', 'Payout truth tracking'],
     submissionRequirements: [],
