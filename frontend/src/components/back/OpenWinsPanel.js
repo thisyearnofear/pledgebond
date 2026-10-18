@@ -59,6 +59,11 @@ export default function OpenWinsPanel() {
           </h3>
           <p className="text-sm text-secondary">
             Wins declared on the rail that no lender has funded yet.
+            {!wallet.connected && (
+              <span className="block text-xs text-tertiary mt-0.5">
+                Connect a wallet to fund or bet on one.
+              </span>
+            )}
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
@@ -100,8 +105,6 @@ export default function OpenWinsPanel() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={!wallet.connected}
-                  title={wallet.connected ? undefined : "Connect a wallet to bet"}
                   onClick={() => setBetting(win)}
                 >
                   Bet
@@ -109,8 +112,6 @@ export default function OpenWinsPanel() {
                 <Button
                   variant="primary"
                   size="sm"
-                  disabled={!wallet.connected}
-                  title={wallet.connected ? undefined : "Connect a wallet to fund"}
                   onClick={() => setFunding(win)}
                 >
                   Fund

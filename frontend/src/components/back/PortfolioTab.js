@@ -6,6 +6,8 @@ import Button from "@/components/common/Button";
 import SnsIdentityBadge from "@/components/common/SnsIdentityBadge";
 import { isValidSolanaAddress } from "@/utils/common";
 import { LoadingSpinner } from "@/components/common/LoadingStates";
+const RAIL_CHAIN_ID = Number(process.env.NEXT_PUBLIC_RAIL_CHAIN_ID || 5042002);
+
 import {
   BanknotesIcon,
   RocketLaunchIcon,
@@ -50,11 +52,33 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
       }
       try {
         if (!cancelled) setLoading(true);
-        // Loan positions come from LiquidityRail (WS2 wires the service).
-        // Until the rail is deployed on this network there are no positions to
-        // show, so return empty rather than reading a contract that is being
-        // retired.
-        const details = [];
+        // Positions come from the rail's win history, filtered to wins where
+        // this wallet is the recorded lender. Server-cached endpoint.
+        let details = [];
+        try {
+          const res = await fetch(`/api/rail/history?chainId=${RAIL_CHAIN_ID}`);
+          const data = await res.json();
+          const mine = (data.wins || []).filter(
+            (w) => w.lender && w.lender.toLowerCase() === wallet.account.toLowerCase()
+          );
+          details = mine.map((w) => ({
+            id: `win-${w.winId}`,
+            name: w.projectName || `Win #${w.winId}`,
+            developer: w.builder,
+            myStake: w.principal ?? "0",
+            isActive: w.loanStatus === 1,
+            status: w.loanStatus === 2 ? "repaid" : w.loanStatus === 3 ? "defaulted" : "open",
+            daysToRepay: null,
+            milestonesCount: 0,
+            milestonesCompleted: 0,
+            claimed: true,
+            dueAt: w.dueAt ?? null,
+            prizeAmount: w.prizeAmount,
+            winId: w.winId,
+          }));
+        } catch {
+          details = [];
+        }
         if (!cancelled) {
           setBackedDetails(details);
           setRepaymentRate(computeRepaymentRate(details));
@@ -204,15 +228,24 @@ export default function PortfolioTab({ setTab, onPositions, compact = false }) {
                     <p className="text-lg font-bold text-indigo-900">Prize payout</p>
                   </div>
                 </div>
-                <div className="mb-3">
-                  <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    <span>Progress</span>
-                    <span>{project.milestonesCompleted}/{project.milestonesCount}</span>
+                {project.milestonesCount > 0 ? (
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      <span>Progress</span>
+                      <span>{project.milestonesCompleted}/{project.milestonesCount}</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
+                      <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: `${progress}%` }} />
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                    <div className="bg-indigo-600 h-1.5 rounded-full" style={{ width: `${progress}%` }} />
+                ) : (
+                  <div className="mb-3">
+                    <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      <span>Status</span>
+                      <span className="font-medium">{project.isActive ? "open — repaid from the prize" : project.status}</span>
+                    </div>
                   </div>
-                </div>
+                )}
                 <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                   <span className={`font-medium ${project.claimed ? "text-green-600 dark:text-green-400" : needsClaim ? "text-amber-600 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"}`}>
                     {project.claimed ? "✓ Repaid" : needsClaim ? "★ Payout recorded — settle" : "Pending payout"}
