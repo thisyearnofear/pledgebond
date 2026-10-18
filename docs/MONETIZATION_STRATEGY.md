@@ -14,11 +14,10 @@ That rule is not aspirational — it is enforced in code. Every loan is either o
 
 | Fee | Charged on | When |
 |---|---|---|
-| **Origination fee** | Loan principal | Atomically in `openLoan` — deducted from the amount the builder receives |
-| **Settlement fee** | Repaid amount | Atomically in `settleLoan` |
-| **Market fee** | Bet stake | On bet placement and/or resolution |
+| **Origination fee** | Loan principal | Atomically in `acceptLoan` — pulled into the contract when the builder draws |
+| **Market fee** | Bet stake | Not yet implemented — markets currently settle zero-house |
 
-All are basis points of notional. Both sides pay, because the platform is making a market between them — not brokering one side's behalf.
+Basis points of notional. The contract implements origination only: `repayLoan` is at par and `claimWinnings` pays the full pool, so `accruedFees` is exactly origination fees — physically transferred in at accept time, never accounting-only. A settlement or market fee is a governance decision to add in a future version, not a claim the current code makes.
 
 **Why not fee-on-winnings:** a charge proportional to the outcome is a claim on the result, which is a much harder thing to characterize. Fee-on-notional is a service charge on a transaction. Given this is a lending business and an event-derivatives market, that distinction is doing real work.
 

@@ -79,11 +79,13 @@ The liquidity rail lives on **Arc Testnet** (chain `5042002`, USDC-native gas):
 
 | Contract | Address |
 |----------|---------|
-| LiquidityRail (UUPS proxy) | `0xa8CB00A09092203Dd3274EBc065845fe034a0d38` |
-| HackathonRegistry | `0x6C523bf8639515FaCCf6F9A577758C5C415DB89b` |
+| LiquidityRail v4 (UUPS proxy) | `0x3e4290190E6Ae25E0c00f38424B6d23d35F4DDF6` |
+| HackathonRegistry | `0xa0b15807B30Dd84CcE9334e10c491436b73f9AAc` |
 
-Declarations, loan opens, and settlements from the demo loop are on-chain and
-verifiable on the [Arc explorer](https://testnet.arcscope.net). Deploy with
+Win anchoring, loan accepts, and market resolutions from the demo loop are
+on-chain and verifiable on the [Arc explorer](https://explorer.testnet.arc.io).
+The v3 proxy at `0xa8CB00A09092203Dd3274EBc065845fe034a0d38` is legacy state —
+v4 is a fresh deployment with the builder-consent lifecycle. Deploy with
 `pnpm --filter ./blockchain deploy:arctestnet` (see [`docs/README.md`](docs/README.md)).
 
 > The legacy Solana credit-line program (`blockchain-solana/`, Anchor) was

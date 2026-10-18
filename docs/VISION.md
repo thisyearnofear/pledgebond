@@ -52,13 +52,16 @@ A builder wins. We anchor the win. They draw against it.
 
 ```
 Builder wins hackathon
-  └─ declareWin(hackathonId, prizeAmount)     → dated, public, verifiable
-       └─ openLoan(...)                       → USDC to builder, atomically
-            ├─ collateral locked (overcollateralized), or
-            └─ first-loss tranche allocated
-       └─ organizer pays out
-            └─ settleLoan(...)                → lender repaid, collateral released
-       └─ reputation updates automatically    → paid in full? how fast?
+  └─ registry.declareWinner(...)              → host-attested, dated, public
+       └─ anchorWin(hackathonId, declIndex)   → the prize becomes a rail asset
+            └─ proposeLoan(...)              → a lender offers funded terms
+                 ├─ commitTranche(...)       → named first-loss provider escrows
+                 └─ acceptLoan(...)          → builder consents: posts collateral,
+                                              draws principal net of fee, atomically
+       └─ organizer pays out → verifiers attest → recordPayout sets paidAt
+            ├─ repayLoan(...)                → lender repaid, collateral released
+            └─ resolveMarket(...)            → the market prices whether they paid
+       └─ reputation updates automatically    → paid? how fast? repaid? defaulted?
 ```
 
 **Every loan is either overcollateralized or backed by a designated first-loss tranche.** This is not a policy preference — it is what makes "the platform never takes risk" true rather than aspirational. Overcollateralization is the cleanest form: default triggers liquidation, not a loss someone has to absorb. A builder chooses at origination.

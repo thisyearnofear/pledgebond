@@ -36,7 +36,7 @@ The value is the reasoning trace, not just the trade.
 
 ### 4. Executor Agent — **removed**
 - The Executor staked platform capital on chain at leverage multipliers. That made the platform an underwriter, which the product rule forbids, and a single 0.01 USDC toll could authorize thousands of dollars of platform exposure.
-- `/api/agent/execute` now returns **410 Gone**. A lender staking their own capital is done client-side via `LiquidityRail.openLoan`.
+- `/api/agent/execute` now returns **410 Gone**. A lender staking their own capital is done client-side via `LiquidityRail.proposeLoan`.
 
 
 ---

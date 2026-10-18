@@ -1,5 +1,76 @@
 # Changelog
 
+## 2026-10-07 — Contract v4: builder-consent loan lifecycle + M-of-N payout attestation
+
+A full redesign of the rail's loan lifecycle and the registry's payout
+attestation, fixing every flaw found in the pre-mainnet review. Deployed to
+Arc Testnet as a **fresh proxy** (`0x3e4290190E6Ae25E0c00f38424B6d23d35F4DDF6`);
+wins 1–9 on the v3 proxy are legacy state. 70 contract tests + 538 frontend
+tests pass; `demo-loan.js` runs the whole lifecycle green on live testnet.
+
+### The lifecycle is now consent-first
+
+`anchorWin → proposeLoan → commitTranche? → acceptLoan → repayLoan | defaultLoan`.
+The lender offers funded terms; **the builder accepts and posts their own
+collateral in the same transaction** that draws principal net of fee.
+
+- **Collateral direction fixed.** The v3 contract escrowed collateral *from the
+  lender* and returned it *to the builder* — a lender would lose principal and
+  collateral in every outcome. Collateral now comes from the builder at accept
+  and liquidates to the lender on default.
+- **Credibility is no longer attackable.** `declareWin` was permissionless and
+  `openLoan` needed no builder consent, so anyone could force a loan on a
+  victim and grief `winsDefaulted` into their public history. Anchoring binds a
+  specific registry declaration and acceptance requires the builder's signature.
+- **One loan per win, one win per declaration.** `declarationWin` prevents the
+  same prize being borrowed against twice.
+- **Self-dealing closed.** Builder can't be the lender, the tranche provider,
+  or a bettor on their own win; lender can't name themselves tranche provider.
+
+### The market resolves the question it asks
+
+- `settleBet` resolved on loan status — a paid win whose builder defaulted
+  resolved UNPAID, and a win with bets but no loan could never resolve at all.
+  `resolveMarket` now resolves PAID on the bound declaration's `paidAt`, or
+  UNPAID after a per-win `resolutionDeadline` **frozen at anchor** so
+  `setResolutionWindow` can't rewrite live markets.
+- Settlement is O(1) parimutuel with pro-rata `claimWinnings` — the old
+  claim path re-scanned the full bet array per claim (O(n²)) and `totalBetOwed`
+  never reached zero because it decremented by stake, not payout.
+
+### Payout truth requires a quorum
+
+- `recordPayout(hackathonId, declarationIndex, txHash)` is index-exact — a
+  builder with two wins at one hackathon can no longer have the wrong
+  declaration marked paid.
+- `requiredSignatures` was decorative: any single verifier could record a
+  payout. `paidAt` now sets only when M-of-N distinct verifiers attest —
+  one compromised key can't forge the record markets settle on.
+
+### Admin surface hardened
+
+- Pause blocks new risk only (`anchorWin`, `proposeLoan`, `commitTranche`,
+  `placeBet`) — exits, repayments, and claims stay callable in an emergency.
+- `updateRegistry` is blocked while unresolved market stakes exist;
+  `updateUsdcToken` is blocked while any principal, collateral, tranche, bet,
+  owed payout, or accrued fee is live.
+- `accruedFees` is funded, not accounting-only: the fee is physically pulled
+  into the contract at accept.
+- Dead `HACKATHON_HOST_ROLE` removed — host authority is per-hackathon.
+
+### Frontend + tooling
+
+- `abis.js` rewritten to the new surface; `liquidityRailService` reads via
+  `winCount`/`proposalCount` and struct views instead of capped log scans.
+- `walletStore` exposes `anchorWin`/`proposeLoan`/`commitTranche`/`acceptLoan`/
+  `repayLoan`/`defaultLoan`/`resolveMarket`/`claimWinnings`.
+- `BridgeLoanCard` is now a builder accept-offers flow; `LoanTermsModal` is a
+  lender propose-terms flow reading `maxFeeBps` from chain.
+- `tokens.js` gains `NEXT_PUBLIC_LIQUIDITY_RAIL_START_BLOCK` for mainnet and
+  updated v4 testnet fallbacks (deploy block 67010632).
+- `demo-loan.js`, `demo-default.js`, and `smoke.js` rewritten for the new
+  lifecycle; smoke's `withdrawFees` check now uses a random stranger wallet.
+
 ## 2026-10-05 — Retired the legacy Solana credit-line program
 
 The Anchor program (`blockchain-solana/`), its IDL, and every frontend binding

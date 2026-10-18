@@ -10,17 +10,17 @@ Defines every domain-specific term used across the codebase and docs.
 | **Bridge Loan** | Product | USDC advanced to a builder against a confirmed, declared win. Repaid when the organizer disburses the prize. The core instrument. |
 | **Bridge Lender** | Role | Capital provider who funds bridge loans. Bears credit risk: loses money when a builder defaults. |
 | **Collateral** | Concept | Assets a builder locks to secure a bridge loan. Released on repayment, liquidated on default. |
-| **Confirmed Win** | Concept | A hackathon win anchored on-chain via `declareWin`, producing a dated public record that makes the unpaid prize legible. The precondition for any loan. |
-| **Coverage Rate** | Metric | Share of a builder's declared wins that were settled in full. Derived, never assigned. |
+| **Confirmed Win** | Concept | A hackathon win declared by the host in `HackathonRegistry.declareWinner` and bound to the rail via `anchorWin`, producing a dated public record that makes the unpaid prize legible. The precondition for any loan. |
+| **Coverage Rate** | Metric | Share of a builder's resolved wins the organizer actually paid — on-chain this is `payoutRateBps`. The lending analogue is `repaymentRateBps` (loans repaid over loans resolved). Both derived, never assigned. |
 | **Credibility** | Metric | Public payment record: coverage, speed, and defaults. Derived from settled outcomes by the contract. There is no admin who sets it. |
 | **Declared Win** | Concept | An on-chain assertion that a builder won a given hackathon and is owed a given prize. The claim that a bridge loan is written against. |
 | **Default** | Concept | A bridge loan not repaid by its due date. Resolves by collateral liquidation or first-loss absorption. |
 | **First-Loss Tranche** | Product | A designated capital slice that absorbs loan defaults up to its size, protecting lenders above it. The mechanism that lets the platform itself never absorb a loss. |
-| **Notional Fee** | Concept | A fee charged in basis points of transaction value — loan origination and settlement. The platform's only revenue. Deliberately not a share of winnings. |
+| **Notional Fee** | Concept | A fee charged in basis points of transaction value — loan origination only in the current contract. The platform's only revenue. Deliberately not a share of winnings. |
 | **Overcollateralization** | Concept | Securing a loan with collateral worth more than the principal. The cleanest form of zero platform risk: default means liquidation, not a loss. |
 | **Payout Verification** | Concept | Confirming an organizer's prize payment actually settled, via on-chain receipt or Circle transfer id. Feeds coverage and speed. |
 | **Prize Routing** | *(deprecated)* | Old name for settling a bridge loan from a prize disbursement. Retained as the settlement step, but no longer involves platform escrow or multiplier-backed backers. |
-| **Repayment** | Concept | The builder returning bridge loan principal plus the settlement fee, typically when the organizer pays the prize. |
+| **Repayment** | Concept | The builder returning bridge loan principal at par, typically when the organizer pays the prize. |
 | **Settlement** | Concept | Closing a bridge loan: repaying the lender, releasing collateral, updating the builder's credibility record. |
 | **Time-to-Pay** | Metric | Days between a declared win and the prize actually landing. The North Star. |
 

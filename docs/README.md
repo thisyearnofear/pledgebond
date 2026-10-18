@@ -6,10 +6,10 @@ A liquidity rail for hackathon winners — paid in hours, not 90 days.
 
 ## How it works
 
-1. A builder wins a hackathon and the win is anchored on-chain via `declareWinner` — a dated, public claim on money that hasn't moved yet.
-2. They **draw a bridge loan** against that claim, choosing their own rate and duration within bounds. Overcollateralized or backed by a first-loss tranche — the platform never carries the loss.
-3. When the organizer pays out, `recordPayout` closes the loop: the loan is repaid, collateral released, and the builder's public payment history updated.
-4. Alongside the loan, a **market** on whether each declared win will actually be settled. Bettors are held in a pool structurally separate from lending capital — they never fund a loan or absorb an organizer's default.
+1. A builder wins a hackathon and the host anchors it on-chain via `declareWinner`; the builder binds it to the rail with `anchorWin` — a dated, public claim on money that hasn't moved yet.
+2. A lender **proposes a bridge loan** against that claim — principal, required collateral, optional first-loss tranche, fee, duration. The builder reviews offers and **accepts** the one they want, posting their own collateral and drawing principal net of the origination fee in one transaction. The platform never carries the loss.
+3. When the organizer pays out, verifiers attest and `recordPayout` closes the loop: the loan is repaid, collateral released, and the builder's public payment history updated.
+4. Alongside the loan, a **market** on whether each declared win will actually be settled — resolving on the registry's `paidAt` or the win's frozen deadline. Bettors are held in a pool structurally separate from lending capital — they never fund a loan or absorb an organizer's default.
 
 Credibility is **derived** from that payment history — coverage, speed, defaults. No admin assigns it. No credit scores, no multipliers.
 
@@ -143,7 +143,6 @@ Activities written to the `activities` collection are polled by `useNotification
 | Activity type | Notification | Recipient | Trigger |
 |---|---|---|---|
 | `winner_verified` | 🏆 You're a Verified Winner! | Builder | Admin approves claim |
-| `loan_opened` | 💰 Loan opened | Builder | Bridge loan drawn against a declared win |
 | `payout_verified` | 🎉 Payout verified! | Builder | Cron confirms payout on-chain |
 | `project_submitted` | 🚢 Project shipped! | Builder | Project submission |
 | `payout_processed` | 💰 Payout secured! | Builder/Lender | Prize recorded as paid |
@@ -227,8 +226,10 @@ When upgrading, new implementations must preserve the existing storage layout �
 
 | Contract | Network | Address |
 |----------|---------|---------|
-| LiquidityRail (UUPS proxy) | Arc Testnet | `0xa8CB00A09092203Dd3274EBc065845fe034a0d38` |
-| HackathonRegistry | Arc Testnet | `0x6C523bf8639515FaCCf6F9A577758C5C415DB89b` |
+| LiquidityRail v4 (UUPS proxy) | Arc Testnet | `0x3e4290190E6Ae25E0c00f38424B6d23d35F4DDF6` |
+| LiquidityRail v4 (impl) | Arc Testnet | `0x4BE0227496deA3ED5ed1f64AeeA0f990287b9731` |
+| HackathonRegistry | Arc Testnet | `0xa0b15807B30Dd84CcE9334e10c491436b73f9AAc` |
+| LiquidityRail v3 (legacy, superseded) | Arc Testnet | `0xa8CB00A09092203Dd3274EBc065845fe034a0d38` |
 
 Addresses per network are written to `blockchain/deployments/<network>_deployment.json` by the deploy script.
 
