@@ -5,7 +5,7 @@
 Two contracts:
 
 - **`HackathonRegistry.sol`** — hackathons, verifiers, and the **credibility anchor**. `declareWinner` anchors `declaredAt`; `recordPayout` is index-exact and **M-of-N**: `paidAt` is set only once `requiredSignatures` distinct verifiers attest a specific declaration — one compromised key cannot forge the payout record markets settle on. That pair is what makes an unpaid prize legible as an asset. `getPayoutStats` returns the latency distribution the leaderboard markets.
-- **`LiquidityRail.sol`** — the core rail. Lifecycle: `anchorWin` binds a specific registry declaration → `proposeLoan` (lender offers terms) → `commitTranche` (named first-loss provider escrows) → `acceptLoan` (**the builder consents**: posts collateral, draws principal net of fee) → `repayLoan` / `defaultLoan`. The payout market is parimutuel and resolves on the registry's `paidAt` or the per-win `resolutionDeadline` — never on the loan's fate. Holds collateral, tranche capacity, bet stakes, and accrued fees as **separately accounted reserves**.
+- **`LiquidityRail.sol`** — the core rail. Lifecycle: `anchorWin` binds a specific registry declaration → `proposeLoan` (lender offers terms) → `commitTranche` (named first-loss provider escrows) → `acceptLoan` (**the builder consents**: posts collateral, draws principal net of fee) → `repayLoan` / `defaultLoan`. `defaultLoan` fails closed once the registry records a payout: `dueAt` alone says nothing about whether the prize landed, so a recorded `paidAt` blocks liquidation of the builder's collateral. The payout market is parimutuel and resolves on the registry's `paidAt` or the per-win `resolutionDeadline` — never on the loan's fate. Holds collateral, tranche capacity, bet stakes, and accrued fees as **separately accounted reserves**.
 
 ### The invariants the contract enforces
 
@@ -16,6 +16,11 @@ Two contracts:
 5. **No multiplier.** A routed prize splits by principal. Any value above 100 is a promise backed by someone other than the prize.
 
 The audit question to answer before mainnet: *can any legitimate sequence of user actions make the platform pay principal?* It must be no.
+
+### Known limits
+
+- **`updateRegistry` covers staked markets, not zero-stake ones.** The guard checks `outstandingBetStakes == 0` (plus open loans, collateral, and tranches), but an anchored win can carry an `UNRESOLVED` market with no stakes. A registry swap in that window rebinds its `declarationIndex` and the market can mis-resolve against foreign data. Impact is stats-only — no claims can exist without stakes — but `BuilderHistory` can record a wrong outcome. If this ever matters, track a per-contract count of unresolved markets rather than proxying on stakes.
+- **`totalBetOwed` exempts `updateRegistry` but not `updateUsdcToken`.** Resolved claims are already priced into the market record and pay out of the balance without consulting the registry — a registry swap can't strand them. A token swap can (claims pay in `usdcToken`), so `updateUsdcToken` keeps the full clean-book guard. Corollary: losing-side dust in a one-sided market is unclaimable, so `totalBetOwed` can sit permanently above zero and `updateUsdcToken` can end up frozen by dust. Admin-only and edge-case, but real.
 
 ### Interfaces
 
