@@ -12,6 +12,10 @@
     {
       "path": "/api/leaderboard/snapshot",
       "schedule": "30 0 * * *"
+    },
+    {
+      "path": "/api/hackathons/ingest-devpost",
+      "schedule": "0 2 * * *"
     }
   ]
 }
