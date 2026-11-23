@@ -1,5 +1,39 @@
 # Changelog
 
+## 2026-11-23 — Payout router: sponsor-side cohort payouts (MultiHopper plan, Phases 1–3)
+
+The sponsor-led path into the credibility record, per
+[`MULTIHOPPER_PLAN.md`](MULTIHOPPER_PLAN.md): a sponsor's verified obligation to
+pay a cohort becomes a `payoutCampaign` that routes settlement through
+MultiHopper on Solana and writes `paidAt` ground truth as it settles.
+
+- **Domain:** `src/lib/payoutCampaigns.js` — the status machine
+  (`draft → awaiting_funding → approved → routing → partially_settled → settled`,
+  plus `exception`/`cancelled`). Sponsors drive draft/funding/cancel; approval
+  requires an evidence URL + business purpose or an admin override.
+- **API:** `GET/POST /api/payout-campaigns`, `GET/PUT /api/payout-campaigns/[id]`
+  (`?wallet=` returns a sanitized recipient view — no auth, no sponsor-private
+  data), `POST/GET /api/payout-campaigns/[id]/route` (route creation + per-
+  recipient settlement reconcile; fails closed to `exception`).
+- **Adapter:** `src/services/MultiHopperService.ts` — single boundary, server
+  env only. `MULTIHOPPER_MOCK=1` (or dev without a key) returns deterministic
+  mock routes that settle after 30s; production without a key throws. Real
+  endpoints are provisional until production onboarding.
+- **UI:** `/payouts`, `/payouts/new`, `/payouts/[id]` sponsor console with
+  status actions, per-recipient transfer table, recipient share link, and
+  auto-poll while routing. `payout_routed` / `payout_settled` /
+  `payout_exception` activities land in the sponsor's notification feed.
+- **Rules:** `payoutCampaigns` read limited to sponsor/admin; writes server-only.
+
+Verification: 12 new route-contract tests (557/557 total), `tsc --noEmit`
+clean, production build green. Still unbuilt: the machine-readable volume
+ledger and the real MultiHopper integration — both gated on production
+onboarding and a credible $100k volume path (the plan's go/no-go).
+
+Also aligned `VISION.md` (borrower-first vs sponsor-first paths to the
+`paidAt` record), `MONETIZATION_STRATEGY.md` (0.25% routing revenue share as
+secondary revenue), `API.md`, `GLOSSARY.md`, and `README.md` route table.
+
 ## 2026-10-07 — Contract v4: builder-consent loan lifecycle + M-of-N payout attestation
 
 A full redesign of the rail's loan lifecycle and the registry's payout

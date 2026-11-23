@@ -124,6 +124,16 @@ service cloud.firestore {
       allow read: if isAdminUser();
       allow create, update, delete: if isAdminUser();
     }
+
+    // Payout campaigns — sponsor-side cohort payouts routed via MultiHopper.
+    // Read: the sponsor who owns the campaign, or an admin. Recipients read a
+    // sanitized projection through the API (no Firestore access).
+    // Write: only server-side via admin SDK (rules bypassed).
+    match /payoutCampaigns/{campaignId} {
+      allow read: if isAdminUser() ||
+        (isAuthenticated() && request.auth.uid == resource.data.sponsorUid);
+      allow write: if false;
+    }
     
     // Ships Logs
     match /ships_logs/{logId} {

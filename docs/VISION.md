@@ -113,6 +113,19 @@ Not a share of winnings. Not a spread on principal. A service charge on transact
 
 ---
 
+## Where the record comes from
+
+The moat only works if `paidAt` data accumulates faster than we can wait for it. Two paths write the same record:
+
+- **Borrower-first.** Winners anchor their own wins and draw against them. Slow — we inherit the organizer's pace, one prize at a time.
+- **Sponsor-first.** An organizer or funded program routes a whole cohort payout through the rail; every recipient's `paidAt` lands at once, with evidence attached, and the sponsor pays for the privilege. See [MULTIHOPPER_PLAN.md](./MULTIHOPPER_PLAN.md).
+
+The sponsor path also fixes scale: one organizer paying a cohort is a bigger check than any single builder's bridge loan, and routing a payout is a service sold to whoever holds the money — not a loan sold to whoever is waiting for it. The bridge loan and the market sit on top of whichever path reaches scale first.
+
+The pattern itself generalizes. A confirmed-but-unpaid hackathon prize is the smallest instance of a receivable: grants, retro funding, bounties, and accelerator tranches are the same shape with bigger numbers. The verification machinery and the record don't care which one feeds them.
+
+---
+
 ## North Star
 
 **Time-to-cash for a confirmed win.** Hours, not months.

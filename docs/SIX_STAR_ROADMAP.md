@@ -105,7 +105,7 @@ This document tracks the full initiative to elevate PledgeBond from a functional
 
 | # | Item | Description |
 |---|---|---|
-| O1 | Organizer self-serve + dashboard | Organizers have no self-serve onboarding (admin-only). No dashboard showing "your hackathon's winners, their verified status, their funding raised on PoS." Would make PoS the post-hackathon follow-through layer. |
+| O1 | Organizer self-serve + dashboard | Organizers have no self-serve onboarding (admin-only). No dashboard showing "your hackathon's winners, their verified status, their funding raised on PoS." Would make PoS the post-hackathon follow-through layer — and it's the natural home for the sponsor-side payout router (see [MULTIHOPPER_PLAN.md](./MULTIHOPPER_PLAN.md)): a cohort-payout campaign page doubles as the organizer dashboard. |
 
 ---
 

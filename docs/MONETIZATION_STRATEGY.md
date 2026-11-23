@@ -25,6 +25,10 @@ Basis points of notional. The contract implements origination only: `repayLoan` 
 
 Per-call x402 pricing on Arc: `underwrite` $0.05, `scout` $0.01, `verify` $0.001. Real revenue, but a rounding error next to loan fees, and explicitly **not** the model.
 
+### Secondary — payout routing revenue share
+
+The sponsor-side payout router ([MULTIHOPPER_PLAN.md](./MULTIHOPPER_PLAN.md)) earns an integration revenue share of **0.25% of qualifying full-fee transfer volume** when a sponsor routes a cohort payout through MultiHopper. This is a service charge on transactions we enable — sponsor pays for verification, routing, and reconciliation — so it fits the rule: we never touch principal and never underwrite. It is also the likeliest first real revenue, since a sponsor-paid cohort is a much larger check than any single bridge loan, and every settled campaign writes the `paidAt` record the credit market prices against.
+
 ### Explicitly not revenue
 
 - **A share of prize winnings.** Never. See above.

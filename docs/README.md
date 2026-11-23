@@ -190,6 +190,8 @@ Rendered on builder dashboard (`/build`), public portfolio (`/u/[username]`), pr
 | `/profile` | Everyone | User profile with credentials and portfolio |
 | `/u/[username]` | Everyone | Public builder portfolio with badges |
 | `/compare` | Everyone | Side-by-side project comparison |
+| `/payouts` | Sponsors | Payout campaign list + creation |
+| `/payouts/[id]` | Sponsors / recipients | Campaign console (sponsor); `?wallet=` → recipient status view |
 | `/login` | Everyone | Role picker + GitHub + wallet auth |
 | `/admin/verification` | Verifiers | Milestone verification dashboard |
 
@@ -243,6 +245,7 @@ Addresses per network are written to `blockchain/deployments/<network>_deploymen
 ## Integrations
 
 - **Circle W3S (Developer-Controlled Wallets)** — USDC settlement, wallet management, and smart contract execution on Arc. Single service (`RealCircleService`) handles all Circle API calls. Webhook endpoint at `/api/circle/webhook` for push-based transaction settlement. Contract calls validated against an allowlist of server-controlled deployments. Outbound transfers may only source from wallets in `RealCircleService.getServerControlledWallets()` — callers may not name the source wallet.
+- **MultiHopper** — opportunity plan for a sponsor-side **payout router**: verified cohort payouts for organizers and grant programs routed on Solana, earning 0.25% of qualifying volume and writing the `paidAt` record the credit market prices against. See [MULTIHOPPER_PLAN.md](./MULTIHOPPER_PLAN.md). No integration or qualifying production volume yet.
 - **MetaMask SDK** — wallet connection
 - **Solana Name Service (SNS)** — .sol identity
 - **QVAC** — local-first on-device AI inference

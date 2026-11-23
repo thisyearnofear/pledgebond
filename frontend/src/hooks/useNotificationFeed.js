@@ -77,8 +77,8 @@ function isRelevantToUser(activity, userId) {
   if (activity.type === "follow" && activity.followedId === userId) return true;
   // For project submissions, show if the user is the submitter
   if (activity.type === "project_submitted" && activity.userHandle === userId) return true;
-  // Show all milestone/payout events (they're rare and interesting)
-  if (activity.type === "milestone_verified" || activity.type === "payout_processed") return true;
+  // Show all milestone/payout/agent-payment events (they're rare and interesting)
+  if (activity.type === "milestone_verified" || activity.type === "payout_processed" || activity.type === "agent_payment") return true;
   return false;
 }
 
@@ -157,6 +157,17 @@ function transformActivity(activity) {
           : null,
       };
 
+    case "agent_payment":
+      return {
+        id,
+        type: "agent_payment",
+        title: "🤖 Agent paid on Solana",
+        description: activity.description || "An agent API call settled in USDC on Solana",
+        timestamp,
+        read: false,
+        href: "/agents",
+      };
+
     case "payout_verified":
       return {
         id,
@@ -179,6 +190,39 @@ function transformActivity(activity) {
         timestamp,
         read: false,
         href: "/leaderboard",
+      };
+
+    case "payout_routed":
+      return {
+        id,
+        type: "payout",
+        title: "🚚 Payout route created",
+        description: activity.description || "A payout campaign route was created",
+        timestamp,
+        read: false,
+        href: activity.metadata?.campaignId ? `/payouts/${activity.metadata.campaignId}` : "/payouts",
+      };
+
+    case "payout_settled":
+      return {
+        id,
+        type: "payout",
+        title: "✅ Payout settled",
+        description: activity.description || "A payout campaign finished settling",
+        timestamp,
+        read: false,
+        href: activity.metadata?.campaignId ? `/payouts/${activity.metadata.campaignId}` : "/payouts",
+      };
+
+    case "payout_exception":
+      return {
+        id,
+        type: "payout",
+        title: "⚠️ Payout needs attention",
+        description: activity.description || "A payout campaign hit an exception",
+        timestamp,
+        read: false,
+        href: activity.metadata?.campaignId ? `/payouts/${activity.metadata.campaignId}` : "/payouts",
       };
 
     default:

@@ -52,6 +52,21 @@ All routes are BFF (Backend-for-Frontend) wrappers under `frontend/src/pages/api
 | `/[id]/payout-timeline` | GET | Payout schedule |
 | `/leaderboard` | GET | Leaderboard scores |
 
+## Payout Campaigns (`/api/payout-campaigns/*`)
+
+Sponsor-side cohort payouts routed via MultiHopper. All routes are
+Firebase-authenticated; the recipient view is the only unauthenticated read.
+See [MULTIHOPPER_PLAN.md](./MULTIHOPPER_PLAN.md).
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/` | GET | List the caller's campaigns (admin: `?all=1`) |
+| `/` | POST | Create a draft campaign |
+| `/[id]` | GET | Full view (sponsor/admin); `?wallet=<addr>` → sanitized recipient view |
+| `/[id]` | PUT | Transitions: `submit`, `reopen`, `approve`, `cancel`, `edit` (draft only) |
+| `/[id]/route` | POST | Create the MultiHopper route (approved campaigns only; fails closed) |
+| `/[id]/route` | GET | Reconcile route status → `partially_settled` / `settled` / `exception` |
+
 ## Verification (`/api/verification/*`)
 
 | Route | Method | Purpose |

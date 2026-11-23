@@ -18,6 +18,8 @@ Defines every domain-specific term used across the codebase and docs.
 | **First-Loss Tranche** | Product | A designated capital slice that absorbs loan defaults up to its size, protecting lenders above it. The mechanism that lets the platform itself never absorb a loss. |
 | **Notional Fee** | Concept | A fee charged in basis points of transaction value — loan origination only in the current contract. The platform's only revenue. Deliberately not a share of winnings. |
 | **Overcollateralization** | Concept | Securing a loan with collateral worth more than the principal. The cleanest form of zero platform risk: default means liquidation, not a loss. |
+| **Payout Campaign** | Product | A sponsor's verified obligation to pay a cohort of recipients (prizes, grants, contributor payouts). Recorded in `payoutCampaigns`, routed via MultiHopper, settles per-recipient. The sponsor-side counterpart to the bridge loan. |
+| **Payout Router** | Product | The sponsor-facing rail: verify a claim, record the payout instruction, hand the transfer to a routing adapter (MultiHopper on Solana), reconcile settlement. Funds stay sponsor-held — the router tracks the route, never custodies the money. |
 | **Payout Verification** | Concept | Confirming an organizer's prize payment actually settled, via on-chain receipt or Circle transfer id. Feeds coverage and speed. |
 | **Prize Routing** | *(deprecated)* | Old name for settling a bridge loan from a prize disbursement. Retained as the settlement step, but no longer involves platform escrow or multiplier-backed backers. |
 | **Repayment** | Concept | The builder returning bridge loan principal at par, typically when the organizer pays the prize. |
